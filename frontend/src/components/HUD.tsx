@@ -39,17 +39,10 @@ interface HUDProps {
   onOpenGalaxyMap?: () => void
   onOpenLeaderboard?: () => void
   onOpenTrader?: () => void
-  onOpenShipyard?: () => void
-  onOpenDefense?: () => void
+  onOpenMessages?: () => void
 }
 
-export default function HUD({
-  onOpenGalaxyMap,
-  onOpenLeaderboard,
-  onOpenTrader,
-  onOpenShipyard,
-  onOpenDefense,
-}: HUDProps) {
+export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenMessages }: HUDProps) {
   const selectedGalaxy = GameStore((s) => s.selectedGalaxy)
   const selectedSystem = GameStore((s) => s.selectedSystem)
   const selectedPlanet = GameStore((s) => s.selectedPlanet)
@@ -237,14 +230,9 @@ export default function HUD({
             Marketplace (T)
           </button>
         )}
-        {onOpenShipyard && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenShipyard}>
-            Shipyard (S)
-          </button>
-        )}
-        {onOpenDefense && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenDefense}>
-            Defense (D)
+        {onOpenMessages && (
+          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenMessages}>
+            Messages (M)
           </button>
         )}
       </div>
