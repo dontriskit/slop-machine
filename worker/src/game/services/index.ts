@@ -73,3 +73,18 @@ export {
 } from './espionageService';
 
 export * from './messageService';
+export type {
+  ExpeditionEventType,
+  ExpeditionEvent,
+  ExpeditionResult,
+  NPCFleetOptions,
+} from './expeditionService';
+export {
+  EXPEDITION_EVENTS,
+  resolveExpedition,
+  generateNPCFleet,
+  calculateExpeditionLoot,
+  calculateFleetValue,
+  ExpeditionService,
+  expeditionService,
+} from './expeditionService';
