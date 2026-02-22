@@ -283,45 +283,51 @@ export interface ResearchQueueItem {
 }
 
 // ============================================================================
-// OFFICERS SYSTEM
+// NOTIFICATION SYSTEM
 // ============================================================================
 
-export type OfficerType = 'commander' | 'admiral' | 'engineer' | 'geologist' | 'technocrat';
+export type NotificationType =
+  | 'attack_incoming'
+  | 'battle_complete'
+  | 'espionage_detected'
+  | 'build_complete'
+  | 'research_complete'
+  | 'ship_built'
+  | 'fleet_arrived'
+  | 'fleet_returned'
+  | 'resources_collected'
+  | 'alliance_broadcast'
+  | 'achievement_unlocked'
+  | 'rank_changed'
+  | 'officer_expired';
 
-export interface OfficerDefinition {
-  type: OfficerType;
-  name: string;
-  description: string;
-  cost: number;          // dark matter cost
-  durationDays: number;  // how long the officer stays active
-  bonuses: OfficerBonuses;
-}
+export type NotificationPriority = 'critical' | 'warning' | 'info';
 
-export interface OfficerBonuses {
-  /** Commander: extra build queue slots */
-  buildQueueSlots?: number;
-  /** Commander: fleet shortcuts enabled */
-  fleetShortcuts?: boolean;
-  /** Admiral: extra fleet slots */
-  fleetSlots?: number;
-  /** Admiral: fleet recall enabled */
-  fleetRecall?: boolean;
-  /** Engineer: defense repair time multiplier (0.5 = 50% faster) */
-  defenseRepairFactor?: number;
-  /** Engineer: energy production bonus (0.10 = +10%) */
-  energyProductionBonus?: number;
-  /** Geologist: mine production bonus (0.10 = +10%) */
-  mineProductionBonus?: number;
-  /** Technocrat: espionage level bonus (+2 effective levels) */
-  espionageLevelBonus?: number;
-  /** Technocrat: research speed bonus (0.25 = +25% faster) */
-  researchSpeedBonus?: number;
-}
-
-export interface ActiveOfficer {
+export interface Notification {
   id: string;
   playerId: string;
-  officerType: OfficerType;
-  activatedAt: number;   // unix seconds
-  expiresAt: number;     // unix seconds
+  type: NotificationType;
+  priority: NotificationPriority;
+  title: string;
+  message: string;
+  data: Record<string, unknown> | null;  // arbitrary metadata (e.g. fleetId, battleReportId)
+  read: boolean;
+  createdAt: number;   // unix seconds
+}
+
+export interface PaginatedNotifications {
+  notifications: Notification[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface NotificationPreferences {
+  playerId: string;
+  /** JSON map of NotificationType -> boolean (enabled/disabled) */
+  enabledTypes: Record<NotificationType, boolean>;
+  /** Minimum priority level to show ('critical' | 'warning' | 'info') */
+  minimumPriority: NotificationPriority;
+  updatedAt: number;   // unix seconds
 }

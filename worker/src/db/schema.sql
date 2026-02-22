@@ -387,16 +387,28 @@ CREATE INDEX IF NOT EXISTS idx_tournament_rewards_tournament ON tournament_rewar
 CREATE INDEX IF NOT EXISTS idx_tournament_rewards_player ON tournament_rewards(player_id);
 
 -- ============================================================================
--- OFFICERS SYSTEM
+-- NOTIFICATION SYSTEM
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS officers (
+CREATE TABLE IF NOT EXISTS notifications (
   id TEXT PRIMARY KEY,
-  player_id TEXT NOT NULL REFERENCES players(id),
-  officer_type TEXT NOT NULL,  -- 'commander' | 'admiral' | 'engineer' | 'geologist' | 'technocrat'
-  activated_at INTEGER NOT NULL,  -- unix seconds
-  expires_at INTEGER NOT NULL     -- unix seconds
+  player_id TEXT NOT NULL,
+  type TEXT NOT NULL,        -- NotificationType enum value
+  priority TEXT NOT NULL,    -- 'critical' | 'warning' | 'info'
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  data TEXT,                 -- optional JSON metadata
+  read INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_notifications_player ON notifications(player_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(player_id, read);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(player_id, type);
+CREATE INDEX IF NOT EXISTS idx_notifications_priority ON notifications(player_id, priority);
 
-CREATE INDEX IF NOT EXISTS idx_officers_player ON officers(player_id);
-CREATE INDEX IF NOT EXISTS idx_officers_active ON officers(player_id, officer_type, expires_at);
+CREATE TABLE IF NOT EXISTS notification_preferences (
+  player_id TEXT PRIMARY KEY,
+  enabled_types TEXT NOT NULL,       -- JSON: Record<NotificationType, boolean>
+  minimum_priority TEXT NOT NULL DEFAULT 'info',  -- 'critical' | 'warning' | 'info'
+  updated_at INTEGER NOT NULL
+);

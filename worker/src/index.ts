@@ -37,6 +37,7 @@ import {
 import type { OfficerType } from './game/types';
 import { ColonizationService } from './game/services/colonizationService';
 import { defenseService, buildDefense, cancelDefenseBuild, createEmptyDefenseQueue, processDefenseQueue, getDefenseBuildQueue, rebuildDefensesAfterBattle, launchMissileAttack } from './game/services/defenseService';
+import { createNotification, getNotifications, markRead as markNotifRead, markAllRead as markAllNotifsRead, deleteNotification, getUnreadCount as getNotifUnreadCount, getPreferences as getNotifPreferences, setPreferences as setNotifPreferences, getDefaultPreferences as getDefaultNotifPreferences } from './game/services/notificationService';
 
     const result = await svc.colonize({ playerId, fromPlanetId, galaxy, system, position });
     const result = await svc.colonizePlanet({ playerId, fromPlanetId, galaxy, system, position });
@@ -3083,6 +3084,110 @@ app.get('/api/leaderboard/tournament', async (c) => {
 
     const leaderboard = await getSeasonLeaderboard(activeSeason.id, limit, DB);
     return c.json({ leaderboard });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+
+// NOTIFICATION ENDPOINTS
+app.get('/api/notifications/unread-count/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const count = await getNotifUnreadCount(playerId, DB);
+    return c.json({ unreadCount: count });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.get('/api/notifications/preferences/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const prefs = await getNotifPreferences(playerId, DB);
+    return c.json(prefs ?? getDefaultNotifPreferences(playerId));
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.put('/api/notifications/preferences/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const body = await c.req.json();
+    const prefs = await setNotifPreferences(playerId, body, DB);
+    return c.json(prefs);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.post('/api/notifications/mark-read', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json() as { notificationId: string; playerId: string };
+    if (!body.notificationId || !body.playerId) {
+      return c.json({ error: 'notificationId and playerId are required' }, 400);
+    }
+    const result = await markNotifRead(body.notificationId, body.playerId, DB);
+    return c.json({ updated: result });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.post('/api/notifications/mark-all-read', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json() as { playerId: string };
+    if (!body.playerId) {
+      return c.json({ error: 'playerId is required' }, 400);
+    }
+    const count = await markAllNotifsRead(body.playerId, DB);
+    return c.json({ updated: count });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.get('/api/notifications/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const type = c.req.query('type') || undefined;
+    const priority = c.req.query('priority') || undefined;
+    const unreadParam = c.req.query('unread');
+    const page = parseInt(c.req.query('page') ?? '1', 10);
+    const limit = parseInt(c.req.query('limit') ?? '20', 10);
+
+    const unread = unreadParam === 'true' ? true : unreadParam === 'false' ? false : undefined;
+
+    const result = await getNotifications(playerId, DB, {
+      type: type as any,
+      priority: priority as any,
+      unread,
+      page,
+      limit,
+    });
+app.delete('/api/notifications/:id', async (c) => {
+  const DB = c.env.DB;
+  const notificationId = c.req.param('id');
+  const playerId = c.req.query('player_id');
+
+  if (!playerId) {
+    return c.json({ error: 'player_id query param required' }, 400);
+  }
+
+  try {
+    const deleted = await deleteNotification(notificationId, playerId, DB);
+    if (!deleted) {
+      return c.json({ error: 'Notification not found' }, 404);
+    }
+    return c.json({ deleted: true });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
