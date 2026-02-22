@@ -5,6 +5,10 @@ import { battleService, BattleReport } from './battleService';
 /**
  * Mission Service
  * Handles fleet mission lifecycle: creation, processing, arrival, battle, return
+ *
+ * NOTE: For full fleet dispatch/arrival/return logic, prefer the exported functions
+ * from fleetService.ts (dispatchFleet, processFleetArrival, processFleetReturn).
+ * This service provides supplementary mission management utilities.
  */
 
 export interface MissionPreparation {
@@ -31,7 +35,8 @@ export class MissionService {
     toCoord: Coordinate,
     ships: Ships,
     missionType: FleetMissionType,
-    resources: Resources = { metal: 0, crystal: 0, deuterium: 0 }
+    resources: Resources = { metal: 0, crystal: 0, deuterium: 0 },
+    speedPercent: number = 100,
   ): MissionPreparation {
     // Validate ships for mission type
     if (!fleetService.meetsRequirements(ships, missionType)) {
@@ -45,7 +50,7 @@ export class MissionService {
     }
 
     // Plan the mission
-    const plan = fleetService.planMission(fromCoord, toCoord, ships, resources);
+    const plan = fleetService.planMission(fromCoord, toCoord, ships, resources, speedPercent);
 
     if (!plan.canExecute) {
       return {
@@ -66,7 +71,7 @@ export class MissionService {
   }
 
   /**
-   * Create a new fleet mission
+   * Create a new fleet mission record (low-level, does not deduct resources/ships)
    */
   createMission(
     missionId: string,
@@ -78,23 +83,28 @@ export class MissionService {
     missionType: FleetMissionType,
     ships: Ships,
     resources: Resources,
-    nowSeconds: number = Math.floor(Date.now() / 1000)
+    speedPercent: number = 100,
+    nowSeconds: number = Math.floor(Date.now() / 1000),
   ): FleetMission {
-    const plan = fleetService.planMission(fromCoord, toCoord, ships, resources);
+    const plan = fleetService.planMission(fromCoord, toCoord, ships, resources, speedPercent);
 
     return {
       id: missionId,
       playerId,
       planetIdFrom: fromPlanetId,
       planetIdTo: toPlanetId,
-      targetCoordinate: toCoord,
+      sourceCoordinate: { ...fromCoord },
+      targetCoordinate: { ...toCoord },
       missionType,
       missionStatus: 'in_transit',
       timeDeparture: nowSeconds,
       timeArrival: nowSeconds + plan.durationSeconds,
       holdTime: 0,
+      speedPercent,
       resources,
+      loot: { metal: 0, crystal: 0, deuterium: 0 },
       ships,
+      fuelConsumed: plan.fuelRequired,
       createdAt: Date.now(),
     };
   }
@@ -109,8 +119,7 @@ export class MissionService {
   }
 
   /**
-   * Process mission arrival
-   * Handles battle, looting, colonization, etc.
+   * Process mission arrival (simplified -- for full logic use fleetService.processFleetArrival)
    */
   processMissionArrival(
     mission: FleetMission,
@@ -118,7 +127,7 @@ export class MissionService {
       defenseStructures: any;
       resources: Resources;
       owner: string;
-    }
+    },
   ): MissionArrival {
     const nowSeconds = Math.floor(Date.now() / 1000);
 
@@ -155,11 +164,10 @@ export class MissionService {
 
   /**
    * Process attack mission
-   * Fleet battles defender, loots resources if successful
    */
   private processAttackMission(
     mission: FleetMission,
-    defenderData?: any
+    defenderData?: any,
   ): MissionArrival {
     const nowSeconds = Math.floor(Date.now() / 1000);
 
@@ -171,17 +179,13 @@ export class MissionService {
       };
     }
 
-    // Run battle
     const battle = battleService.resolveBattle(
-      {
-        ships: mission.ships,
-        name: `Fleet ${mission.id}`,
-      },
+      { ships: mission.ships, name: `Fleet ${mission.id}` },
       {
         ships: defenderData.ships || {},
         defenses: defenderData.defenseStructures,
         name: `Defender ${mission.planetIdTo}`,
-      }
+      },
     );
 
     return {
@@ -194,11 +198,9 @@ export class MissionService {
 
   /**
    * Process transport mission
-   * Delivers resources to target planet
    */
   private processTransportMission(mission: FleetMission): MissionArrival {
     const nowSeconds = Math.floor(Date.now() / 1000);
-
     return {
       missionId: mission.id,
       arrivedAt: nowSeconds,
@@ -208,12 +210,10 @@ export class MissionService {
 
   /**
    * Process colonization mission
-   * Establishes new planet at target coordinate
    */
   private processColonizeMission(mission: FleetMission): MissionArrival {
     const nowSeconds = Math.floor(Date.now() / 1000);
 
-    // Check if fleet has colony ship
     if (mission.ships.colonyShip === 0) {
       return {
         missionId: mission.id,
@@ -231,31 +231,9 @@ export class MissionService {
 
   /**
    * Process expedition mission
-   * Explore space slot (position 16)
    */
   private processExpeditionMission(mission: FleetMission): MissionArrival {
     const nowSeconds = Math.floor(Date.now() / 1000);
-
-    // Expedition can find resources, ships, or nothing
-    const randomResult = Math.random();
-
-    if (randomResult < 0.3) {
-      // 30% chance to find resources
-      return {
-        missionId: mission.id,
-        arrivedAt: nowSeconds,
-        success: true,
-      };
-    } else if (randomResult < 0.6) {
-      // 30% chance to find ships (small amount)
-      return {
-        missionId: mission.id,
-        arrivedAt: nowSeconds,
-        success: true,
-      };
-    }
-
-    // 40% chance to find nothing
     return {
       missionId: mission.id,
       arrivedAt: nowSeconds,
@@ -268,39 +246,13 @@ export class MissionService {
    */
   createReturnMission(
     outboundMission: FleetMission,
-    nowSeconds: number = Math.floor(Date.now() / 1000)
+    nowSeconds: number = Math.floor(Date.now() / 1000),
   ): FleetMission {
-    const returnStartTime = outboundMission.timeArrival + outboundMission.holdTime * 3600;
-    const plan = fleetService.planMission(
-      outboundMission.targetCoordinate,
-      {
-        galaxy: 0,
-        system: 0,
-        position: 0,
-      }, // Placeholder - will be from planet
+    return fleetService.createReturnMission(
+      outboundMission,
       outboundMission.ships,
-      outboundMission.resources
+      outboundMission.resources,
     );
-
-    return {
-      id: `${outboundMission.id}-return`,
-      playerId: outboundMission.playerId,
-      planetIdFrom: outboundMission.planetIdTo,
-      planetIdTo: outboundMission.planetIdFrom,
-      targetCoordinate: {
-        galaxy: 0,
-        system: 0,
-        position: 0,
-      }, // Placeholder
-      missionType: 'return',
-      missionStatus: 'in_transit',
-      timeDeparture: returnStartTime,
-      timeArrival: returnStartTime + plan.durationSeconds,
-      holdTime: 0,
-      resources: outboundMission.resources,
-      ships: outboundMission.ships,
-      createdAt: Date.now(),
-    };
   }
 
   /**
@@ -309,16 +261,19 @@ export class MissionService {
    */
   recallMission(mission: FleetMission, nowSeconds: number): FleetMission | null {
     if (mission.missionStatus !== 'in_transit') {
-      return null; // Can't recall if not in transit
+      return null;
     }
 
-    // Create immediate return mission
     return {
       ...mission,
       id: `${mission.id}-recalled`,
       missionType: 'return',
+      sourceCoordinate: { ...mission.targetCoordinate },
+      targetCoordinate: { ...mission.sourceCoordinate },
       timeDeparture: nowSeconds,
       timeArrival: nowSeconds, // Immediate
+      loot: { metal: 0, crystal: 0, deuterium: 0 },
+      fuelConsumed: 0,
       createdAt: Date.now(),
     };
   }
@@ -336,7 +291,7 @@ export class MissionService {
    */
   getProgress(mission: FleetMission, nowSeconds: number): number {
     if (mission.missionStatus !== 'in_transit') {
-      return mission.missionStatus === 'arrived' ? 100 : 0;
+      return mission.missionStatus === 'arrived' || mission.missionStatus === 'completed' ? 100 : 0;
     }
 
     const totalDuration = mission.timeArrival - mission.timeDeparture;
@@ -351,12 +306,16 @@ export class MissionService {
    */
   getStatusLabel(mission: FleetMission): string {
     switch (mission.missionStatus) {
+      case 'dispatched':
+        return 'Dispatched';
       case 'in_transit':
         return 'In Transit';
       case 'arrived':
         return 'Arrived';
-      case 'returned':
-        return 'Returned';
+      case 'returning':
+        return 'Returning';
+      case 'completed':
+        return 'Completed';
       case 'canceled':
         return 'Canceled';
       default:
@@ -373,6 +332,12 @@ export class MissionService {
         return 'Attack';
       case 'transport':
         return 'Transport';
+      case 'deploy':
+        return 'Deploy';
+      case 'espionage':
+        return 'Espionage';
+      case 'harvest':
+        return 'Harvest';
       case 'colonize':
         return 'Colonize';
       case 'expedition':
