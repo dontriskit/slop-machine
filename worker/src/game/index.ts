@@ -22,8 +22,27 @@ export type {
 export { BUILDING_ID, BUILDING_NAME, SHIP_KEYS } from './types';
 
 // Defenses
-export type { DefenseStructure, DefenseStructures } from './defenses';
-export { DEFENSE_SPECS, DEFENSE_ID, DEFENSE_NAME, getDefensePower, getDefenseHull } from './defenses';
+export type { DefenseStructure, DefenseStructures, TechLevels } from './defenses';
+export {
+  DefenseType,
+  DEFENSE_STATS,
+  DEFENSE_COSTS,
+  DEFENSE_REQUIREMENTS,
+  DEFENSE_SPECS,
+  DEFENSE_ID,
+  DEFENSE_NAME,
+  canBuildDefense,
+  getDefenseBuildTime,
+  calculateMissileAttack,
+  repairDefenses,
+  getMissileSiloCapacity,
+  getStoredMissileCount,
+  getDefensePower,
+  getDefenseHull,
+  getDefenseShield,
+  getDefenseCost,
+  getEmptyDefenses,
+} from './defenses';
 
 // Formulas
 export {
