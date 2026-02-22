@@ -7,6 +7,7 @@ import GalaxyMap from './components/GalaxyMap'
 import Leaderboard from './components/Leaderboard'
 import PlayerProfile from './components/PlayerProfile'
 import ResourceTrader from './components/ResourceTrader'
+import MessagesInbox from './components/MessagesInbox'
 import { GameStore } from './store/gameStore'
 
 // ---------------------------------------------------------------------------
@@ -42,7 +43,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'messages' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -63,6 +64,7 @@ export default function App() {
   // Global keyboard shortcuts:
   //   G — Galaxy Map
   //   L — Leaderboard
+  //   M — Messages Inbox
   //   T — Trader
   //   Escape — close any open panel
   useEffect(() => {
@@ -80,6 +82,9 @@ export default function App() {
       }
       if (e.key === 'l' || e.key === 'L') {
         setActivePanel((p) => (p === 'leaderboard' ? null : 'leaderboard'))
+      }
+      if (e.key === 'm' || e.key === 'M') {
+        setActivePanel((p) => (p === 'messages' ? null : 'messages'))
       }
       if (e.key === 't' || e.key === 'T') {
         setActivePanel((p) => (p === 'trader' ? null : 'trader'))
@@ -116,6 +121,7 @@ export default function App() {
         onOpenGalaxyMap={() => setActivePanel('galaxy-map')}
         onOpenLeaderboard={() => setActivePanel('leaderboard')}
         onOpenTrader={() => setActivePanel('trader')}
+        onOpenMessages={() => setActivePanel('messages')}
       />
 
       {/* Galaxy Map modal */}
@@ -139,6 +145,13 @@ export default function App() {
       {activePanel === 'trader' && (
         <ModalOverlay onClose={closePanel}>
           <ResourceTrader onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {/* Messages Inbox modal */}
+      {activePanel === 'messages' && (
+        <ModalOverlay onClose={closePanel}>
+          <MessagesInbox onClose={closePanel} />
         </ModalOverlay>
       )}
 
