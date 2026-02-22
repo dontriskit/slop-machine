@@ -88,3 +88,30 @@ export {
   ExpeditionService,
   expeditionService,
 } from './expeditionService';
+
+export type { OfficerDefinition, OfficerBonuses, ActiveOfficer, OfficerType } from '../types';
+export {
+  OFFICER_DEFINITIONS,
+  OFFICER_TYPES,
+  OfficerService,
+  officerService,
+  activateOfficer,
+  deactivateOfficer,
+  getActiveOfficers,
+  getOfficerBonuses,
+  hasOfficer,
+  getOfficerHistory,
+  getOfficerDefinition,
+  isOfficerActive,
+  mergeOfficerBonuses,
+  calculateExpiry,
+  applyMineProductionBonus,
+  applyEnergyProductionBonus,
+  applyResearchSpeedBonus,
+  getEffectiveEspionageLevel,
+  applyDefenseRepairBonus,
+  getTotalBuildQueueSlots,
+  getTotalFleetSlots,
+  hasFleetRecall,
+  hasFleetShortcuts,
+} from './officerService';

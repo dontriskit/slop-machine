@@ -385,3 +385,18 @@ CREATE TABLE IF NOT EXISTS tournament_rewards (
 );
 CREATE INDEX IF NOT EXISTS idx_tournament_rewards_tournament ON tournament_rewards(tournament_id);
 CREATE INDEX IF NOT EXISTS idx_tournament_rewards_player ON tournament_rewards(player_id);
+
+-- ============================================================================
+-- OFFICERS SYSTEM
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS officers (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  officer_type TEXT NOT NULL,  -- 'commander' | 'admiral' | 'engineer' | 'geologist' | 'technocrat'
+  activated_at INTEGER NOT NULL,  -- unix seconds
+  expires_at INTEGER NOT NULL     -- unix seconds
+);
+
+CREATE INDEX IF NOT EXISTS idx_officers_player ON officers(player_id);
+CREATE INDEX IF NOT EXISTS idx_officers_active ON officers(player_id, officer_type, expires_at);

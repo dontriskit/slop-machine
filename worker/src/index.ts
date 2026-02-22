@@ -24,6 +24,15 @@ import {
   getTopPlayers,
 } from './game/services/statsService';
 import type { LeaderboardStat } from './game/services/statsService';
+import {
+  OFFICER_DEFINITIONS,
+  OFFICER_TYPES,
+  activateOfficer,
+  deactivateOfficer,
+  getActiveOfficers,
+  getOfficerBonuses,
+} from './game/services/officerService';
+import type { OfficerType } from './game/types';
 
 /**
  * Cosmic Protocol Worker
@@ -1674,6 +1683,109 @@ app.delete('/api/messages/:id', async (c) => {
 });
 
 // ============================================================================
+
+// ============================================================================
+// OFFICERS ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/officers/definitions
+ * List all officer type definitions (static, no auth required).
+ */
+app.get('/api/officers/definitions', (c) => {
+  return c.json(Object.values(OFFICER_DEFINITIONS));
+});
+
+/**
+ * POST /api/officers/activate
+ * Activate an officer for a player.
+ * Body: { playerId: string, officerType: OfficerType }
+ */
+app.post('/api/officers/activate', async (c) => {
+  const DB = c.env.DB;
+  try {
+    const body = await c.req.json() as { playerId?: string; officerType?: string };
+    const { playerId, officerType } = body;
+
+    if (!playerId || !officerType) {
+      return c.json({ error: 'playerId and officerType are required' }, 400 as any);
+    }
+
+    if (!OFFICER_TYPES.includes(officerType as OfficerType)) {
+      return c.json(
+        { error: `Invalid officerType. Valid: ${OFFICER_TYPES.join(', ')}` },
+        400 as any
+      );
+    }
+
+    const officer = await activateOfficer(playerId, officerType as OfficerType, DB);
+    return c.json(officer);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+/**
+ * GET /api/officers/active/:playerId
+ * Get all currently active officers for a player.
+ */
+app.get('/api/officers/active/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const officers = await getActiveOfficers(playerId, DB);
+    return c.json(officers);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+/**
+ * POST /api/officers/deactivate
+ * Deactivate an officer for a player immediately.
+ * Body: { playerId: string, officerType: OfficerType }
+ */
+app.post('/api/officers/deactivate', async (c) => {
+  const DB = c.env.DB;
+  try {
+    const body = await c.req.json() as { playerId?: string; officerType?: string };
+    const { playerId, officerType } = body;
+
+    if (!playerId || !officerType) {
+      return c.json({ error: 'playerId and officerType are required' }, 400 as any);
+    }
+
+    if (!OFFICER_TYPES.includes(officerType as OfficerType)) {
+      return c.json(
+        { error: `Invalid officerType. Valid: ${OFFICER_TYPES.join(', ')}` },
+        400 as any
+      );
+    }
+
+    const deactivated = await deactivateOfficer(playerId, officerType as OfficerType, DB);
+    return c.json({ deactivated });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+/**
+ * GET /api/officers/bonuses/:playerId
+ * Get merged bonuses from all active officers for a player.
+ */
+app.get('/api/officers/bonuses/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const bonuses = await getOfficerBonuses(playerId, DB);
+    return c.json(bonuses);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
 // CRON TRIGGER
 // ============================================================================
 
