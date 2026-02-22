@@ -1,0 +1,6 @@
+[submodule "references/OGameX"]
+	path = references/OGameX
+	url = https://github.com/lanedirt/OGameX
+[submodule "references/UniEngine"]
+	path = references/UniEngine
+	url = https://github.com/mdziekon/UniEngine
