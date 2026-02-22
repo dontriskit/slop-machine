@@ -188,11 +188,33 @@ CREATE TABLE IF NOT EXISTS debris_fields (
 
 CREATE TABLE IF NOT EXISTS alliances (
   id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
   tag TEXT NOT NULL UNIQUE,
-  name TEXT NOT NULL,
   founder_id TEXT NOT NULL REFERENCES players(id),
+  description TEXT NOT NULL DEFAULT '',
+  member_count INTEGER NOT NULL DEFAULT 1,
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
+
+CREATE TABLE IF NOT EXISTS alliance_members (
+  player_id TEXT NOT NULL REFERENCES players(id),
+  alliance_id TEXT NOT NULL REFERENCES alliances(id),
+  role TEXT NOT NULL DEFAULT 'member',  -- 'founder' | 'officer' | 'member' | 'applicant'
+  joined_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  PRIMARY KEY (player_id, alliance_id)
+);
+CREATE INDEX IF NOT EXISTS idx_alliance_members ON alliance_members(alliance_id);
+CREATE INDEX IF NOT EXISTS idx_alliance_members_player ON alliance_members(player_id);
+
+CREATE TABLE IF NOT EXISTS alliance_applications (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  alliance_id TEXT NOT NULL REFERENCES alliances(id),
+  message TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_alliance_applications ON alliance_applications(alliance_id);
+CREATE INDEX IF NOT EXISTS idx_alliance_applications_player ON alliance_applications(player_id);
 
 CREATE INDEX IF NOT EXISTS idx_planets_player ON planets(player_id);
 CREATE INDEX IF NOT EXISTS idx_planets_agent ON planets(agent_enabled);
