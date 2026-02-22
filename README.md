@@ -3,10 +3,10 @@
 An open source, self-hosted, federated OGame clone where humans and AI agents play cooperatively in a space economy simulation.
 
 **Tech Stack:**
-- **Frontend**: Svelte + TypeScript-Go (6x faster compiler) + esbuild (fastest bundler)
+- **Frontend**: React 19 + React Three Fiber (3D galaxy) + Zustand (state) + Vite (build)
 - **Backend**: Cloudflare Workers + Durable Objects + D1 + Workers AI (GLM-4.7-Flash)
 - **Build Agent**: Single-loop agentic pattern with fan-out across all active planets
-- **Battle Engine**: Rust FFI (reference: OGameX)
+- **Battle Engine**: TypeScript simulation (6-round combat, rapidfire, debris)
 
 ## Reference Implementations
 
@@ -17,30 +17,46 @@ An open source, self-hosted, federated OGame clone where humans and AI agents pl
 
 ```
 og-game/
-├── frontend/                    # Svelte UI (playable immediately)
+├── frontend/                    # React 19 + React Three Fiber UI
 │   ├── src/
-│   │   ├── App.svelte          # Root component (planet dashboard)
-│   │   ├── index.ts            # Entry point
-│   │   └── types/game.ts       # Shared game types
-│   ├── scripts/dev.js          # Live reload dev server
+│   │   ├── App.tsx             # Root component
+│   │   ├── main.tsx            # Entry point
+│   │   ├── components/
+│   │   │   ├── Galaxy.tsx      # 3D spiral galaxy with 499 systems
+│   │   │   ├── System.tsx      # Star system with orbiting planets
+│   │   │   ├── Planet.tsx      # Individual planet (cartoonish style)
+│   │   │   ├── HUD.tsx         # Green retro-terminal overlay
+│   │   │   └── GalaxyMap.tsx   # Galaxy browser UI (grid + navigation)
+│   │   ├── store/
+│   │   │   └── gameStore.ts    # Zustand state (selected galaxy/system/planet)
+│   │   └── lib/
+│   │       ├── api.ts          # Typed API client
+│   │       └── galaxyGenerator.ts  # Procedural galaxy layout
+│   ├── vite.config.ts
 │   ├── package.json
-│   ├── tsconfig.json           # TypeScript config for typescript-go
-│   └── README.md
+│   └── index.html
 │
 ├── worker/                      # Cloudflare Workers (AI agent + API)
 │   ├── src/
 │   │   ├── index.ts            # Hono router
 │   │   ├── game/
 │   │   │   ├── types.ts        # Shared types
-│   │   │   └── formulas.ts     # OGame math (production, cost, time)
+│   │   │   ├── formulas.ts     # OGame math (production, cost, time, distance)
+│   │   │   ├── defenses.ts     # Defense structures (10 types)
+│   │   │   └── services/
+│   │   │       ├── battleService.ts      # 6-round combat simulation
+│   │   │       ├── fleetService.ts       # 8 mission types, dispatch/arrive/return
+│   │   │       ├── researchService.ts    # 15 technologies, tech tree
+│   │   │       ├── galaxyService.ts      # Galaxy view + colonization
+│   │   │       ├── coordinateService.ts  # Coordinate validation + distance
+│   │   │       ├── missionService.ts     # Mission lifecycle
+│   │   │       └── planetPlacementService.ts  # New player placement
 │   │   ├── db/
 │   │   │   └── schema.sql      # D1 database schema
 │   │   ├── durable-objects/
 │   │   │   └── PlanetDO.ts     # Per-planet state machine
-│   │   ├── agents/
-│   │   │   └── buildOrderAgent.ts  # GLM-4.7-Flash single-loop
-│   │   └── workflows/
-│   │       └── generateStrategy.ts # Cloudflare Workflow
+│   │   └── agents/
+│   │       └── buildOrderAgent.ts  # GLM-4.7-Flash single-loop
 │   ├── wrangler.toml
 │   ├── package.json
 │   └── tsconfig.json
@@ -49,9 +65,29 @@ og-game/
 │   ├── OGameX/
 │   └── UniEngine/
 │
+├── tests/
+│   ├── unit/                   # Vitest unit tests
+│   │   ├── battle.test.ts
+│   │   ├── formulas.test.ts
+│   │   └── integration.test.ts
+│   └── e2e/                    # Playwright end-to-end tests
+│       └── game-flow.spec.ts
+│
 └── docs/
+    ├── architecture.md         # System architecture overview
     └── patterns.md             # Canonical formulas & game mechanics
 ```
+
+## Features
+
+- **3D Galaxy Map** — Procedurally generated spiral galaxy (499 systems), click-to-select
+- **Battle Engine** — 6-round combat, rapidfire mechanics, debris fields
+- **Fleet System** — 8 mission types (attack, transport, deploy, espionage, harvest, colonize, expedition, return)
+- **Research System** — 15 technologies with prerequisite chains (Weapon, Shield, Armor, Drive, etc.)
+- **Defense System** — 10 defense structures (Rocket Launcher through Plasma Turret + shields)
+- **Galaxy Map UI** — System grid view, debris fields, player info per slot
+- **Build Agent** — GLM-4.7-Flash AI that plans building queues every minute
+- **H2M Protocol** — Every build decision logged to `build_history` for AI training
 
 ## Setup
 
@@ -60,28 +96,41 @@ og-game/
 git submodule update --init --recursive
 
 # Frontend
-cd frontend && pnpm install && pnpm dev
+cd frontend && npm install && npm run dev
 
 # Worker (separate terminal)
-cd worker && pnpm install && wrangler dev
+cd worker && npm install && wrangler dev
 ```
 
 ## Frontend Development
 
-Start with playable UI, evolve iteratively:
 ```bash
 cd frontend
-pnpm install
-pnpm dev  # Starts on http://localhost:5173 with live reload
+npm install
+npm run dev  # Starts on http://localhost:5173
 ```
-
-Rebuild time: **<100ms** (thanks to typescript-go + esbuild).
 
 ## Worker Deployment
 
 ```bash
 cd worker
 wrangler deploy  # Deploys to Cloudflare
+```
+
+## Testing
+
+```bash
+# Unit tests (Vitest)
+npx vitest run
+
+# TypeScript type check (worker)
+cd worker && npx tsc --noEmit
+
+# Frontend build check
+cd frontend && npx vite build
+
+# E2E tests (Playwright, requires running dev servers)
+npx playwright test
 ```
 
 ## Human-to-Machine (H2M) Protocol
