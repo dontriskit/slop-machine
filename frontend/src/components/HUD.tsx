@@ -35,7 +35,11 @@ function formatCountdown(ms: number): string {
   return `${s}s`
 }
 
-export default function HUD() {
+interface HUDProps {
+  onOpenGalaxyMap?: () => void
+}
+
+export default function HUD({ onOpenGalaxyMap }: HUDProps) {
   const selectedGalaxy = GameStore((s) => s.selectedGalaxy)
   const selectedSystem = GameStore((s) => s.selectedSystem)
   const selectedPlanet = GameStore((s) => s.selectedPlanet)
@@ -208,6 +212,11 @@ export default function HUD() {
         <p className="control-item">Drag to rotate</p>
         <p className="control-item">Scroll to zoom</p>
         <p className="control-item">Click system/planet</p>
+        {onOpenGalaxyMap && (
+          <button className="galaxy-btn" style={{ marginTop: 10, width: '100%' }} onClick={onOpenGalaxyMap}>
+            Galaxy Map (G)
+          </button>
+        )}
       </div>
     </div>
   )

@@ -61,7 +61,7 @@ export function generateGalaxy(galaxyId: number): GalaxyData {
  * Convert game coordinates to 3D position
  */
 export function coordinateTo3D(
-  galaxy: number,
+  _galaxy: number,
   system: number,
   position: number,
   offset: number = 0,

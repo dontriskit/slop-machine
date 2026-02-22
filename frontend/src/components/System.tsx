@@ -58,9 +58,7 @@ export default function System({ system }: SystemProps) {
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={65}
-            array={orbitRingArray}
-            itemSize={3}
+            args={[orbitRingArray, 3]}
           />
         </bufferGeometry>
         <lineBasicMaterial color="#4A90E2" opacity={0.4} transparent />

@@ -69,9 +69,7 @@ function GalacticRing() {
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
-          count={starCount}
-          array={positionsRef.current}
-          itemSize={3}
+          args={[positionsRef.current, 3]}
         />
       </bufferGeometry>
       <pointsMaterial size={0.3} color="#FFFFFF" transparent opacity={0.6} />
