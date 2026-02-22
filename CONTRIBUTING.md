@@ -174,31 +174,44 @@ uv run pytest
 npm test
 ```
 
-## Feature Branch Dependencies
+## Multi-Agent Parallel Development
 
-See `/docs/issues/001-merge-order.md` for the complete dependency graph.
+We use **git worktrees** for parallel feature development. Each agent works on an isolated copy of the repo.
 
-**Merge Order:**
-1. `feat/defense-system`
-2. `feat/research-system`
-3. `feat/battle-engine`
-4. `feat/fleet-movement`
-5. `feat/galaxy-map`
-6. `feat/frontend-wiring`
+### Agent Tiers
+- **Opus** — Complex systems (battle, fleet, Solana, shipyard)
+- **Sonnet** — Services and UI (alliance, marketplace, achievements)
+- **Coordinator** — Merges, conflict resolution, test verification
+
+### Merge Protocol
+1. Agent completes work and commits on its feature branch
+2. Coordinator verifies: `npx tsc --noEmit` + `npx vitest run` + `npx vite build`
+3. Merge to master with descriptive commit (emoji prefix)
+4. Resolve conflicts in predictable files: `index.ts` (routes), `schema.sql` (tables), `services/index.ts` (exports)
+5. All new features are **additive** — no breaking changes
+
+### Conflict Zones
+| File | Why | Resolution |
+|------|-----|------------|
+| `worker/src/index.ts` | Every feature adds API routes | Combine route blocks |
+| `worker/src/db/schema.sql` | Every feature adds tables | Keep all (additive) |
+| `worker/src/game/services/index.ts` | Barrel exports | Combine exports |
+| `frontend/src/App.tsx` | UI features add components | Combine imports + JSX |
+
+### Merge Criteria
+- [ ] TypeScript compiles (`npx tsc --noEmit` in worker/)
+- [ ] Unit tests pass (`npx vitest run`)
+- [ ] Frontend builds (`cd frontend && npx vite build`)
+- [ ] No breaking changes to existing features
+- [ ] Descriptive commit message with scope
 
 ## Type Definition Coordination
 
-Multiple branches modify `worker/src/game/types.ts`. See `/docs/issues/002-shared-types.md` for coordination details.
-
-**Important:** When adding types to `types.ts`:
-1. Check if the type already exists in other branches
-2. Comment your type definitions
-3. Update related imports
-4. Test TypeScript compilation
-
-## Integration Testing
-
-After all features are merged, follow the integration test plan in `/docs/issues/003-integration-test.md`.
+When adding types to `worker/src/game/types.ts`:
+1. Check if the type already exists
+2. Use interfaces for object shapes
+3. Export from `worker/src/game/index.ts` barrel
+4. Run `npx tsc --noEmit` to verify
 
 ## Questions or Issues?
 
