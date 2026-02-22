@@ -392,6 +392,7 @@ function makeShips(overrides: Partial<Ships> = {}): Ships {
     colonyShip: 0,
     recycler: 0,
     espionageProbe: 0,
+    solarSatellite: 0,
     ...overrides,
   };
 }

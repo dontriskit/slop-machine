@@ -154,6 +154,7 @@ function emptyShips(): Ships {
     colonyShip: 0,
     recycler: 0,
     espionageProbe: 0,
+    solarSatellite: 0,
   };
 }
 
@@ -184,6 +185,7 @@ const SHIP_COSTS: Record<keyof Ships, { metal: number; crystal: number; deuteriu
   colonyShip:    { metal: 10000, crystal: 20000, deuterium: 10000 },
   recycler:      { metal: 10000, crystal: 6000, deuterium: 2000 },
   espionageProbe:{ metal: 0, crystal: 1000, deuterium: 0 },
+  solarSatellite: { metal: 0, crystal: 2000, deuterium: 500 },
 };
 
 export function calculateFleetValue(ships: Ships): number {

@@ -622,12 +622,13 @@ describe('Shipyard Edge Cases', () => {
     expect(canBuildShip('cruiser', buildings, techs)).toBe(false);
   });
 
-  test('getAvailableShips returns empty array with zeroed techs even with high shipyard', () => {
+  test('getAvailableShips returns only solarSatellite with zeroed techs and high shipyard', () => {
     const buildings = { ...emptyBuildings(), shipyard: 12 };
     const techs = emptyTechs(); // All techs at 0
     const available = getAvailableShips(buildings, techs);
-    // No ship can be built because every ship requires at least one tech
-    expect(available.length).toBe(0);
+    // Only solarSatellite can be built — it requires just shipyard level 1, no tech
+    expect(available.length).toBe(1);
+    expect(available[0]).toBe('solarSatellite');
   });
 });
 

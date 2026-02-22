@@ -555,7 +555,7 @@ describe('getAvailableShips', () => {
       gravitonTech: 1,
     });
     const available = getAvailableShips(buildings, techs);
-    expect(available.length).toBe(13); // All 13 ship types
+    expect(available.length).toBe(14); // All 14 ship types
   });
 
   test('getAllShipInfo returns info for all ship types', () => {
@@ -563,7 +563,7 @@ describe('getAvailableShips', () => {
     const techs = makeTechLevels({ combustionDrive: 2, impulseDrive: 4, ionTech: 2 });
     const info = getAllShipInfo(buildings, techs);
 
-    expect(info.length).toBe(13);
+    expect(info.length).toBe(14);
 
     // Check that some are buildable and some are not
     const buildable = info.filter(s => s.canBuild);

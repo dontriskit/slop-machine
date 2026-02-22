@@ -172,6 +172,7 @@ function emptyShips(): Ships {
     colonyShip: 0,
     recycler: 0,
     espionageProbe: 0,
+    solarSatellite: 0,
   };
 }
 
@@ -259,14 +260,14 @@ function makeStats(overrides?: Partial<AggregatedPlayerStats>): AggregatedPlayer
 
 describe('Shipyard -> Battle: Ship Specs Consistency', () => {
 
-  test('all 13 ship types exist in both SHIP_KEYS and SHIP_COSTS', () => {
+  test('all 14 ship types exist in both SHIP_KEYS and SHIP_COSTS', () => {
     for (const key of SHIP_KEYS) {
       expect(SHIP_COSTS[key]).toBeDefined();
       expect(SHIP_COSTS[key].metal).toBeTypeOf('number');
       expect(SHIP_COSTS[key].crystal).toBeTypeOf('number');
       expect(SHIP_COSTS[key].deuterium).toBeTypeOf('number');
     }
-    expect(SHIP_KEYS.length).toBe(13);
+    expect(SHIP_KEYS.length).toBe(14);
   });
 
   test('ship costs in shipyard match costs used by battle engine for loss calculation', () => {
@@ -286,9 +287,15 @@ describe('Shipyard -> Battle: Ship Specs Consistency', () => {
   });
 
   test('all SHIP_KEYS have entries in SHIP_SPEEDS, SHIP_FUEL, and SHIP_CARGO', () => {
+    // Stationary ships (e.g. solarSatellite) have speed 0 — that is intentional
+    const stationaryShips = new Set(['solarSatellite']);
     for (const key of SHIP_KEYS) {
       expect(SHIP_SPEEDS[key]).toBeTypeOf('number');
-      expect(SHIP_SPEEDS[key]).toBeGreaterThan(0);
+      if (stationaryShips.has(key)) {
+        expect(SHIP_SPEEDS[key]).toBeGreaterThanOrEqual(0);
+      } else {
+        expect(SHIP_SPEEDS[key]).toBeGreaterThan(0);
+      }
       expect(SHIP_FUEL[key]).toBeTypeOf('number');
       expect(SHIP_FUEL[key]).toBeGreaterThanOrEqual(0);
       expect(SHIP_CARGO[key]).toBeTypeOf('number');
@@ -1546,8 +1553,8 @@ describe('Cross-Service Type Consistency', () => {
 
   test('Ships type is identical across all services', () => {
     const ships = emptyShips();
-    // All 13 keys must exist
-    expect(Object.keys(ships).length).toBe(13);
+    // All 14 keys must exist (13 original + solarSatellite added in #154)
+    expect(Object.keys(ships).length).toBe(14);
 
     // Verify the full set of keys matches SHIP_KEYS
     const keysFromShips = Object.keys(ships).sort();

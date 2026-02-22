@@ -1,5 +1,5 @@
 import { Coordinate, PlanetState, QueueItem, BuildingLevels, Resources, Ships, TechLevels } from '../game/types';
-import { calculateProduction, BASE_PRODUCTION, calculateBuildTime } from '../game/formulas';
+import { calculateProduction, BASE_PRODUCTION, calculateBuildTime, calculateEnergyProduction, calculateEnergyConsumption, calculateProductionMultiplier } from '../game/formulas';
 import {
   ShipyardQueue,
   ShipBuildOrder,
@@ -116,6 +116,7 @@ export class PlanetDO implements DurableObject {
           colonyShip: 0,
           recycler: 0,
           espionageProbe: 0,
+          solarSatellite: 0,
         },
         queue: [],
         shipQueue: createEmptyQueue(),
@@ -221,7 +222,22 @@ export class PlanetDO implements DurableObject {
     const deltaMs = nowMs - this.planetState.lastTickAt;
     const deltaHours = deltaMs / (1000 * 60 * 60);
 
-    // Update resources from production
+    // Calculate energy balance for production multiplier
+    const energyProduced = calculateEnergyProduction(
+      this.planetState.buildings.solarPlant,
+      this.planetState.buildings.fusionReactor,
+      this.planetState.ships.solarSatellite ?? 0,
+      this.planetState.techLevels.energyTech,
+      this.planetState.temperature
+    );
+    const energyConsumed = calculateEnergyConsumption(
+      this.planetState.buildings.metalMine,
+      this.planetState.buildings.crystalMine,
+      this.planetState.buildings.deutSynth
+    );
+    const productionMultiplier = calculateProductionMultiplier(energyProduced, energyConsumed);
+
+    // Update resources from production (scaled by energy multiplier)
     const metalProd = calculateProduction(
       BASE_PRODUCTION.metal,
       this.planetState.buildings.metalMine,
@@ -238,9 +254,9 @@ export class PlanetDO implements DurableObject {
       this.planetState.temperature
     );
 
-    this.planetState.resources.metal += Math.floor(metalProd * deltaHours);
-    this.planetState.resources.crystal += Math.floor(crystalProd * deltaHours);
-    this.planetState.resources.deuterium += Math.floor(deutProd * deltaHours);
+    this.planetState.resources.metal += Math.floor(metalProd * productionMultiplier * deltaHours);
+    this.planetState.resources.crystal += Math.floor(crystalProd * productionMultiplier * deltaHours);
+    this.planetState.resources.deuterium += Math.floor(deutProd * productionMultiplier * deltaHours);
 
     this.planetState.lastTickAt = nowMs;
 
@@ -265,6 +281,12 @@ export class PlanetDO implements DurableObject {
         resources: this.planetState.resources,
         deltaMs,
         production: { metalProd, crystalProd, deutProd },
+        energy: {
+          produced: energyProduced,
+          consumed: energyConsumed,
+          balance: energyProduced - energyConsumed,
+          multiplier: productionMultiplier,
+        },
       }),
       { headers: { 'Content-Type': 'application/json' } }
     );
@@ -521,55 +543,63 @@ export class PlanetDO implements DurableObject {
     const deltaMs = nowMs - this.planetState.lastTickAt;
     const deltaHours = deltaMs / (1000 * 60 * 60);
 
+    // Calculate energy balance
+    const energyProduced = calculateEnergyProduction(
+      this.planetState.buildings.solarPlant,
+      this.planetState.buildings.fusionReactor,
+      this.planetState.ships.solarSatellite ?? 0,
+      this.planetState.techLevels.energyTech,
+      this.planetState.temperature
+    );
+    const energyConsumed = calculateEnergyConsumption(
+      this.planetState.buildings.metalMine,
+      this.planetState.buildings.crystalMine,
+      this.planetState.buildings.deutSynth
+    );
+    const productionMultiplier = calculateProductionMultiplier(energyProduced, energyConsumed);
+
+    const metalPerHour = calculateProduction(
+      BASE_PRODUCTION.metal,
+      this.planetState.buildings.metalMine,
+      this.planetState.temperature
+    );
+    const crystalPerHour = calculateProduction(
+      BASE_PRODUCTION.crystal,
+      this.planetState.buildings.crystalMine,
+      this.planetState.temperature
+    );
+    const deutPerHour = calculateProduction(
+      BASE_PRODUCTION.deuterium,
+      this.planetState.buildings.deutSynth,
+      this.planetState.temperature
+    );
+
     const current = {
       metal: Math.floor(
-        this.planetState.resources.metal +
-          calculateProduction(
-            BASE_PRODUCTION.metal,
-            this.planetState.buildings.metalMine,
-            this.planetState.temperature
-          ) *
-            deltaHours
+        this.planetState.resources.metal + metalPerHour * productionMultiplier * deltaHours
       ),
       crystal: Math.floor(
-        this.planetState.resources.crystal +
-          calculateProduction(
-            BASE_PRODUCTION.crystal,
-            this.planetState.buildings.crystalMine,
-            this.planetState.temperature
-          ) *
-            deltaHours
+        this.planetState.resources.crystal + crystalPerHour * productionMultiplier * deltaHours
       ),
       deuterium: Math.floor(
-        this.planetState.resources.deuterium +
-          calculateProduction(
-            BASE_PRODUCTION.deuterium,
-            this.planetState.buildings.deutSynth,
-            this.planetState.temperature
-          ) *
-            deltaHours
+        this.planetState.resources.deuterium + deutPerHour * productionMultiplier * deltaHours
       ),
     };
 
     const production = {
-      metalPerHour: calculateProduction(
-        BASE_PRODUCTION.metal,
-        this.planetState.buildings.metalMine,
-        this.planetState.temperature
-      ),
-      crystalPerHour: calculateProduction(
-        BASE_PRODUCTION.crystal,
-        this.planetState.buildings.crystalMine,
-        this.planetState.temperature
-      ),
-      deutPerHour: calculateProduction(
-        BASE_PRODUCTION.deuterium,
-        this.planetState.buildings.deutSynth,
-        this.planetState.temperature
-      ),
+      metalPerHour: Math.floor(metalPerHour * productionMultiplier),
+      crystalPerHour: Math.floor(crystalPerHour * productionMultiplier),
+      deutPerHour: Math.floor(deutPerHour * productionMultiplier),
     };
 
-    return new Response(JSON.stringify({ resources: current, production }), {
+    const energy = {
+      produced: energyProduced,
+      consumed: energyConsumed,
+      balance: energyProduced - energyConsumed,
+      multiplier: productionMultiplier,
+    };
+
+    return new Response(JSON.stringify({ resources: current, production, energy }), {
       headers: { 'Content-Type': 'application/json' },
     });
   }

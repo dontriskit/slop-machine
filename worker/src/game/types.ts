@@ -96,6 +96,7 @@ export const SHIP_KEYS: (keyof Ships)[] = [
   'colonyShip',
   'recycler',
   'espionageProbe',
+  'solarSatellite',
 ];
 
 // Convert between database column names (snake_case) and TypeScript names (camelCase)
@@ -113,6 +114,7 @@ const SNAKE_TO_CAMEL: Record<string, keyof Ships> = {
   colony_ship: 'colonyShip',
   recycler: 'recycler',
   espionage_probe: 'espionageProbe',
+  solar_satellite: 'solarSatellite',
 };
 
 const CAMEL_TO_SNAKE: Record<keyof Ships, string> = {
@@ -129,6 +131,7 @@ const CAMEL_TO_SNAKE: Record<keyof Ships, string> = {
   colonyShip: 'colony_ship',
   recycler: 'recycler',
   espionageProbe: 'espionage_probe',
+  solarSatellite: 'solar_satellite',
 };
 
 export function snakeToCamelShip(key: string): keyof Ships | undefined {
@@ -167,6 +170,7 @@ export interface Ships {
   colonyShip: number;      // Colonization (must have at least 1)
   recycler: number;        // Resource collection
   espionageProbe: number;  // Scouting
+  solarSatellite: number;  // Energy producer (cannot travel, destroyable in combat)
 }
 
 export interface Fleet {

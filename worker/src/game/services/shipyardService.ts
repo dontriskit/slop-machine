@@ -76,6 +76,7 @@ export const SHIP_COSTS: Record<keyof Ships, Resources> = {
   colonyShip:     { metal: 10000,   crystal: 20000,   deuterium: 10000 },
   recycler:       { metal: 10000,   crystal: 6000,    deuterium: 2000 },
   espionageProbe: { metal: 0,       crystal: 1000,    deuterium: 0 },
+  solarSatellite: { metal: 0,       crystal: 2000,    deuterium: 500 },
 };
 
 // ============================================================================
@@ -96,6 +97,7 @@ export const SHIP_NAMES: Record<keyof Ships, string> = {
   colonyShip:     'Colony Ship',
   recycler:       'Recycler',
   espionageProbe: 'Espionage Probe',
+  solarSatellite: 'Solar Satellite',
 };
 
 // ============================================================================
@@ -174,6 +176,10 @@ export const SHIP_REQUIREMENTS: Record<keyof Ships, ShipRequirement> = {
   espionageProbe: {
     shipyard: 3,
     techs: { combustionDrive: 3, espionageTech: 2 },
+  },
+  solarSatellite: {
+    shipyard: 1,
+    techs: {},
   },
 };
 

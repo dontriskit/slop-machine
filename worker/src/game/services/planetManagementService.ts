@@ -452,6 +452,7 @@ export class PlanetManagementService {
       colonyShip: (mission.colony_ship as number) ?? 0,
       recycler: (mission.recycler as number) ?? 0,
       espionageProbe: (mission.espionage_probe as number) ?? 0,
+      solarSatellite: (mission.solar_satellite as number) ?? 0,
     };
 
     const resources: Resources = {
