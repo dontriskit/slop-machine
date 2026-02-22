@@ -134,6 +134,12 @@ export class PlanetDO implements DurableObject {
         return await this.handleGetBuildings();
       } else if (path === '/initialize' && request.method === 'POST') {
         return await this.handleInitialize(request);
+      } else if (path === '/fleet-deduct' && request.method === 'POST') {
+        return await this.handleFleetDeduct(request);
+      } else if (path === '/ships' && request.method === 'GET') {
+        return await this.handleGetShips();
+      } else if (path === '/ships/add' && request.method === 'POST') {
+        return await this.handleAddShips(request);
       } else {
         return new Response('Not Found', { status: 404 });
       }
@@ -534,5 +540,69 @@ export class PlanetDO implements DurableObject {
     return new Response(JSON.stringify({ initialized: true, state: this.planetState }), {
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  /**
+   * POST /fleet-deduct
+   * Update planet ships and resources after fleet dispatch.
+   * Called by the fleet/send API after fleetService.dispatchFleet mutates the state.
+   * Body: { ships: Ships, resources: Resources }
+   */
+  private async handleFleetDeduct(request: Request): Promise<Response> {
+    if (!this.planetState) throw new Error('State not initialized');
+
+    const body = await request.json<{ ships: Ships; resources: Resources }>();
+
+    this.planetState.ships = body.ships;
+    this.planetState.resources = body.resources;
+
+    await this.persistState();
+
+    return new Response(
+      JSON.stringify({ deducted: true, ships: this.planetState.ships, resources: this.planetState.resources }),
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  /**
+   * GET /ships
+   * Get current ship counts on this planet
+   */
+  private async handleGetShips(): Promise<Response> {
+    if (!this.planetState) throw new Error('State not initialized');
+
+    return new Response(JSON.stringify(this.planetState.ships), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  /**
+   * POST /ships/add
+   * Add ships back to the planet (used when a fleet returns).
+   * Body: { ships: Ships, resources?: Resources }
+   */
+  private async handleAddShips(request: Request): Promise<Response> {
+    if (!this.planetState) throw new Error('State not initialized');
+
+    const body = await request.json<{ ships: Ships; resources?: Resources }>();
+
+    // Add ships
+    for (const key of Object.keys(body.ships) as (keyof Ships)[]) {
+      this.planetState.ships[key] = (this.planetState.ships[key] || 0) + (body.ships[key] || 0);
+    }
+
+    // Add resources if provided (e.g., returning fleet with loot)
+    if (body.resources) {
+      this.planetState.resources.metal += body.resources.metal || 0;
+      this.planetState.resources.crystal += body.resources.crystal || 0;
+      this.planetState.resources.deuterium += body.resources.deuterium || 0;
+    }
+
+    await this.persistState();
+
+    return new Response(
+      JSON.stringify({ added: true, ships: this.planetState.ships, resources: this.planetState.resources }),
+      { headers: { 'Content-Type': 'application/json' } },
+    );
   }
 }

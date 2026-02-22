@@ -22,8 +22,8 @@ export {
 } from './fleetService';
 export { PlanetPlacementService, planetPlacementService } from './planetPlacementService';
 export type { PlacementAttempt } from './planetPlacementService';
-export type { BattleRound, BattleReport, BattleResult, BattleState, Combatant, TechLevels } from './battleService';
-export { BattleService, battleService, simulateBattle } from './battleService';
+export type { BattleRound, BattleReport, BattleResult, BattleState, Combatant, CombatTechLevels } from './battleService';
+export { BattleService, battleService, simulateBattle, toCombatTech } from './battleService';
 export type { MissionPreparation, MissionArrival } from './missionService';
 export { MissionService, missionService } from './missionService';
 export type { TechDefinition, TechPrerequisite, TechEffect, TechEffectDetail } from './researchService';
