@@ -133,6 +133,27 @@ cd frontend && npx vite build
 npx playwright test
 ```
 
+
+## Coverage
+
+```bash
+# Generate coverage report (passing tests only — recommended)
+npm run coverage:passing
+
+# Full suite with coverage (includes known-failing test files)
+npm run coverage
+```
+
+Report files are written to `coverage/`:
+- `coverage/index.html` — interactive HTML report
+- `coverage/lcov.info` — LCOV format (CI integration)
+- `coverage/coverage-final.json` — raw data
+
+Baseline coverage (passing tests, 2026-02-22): **Lines: 59.48%**, **Branches: 81.62%**, **Functions: 66.18%**
+
+See [COVERAGE_REPORT.md](./COVERAGE_REPORT.md) for full gap analysis and improvement roadmap.
+
+
 ## Human-to-Machine (H2M) Protocol
 
 Every build decision is logged in `build_history` table:
