@@ -1,4 +1,4 @@
-import { Ships, Resources } from '../types';
+import { Ships, Resources, TechLevels } from '../types';
 import { DefenseStructures, DEFENSE_SPECS, DefenseStructure } from '../defenses';
 
 /**
@@ -20,11 +20,20 @@ import { DefenseStructures, DEFENSE_SPECS, DefenseStructure } from '../defenses'
 // TYPES
 // ============================================================================
 
-/** Technology levels that affect combat */
-export interface TechLevels {
-  weaponsTech: number; // +10% attack per level
-  shieldTech: number;  // +10% shield per level
-  armorTech: number;   // +10% hull per level
+/** Combat-relevant technology levels (subset of full TechLevels) */
+export interface CombatTechLevels {
+  weaponTech: number;    // +10% attack per level
+  shieldingTech: number; // +10% shield per level
+  armorTech: number;     // +10% hull per level
+}
+
+/** Extract combat-relevant tech from full TechLevels */
+export function toCombatTech(tech: Partial<TechLevels>): CombatTechLevels {
+  return {
+    weaponTech: tech.weaponTech ?? 0,
+    shieldingTech: tech.shieldingTech ?? 0,
+    armorTech: tech.armorTech ?? 0,
+  };
 }
 
 /** A single unit participating in battle (ship or defense) */
@@ -160,7 +169,7 @@ const SHIP_SPECS: Record<keyof Ships, ShipSpec> = {
       espionageProbe: 5,
       solarSatellite: 5,
       lightFighter: 6,
-      smallLaser: 10,
+      rocketLauncher: 10,
     },
   },
   battleship: {
@@ -202,9 +211,9 @@ const SHIP_SPECS: Record<keyof Ships, ShipSpec> = {
     rapidfire: {
       espionageProbe: 5,
       solarSatellite: 5,
-      smallLaser: 20,
-      bigLaser: 20,
-      gaussCannon: 10,
+      rocketLauncher: 20,
+      lightLaser: 20,
+      heavyLaser: 10,
       ionCannon: 10,
       plasmaTurret: 5,
     },
@@ -244,13 +253,14 @@ const SHIP_SPECS: Record<keyof Ships, ShipSpec> = {
       destroyer: 5,
       colonyShip: 250,
       recycler: 250,
-      smallLaser: 200,
-      bigLaser: 100,
+      rocketLauncher: 200,
+      lightLaser: 200,
+      heavyLaser: 100,
       gaussCannon: 50,
       ionCannon: 100,
       plasmaTurret: 10,
-      smallShield: 10,
-      largeShield: 10,
+      smallShieldDome: 10,
+      largeShieldDome: 10,
     },
   },
   smallCargo: {
@@ -327,7 +337,16 @@ interface DefenseSpec {
 }
 
 const DEFENSE_BATTLE_SPECS: Record<keyof DefenseStructures, DefenseSpec> = {
-  smallLaser: {
+  rocketLauncher: {
+    hull: 2000,
+    shield: 20,
+    attack: 80,
+    metal: 2000,
+    crystal: 0,
+    deuterium: 0,
+    rapidfire: {},
+  },
+  lightLaser: {
     hull: 2000,
     shield: 25,
     attack: 100,
@@ -336,7 +355,7 @@ const DEFENSE_BATTLE_SPECS: Record<keyof DefenseStructures, DefenseSpec> = {
     deuterium: 0,
     rapidfire: {},
   },
-  bigLaser: {
+  heavyLaser: {
     hull: 8000,
     shield: 100,
     attack: 250,
@@ -358,8 +377,8 @@ const DEFENSE_BATTLE_SPECS: Record<keyof DefenseStructures, DefenseSpec> = {
     hull: 8000,
     shield: 500,
     attack: 150,
-    metal: 5000,
-    crystal: 3000,
+    metal: 2000,
+    crystal: 6000,
     deuterium: 0,
     rapidfire: {},
   },
@@ -372,7 +391,7 @@ const DEFENSE_BATTLE_SPECS: Record<keyof DefenseStructures, DefenseSpec> = {
     deuterium: 30000,
     rapidfire: {},
   },
-  smallShield: {
+  smallShieldDome: {
     hull: 20000,
     shield: 2000,
     attack: 1,
@@ -381,7 +400,7 @@ const DEFENSE_BATTLE_SPECS: Record<keyof DefenseStructures, DefenseSpec> = {
     deuterium: 0,
     rapidfire: {},
   },
-  largeShield: {
+  largeShieldDome: {
     hull: 100000,
     shield: 10000,
     attack: 1,
@@ -395,8 +414,8 @@ const DEFENSE_BATTLE_SPECS: Record<keyof DefenseStructures, DefenseSpec> = {
     shield: 1,
     attack: 1,
     metal: 8000,
-    crystal: 0,
-    deuterium: 2000,
+    crystal: 2000,
+    deuterium: 0,
     rapidfire: {},
   },
   interplanetaryMissile: {
@@ -436,21 +455,22 @@ function emptyShips(): Ships {
 /** Create an empty DefenseStructures object with all counts at zero */
 function emptyDefenses(): DefenseStructures {
   return {
-    smallShield: 0,
-    largeShield: 0,
-    smallLaser: 0,
-    bigLaser: 0,
+    rocketLauncher: 0,
+    lightLaser: 0,
+    heavyLaser: 0,
     gaussCannon: 0,
     ionCannon: 0,
+    plasmaTurret: 0,
+    smallShieldDome: 0,
+    largeShieldDome: 0,
     antiBallisticMissile: 0,
     interplanetaryMissile: 0,
-    plasmaTurret: 0,
   };
 }
 
-/** Get a default TechLevels with all zero */
-function defaultTech(): TechLevels {
-  return { weaponsTech: 0, shieldTech: 0, armorTech: 0 };
+/** Get a default CombatTechLevels with all zero */
+function defaultTech(): CombatTechLevels {
+  return { weaponTech: 0, shieldingTech: 0, armorTech: 0 };
 }
 
 /** Count total units in a Ships object */
@@ -485,10 +505,10 @@ function randomInt(max: number): number {
  * Expand a Ships object into individual BattleUnit instances,
  * applying technology bonuses.
  */
-function createShipUnits(ships: Ships, tech: TechLevels): BattleUnit[] {
+function createShipUnits(ships: Ships, tech: CombatTechLevels): BattleUnit[] {
   const units: BattleUnit[] = [];
-  const weaponMult = 1 + tech.weaponsTech * 0.1;
-  const shieldMult = 1 + tech.shieldTech * 0.1;
+  const weaponMult = 1 + tech.weaponTech * 0.1;
+  const shieldMult = 1 + tech.shieldingTech * 0.1;
   const armorMult = 1 + tech.armorTech * 0.1;
 
   for (const key of Object.keys(ships) as (keyof Ships)[]) {
@@ -530,13 +550,13 @@ function createShipUnits(ships: Ships, tech: TechLevels): BattleUnit[] {
  */
 function createDefenseUnits(
   defenses: DefenseStructures | undefined,
-  tech: TechLevels
+  tech: CombatTechLevels
 ): BattleUnit[] {
   if (!defenses) return [];
 
   const units: BattleUnit[] = [];
-  const weaponMult = 1 + tech.weaponsTech * 0.1;
-  const shieldMult = 1 + tech.shieldTech * 0.1;
+  const weaponMult = 1 + tech.weaponTech * 0.1;
+  const shieldMult = 1 + tech.shieldingTech * 0.1;
   const armorMult = 1 + tech.armorTech * 0.1;
 
   for (const key of Object.keys(defenses) as (keyof DefenseStructures)[]) {
@@ -901,8 +921,8 @@ export function simulateBattle(
   attackerFleet: Ships,
   defenderFleet: Ships,
   defenderDefenses?: DefenseStructures,
-  attackerTech: TechLevels = defaultTech(),
-  defenderTech: TechLevels = defaultTech()
+  attackerTech: CombatTechLevels = defaultTech(),
+  defenderTech: CombatTechLevels = defaultTech()
 ): BattleResult {
   const MAX_ROUNDS = 6;
 
@@ -1032,8 +1052,8 @@ export class BattleService {
   resolveBattle(
     attacker: Combatant,
     defender: Combatant,
-    attackerTech: TechLevels = defaultTech(),
-    defenderTech: TechLevels = defaultTech()
+    attackerTech: CombatTechLevels = defaultTech(),
+    defenderTech: CombatTechLevels = defaultTech()
   ): BattleReport {
     const result = simulateBattle(
       attacker.ships,
