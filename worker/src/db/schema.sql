@@ -412,3 +412,43 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
   minimum_priority TEXT NOT NULL DEFAULT 'info',  -- 'critical' | 'warning' | 'info'
   updated_at INTEGER NOT NULL
 );
+
+-- ============================================================================
+-- H2M (HUMAN-TO-MACHINE) LEARNING PROTOCOL
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS override_analysis (
+  id TEXT PRIMARY KEY,
+  planet_id TEXT NOT NULL,
+  player_id TEXT NOT NULL,
+  agent_build_id TEXT NOT NULL,
+  agent_building_id INTEGER NOT NULL,
+  agent_level INTEGER NOT NULL,
+  agent_reason TEXT,
+  manual_build_id TEXT NOT NULL,
+  manual_building_id INTEGER NOT NULL,
+  manual_level INTEGER NOT NULL,
+  time_delta INTEGER NOT NULL,          -- seconds between agent and manual build
+  classification TEXT NOT NULL,          -- OverrideClassification enum
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_override_planet ON override_analysis(planet_id);
+CREATE INDEX IF NOT EXISTS idx_override_player ON override_analysis(player_id);
+CREATE INDEX IF NOT EXISTS idx_override_classification ON override_analysis(classification);
+CREATE INDEX IF NOT EXISTS idx_override_date ON override_analysis(created_at);
+
+CREATE TABLE IF NOT EXISTS strategy_history (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL,
+  planet_id TEXT,                        -- null = player-wide strategy
+  strategy_json TEXT NOT NULL,           -- JSON serialized strategy steps
+  source TEXT NOT NULL DEFAULT 'learned', -- 'initial' | 'learned' | 'manual'
+  override_count INTEGER NOT NULL DEFAULT 0,
+  adoption_rate REAL NOT NULL DEFAULT 0,
+  parent_strategy_id TEXT,               -- previous strategy this was derived from
+  changes_summary TEXT,                  -- human-readable diff
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_strategy_history_player ON strategy_history(player_id);
+CREATE INDEX IF NOT EXISTS idx_strategy_history_planet ON strategy_history(planet_id);
+CREATE INDEX IF NOT EXISTS idx_strategy_history_date ON strategy_history(created_at);

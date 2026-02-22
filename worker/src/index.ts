@@ -39,17 +39,7 @@ import { ColonizationService } from './game/services/colonizationService';
 import { defenseService, buildDefense, cancelDefenseBuild, createEmptyDefenseQueue, processDefenseQueue, getDefenseBuildQueue, rebuildDefensesAfterBattle, launchMissileAttack } from './game/services/defenseService';
 import { createNotification, getNotifications, markRead as markNotifRead, markAllRead as markAllNotifsRead, deleteNotification, getUnreadCount as getNotifUnreadCount, getPreferences as getNotifPreferences, setPreferences as setNotifPreferences, getDefaultPreferences as getDefaultNotifPreferences } from './game/services/notificationService';
 
-    const result = await svc.colonize({ playerId, fromPlanetId, galaxy, system, position });
-    const result = await svc.colonizePlanet({ playerId, fromPlanetId, galaxy, system, position });
-  return c.json(Object.values(OFFICER_DEFINITIONS));
-    if (!OFFICER_TYPES.includes(officerType as OfficerType)) {
-        { error: `Invalid officerType. Valid: ${OFFICER_TYPES.join(', ')}` },
-    const officer = await activateOfficer(playerId, officerType as OfficerType, DB);
-    const officers = await getActiveOfficers(playerId, DB);
-    if (!OFFICER_TYPES.includes(officerType as OfficerType)) {
-        { error: `Invalid officerType. Valid: ${OFFICER_TYPES.join(', ')}` },
-    const deactivated = await deactivateOfficer(playerId, officerType as OfficerType, DB);
-    const bonuses = await getOfficerBonuses(playerId, DB);
+import {
   getTutorialProgress,
   completeTutorialStep,
   claimReward as claimTutorialReward,
@@ -57,6 +47,7 @@ import { createNotification, getNotifications, markRead as markNotifRead, markAl
   getNextStep,
   TUTORIAL_STEPS,
 } from './game/services/tutorialService';
+import { detectOverrides, classifyOverride, analyzePlayerPatterns, getOverrideRate, getTopOverrideReasons, generateImprovedStrategy, compareStrategies, applyLearnedStrategy, getH2MMetrics, getAdoptionRate, generateH2MReport, runH2MLearningCycle, storeOverrides } from './agents/h2mProtocol';
 
 /**
  * Cosmic Protocol Worker
@@ -2129,6 +2120,13 @@ async function handleScheduled(event: ScheduledEvent, env: Bindings): Promise<vo
     );
 
     console.log(`[Cron] Agent run: ${results.succeeded}/${results.total} planets succeeded`);
+    // H2M Learning Cycle — detect overrides and update strategies weekly
+    try {
+      const h2mResults = await runH2MLearningCycle(DB);
+      console.log(`[Cron/H2M] Learning cycle: ${h2mResults.playersProcessed} players, ${h2mResults.overridesDetected} overrides, ${h2mResults.strategiesUpdated} strategies updated`);
+    } catch (h2mError) {
+      console.error('[Cron/H2M] Learning cycle error:', h2mError);
+    }
   } catch (error) {
     console.error('Cron handler error:', error);
   }
@@ -3188,6 +3186,214 @@ app.delete('/api/notifications/:id', async (c) => {
       return c.json({ error: 'Notification not found' }, 404);
     }
     return c.json({ deleted: true });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+
+// ============================================================================
+// H2M (HUMAN-TO-MACHINE) PROTOCOL ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/h2m/metrics/:playerId
+ * Dashboard metrics for a player's H2M learning
+ */
+app.get('/api/h2m/metrics/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const metrics = await getH2MMetrics(DB, playerId);
+    return c.json(metrics);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/h2m/overrides/:playerId
+ * List of overrides with classifications for a player
+ */
+app.get('/api/h2m/overrides/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+  const limit = parseInt(c.req.query('limit') || '50');
+  const offset = parseInt(c.req.query('offset') || '0');
+
+  try {
+    const result = await DB.prepare(
+      `SELECT * FROM override_analysis
+       WHERE player_id = ?
+       ORDER BY created_at DESC
+       LIMIT ? OFFSET ?`
+    )
+      .bind(playerId, limit, offset)
+      .all();
+
+    const overrides = (result.results || []).map((r: any) => ({
+      id: r.id,
+      planetId: r.planet_id,
+      playerId: r.player_id,
+      agentBuildId: r.agent_build_id,
+      agentBuildingId: r.agent_building_id,
+      agentLevel: r.agent_level,
+      agentReason: r.agent_reason,
+      manualBuildId: r.manual_build_id,
+      manualBuildingId: r.manual_building_id,
+      manualLevel: r.manual_level,
+      timeDelta: r.time_delta,
+      classification: r.classification,
+      detectedAt: r.created_at,
+    }));
+
+    const countResult = await DB.prepare(
+      `SELECT COUNT(*) as cnt FROM override_analysis WHERE player_id = ?`
+    ).bind(playerId).first();
+
+    return c.json({
+      overrides,
+      total: (countResult?.cnt as number) || 0,
+      limit,
+      offset,
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/h2m/strategy/:planetId
+ * Current learned strategy for a planet
+ */
+app.get('/api/h2m/strategy/:planetId', async (c) => {
+  const DB = c.env.DB;
+  const planetId = c.req.param('planetId');
+
+  try {
+    const planet = await DB.prepare(
+      'SELECT strategy_id FROM planets WHERE id = ?'
+    ).bind(planetId).first();
+
+    if (!planet || !planet.strategy_id) {
+      return c.json({ strategy: null, message: 'No strategy assigned' });
+    }
+
+    const strategy = await DB.prepare(
+      'SELECT * FROM build_strategies WHERE id = ?'
+    ).bind(planet.strategy_id).first();
+
+    if (!strategy) {
+      return c.json({ strategy: null, message: 'Strategy not found' });
+    }
+
+    // Get strategy history for this planet
+    const history = await DB.prepare(
+      `SELECT * FROM strategy_history
+       WHERE planet_id = ?
+       ORDER BY created_at DESC
+       LIMIT 10`
+    ).bind(planetId).all();
+
+    return c.json({
+      strategy: {
+        id: strategy.id,
+        playerId: strategy.player_id,
+        name: strategy.name,
+        steps: JSON.parse((strategy.steps as string) || '[]'),
+      },
+      history: (history.results || []).map((h: any) => ({
+        id: h.id,
+        source: h.source,
+        overrideCount: h.override_count,
+        adoptionRate: h.adoption_rate,
+        changesSummary: h.changes_summary,
+        createdAt: h.created_at,
+      })),
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/h2m/learn/:playerId
+ * Trigger a learning cycle for a specific player
+ */
+app.post('/api/h2m/learn/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    // Get player's agent-enabled planets
+    const planetsResult = await DB.prepare(
+      'SELECT id FROM planets WHERE player_id = ? AND agent_enabled = 1'
+    ).bind(playerId).all();
+    const planetIds = ((planetsResult.results || []) as any[]).map((p: any) => p.id);
+
+    if (planetIds.length === 0) {
+      return c.json({ error: 'No agent-enabled planets for this player' }, 400);
+    }
+
+    // Detect overrides for each planet (last 30 days)
+    const since = Math.floor(Date.now() / 1000) - 30 * 24 * 3600;
+    let totalOverrides = 0;
+
+    for (const planetId of planetIds) {
+      const overrides = await detectOverrides(DB, planetId, since);
+      const stored = await storeOverrides(DB, overrides);
+      totalOverrides += stored;
+    }
+
+    // Generate improved strategy
+    const newStrategy = await generateImprovedStrategy(DB, playerId);
+    let strategiesApplied = 0;
+
+    for (const planetId of planetIds) {
+      const result = await applyLearnedStrategy(DB, planetId, newStrategy);
+      if (result.applied) strategiesApplied++;
+    }
+
+    return c.json({
+      playerId,
+      overridesDetected: totalOverrides,
+      strategiesApplied,
+      newStrategy,
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/h2m/report/:playerId
+ * Full H2M report for a player
+ */
+app.get('/api/h2m/report/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const report = await generateH2MReport(DB, playerId);
+    return c.json(report);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/h2m/adoption-rate/:playerId
+ * Adoption rate trend for a player
+ */
+app.get('/api/h2m/adoption-rate/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+  const windowDays = parseInt(c.req.query('days') || '7');
+
+  try {
+    const rate = await getAdoptionRate(DB, playerId, windowDays);
+    return c.json(rate);
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
