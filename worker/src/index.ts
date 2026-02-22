@@ -4,6 +4,8 @@ import { runBuildOrderAgent, runAgentForAllPlanets } from './agents/buildOrderAg
 import { Coordinate, Strategy, PlanetState } from './game/types';
 import { GalaxyService } from './game/services/galaxyService';
 import { fleetService } from './game/services/fleetService';
+import { mintCompressedNFT, buildMetadata } from './solana/mint';
+import type { MintRequest, NFTAsset, AssetType } from './solana/types';
 
 /**
  * Cosmic Protocol Worker
@@ -21,7 +23,13 @@ type Bindings = {
   PLANET_DO: DurableObjectNamespace;
   DB: D1Database;
   KV: KVNamespace;
+  R2: R2Bucket;
   AI: any; // Cloudflare Workers AI
+  // Solana devnet configuration
+  SOLANA_RPC_URL: string;
+  SOLANA_NETWORK: string;
+  MINT_AUTHORITY_KEY: string;
+  MERKLE_TREE_ADDRESS: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -736,6 +744,168 @@ app.post('/api/galaxy/colonize', async (c) => {
     return c.json(result, 201);
   } catch (error) {
     return c.json({ error: String(error) }, 500);
+  }
+});
+
+// ============================================================================
+// NFT ENDPOINTS (Solana devnet cNFTs)
+// ============================================================================
+
+/** Valid asset types for request validation */
+const VALID_NFT_ASSET_TYPES: AssetType[] = [
+  'ship_skin',
+  'planet_theme',
+  'booster',
+  'rare_ship',
+];
+
+/**
+ * POST /api/nft/mint
+ * Mint a compressed NFT on Solana devnet.
+ * Body: { playerId, assetType, name, imageUrl?, ownerPublicKey }
+ */
+app.post('/api/nft/mint', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<MintRequest>();
+    const { playerId, assetType, name, ownerPublicKey, imageUrl } = body;
+
+    // Validate required fields
+    if (!playerId || !assetType || !name || !ownerPublicKey) {
+      return c.json(
+        { error: 'playerId, assetType, name, and ownerPublicKey are required' },
+        400 as any,
+      );
+    }
+
+    // Validate asset type
+    if (!VALID_NFT_ASSET_TYPES.includes(assetType)) {
+      return c.json(
+        { error: `Invalid assetType. Must be one of: ${VALID_NFT_ASSET_TYPES.join(', ')}` },
+        400 as any,
+      );
+    }
+
+    // Validate ownerPublicKey is a plausible base58 Solana address (32-44 chars)
+    if (ownerPublicKey.length < 32 || ownerPublicKey.length > 44) {
+      return c.json(
+        { error: 'ownerPublicKey must be a valid Solana base58 address' },
+        400 as any,
+      );
+    }
+
+    // Build metadata
+    const nftImageUrl = imageUrl || `https://r2.cosmic-protocol.dev/default/${assetType}.png`;
+    const metadata = buildMetadata(name, assetType, nftImageUrl);
+
+    // Mint the cNFT on Solana devnet
+    const mintResult = await mintCompressedNFT(metadata, ownerPublicKey, {
+      R2: c.env.R2,
+      SOLANA_RPC_URL: c.env.SOLANA_RPC_URL,
+      SOLANA_NETWORK: c.env.SOLANA_NETWORK,
+      MINT_AUTHORITY_KEY: c.env.MINT_AUTHORITY_KEY,
+      MERKLE_TREE_ADDRESS: c.env.MERKLE_TREE_ADDRESS,
+    });
+
+    // Generate unique asset ID
+    const assetId = `nft-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+    // Store in D1
+    await DB.prepare(
+      `INSERT INTO nft_assets (id, player_id, mint_address, asset_type, name, image_url, metadata_uri, solana_tx, network, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        assetId,
+        playerId,
+        mintResult.assetId,
+        assetType,
+        name,
+        nftImageUrl,
+        `https://r2.cosmic-protocol.dev/nft-metadata/${assetId}.json`,
+        mintResult.signature,
+        'devnet',
+        Math.floor(Date.now() / 1000),
+      )
+      .run();
+
+    const asset: NFTAsset = {
+      id: assetId,
+      playerId,
+      mintAddress: mintResult.assetId,
+      assetType,
+      name,
+      imageUrl: nftImageUrl,
+      metadataUri: `https://r2.cosmic-protocol.dev/nft-metadata/${assetId}.json`,
+      solanaTx: mintResult.signature,
+      network: 'devnet',
+      createdAt: Math.floor(Date.now() / 1000),
+    };
+
+    return c.json({ asset, signature: mintResult.signature, assetId: mintResult.assetId }, 201 as any);
+  } catch (error) {
+    console.error('NFT mint error:', error);
+    return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+/**
+ * GET /api/nft/list
+ * List NFT assets for a player.
+ * Query: ?player_id=xxx
+ */
+app.get('/api/nft/list', async (c) => {
+  const playerId = c.req.query('player_id');
+  const DB = c.env.DB;
+
+  if (!playerId) {
+    return c.json({ error: 'player_id query param required' }, 400 as any);
+  }
+
+  try {
+    const result = await DB.prepare(
+      `SELECT id, player_id, mint_address, asset_type, name, image_url,
+              metadata_uri, solana_tx, network, created_at
+       FROM nft_assets
+       WHERE player_id = ?
+       ORDER BY created_at DESC
+       LIMIT 100`,
+    )
+      .bind(playerId)
+      .all();
+
+    return c.json(result.results || []);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+/**
+ * GET /api/nft/:id
+ * Get a single NFT asset by ID.
+ */
+app.get('/api/nft/:id', async (c) => {
+  const nftId = c.req.param('id');
+  const DB = c.env.DB;
+
+  try {
+    const asset = await DB.prepare(
+      `SELECT id, player_id, mint_address, asset_type, name, image_url,
+              metadata_uri, solana_tx, network, created_at
+       FROM nft_assets
+       WHERE id = ?`,
+    )
+      .bind(nftId)
+      .first();
+
+    if (!asset) {
+      return c.json({ error: 'NFT asset not found' }, 404 as any);
+    }
+
+    return c.json(asset);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
   }
 });
 

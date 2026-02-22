@@ -187,3 +187,22 @@ CREATE INDEX IF NOT EXISTS idx_battle_reports_planet ON battle_reports(defender_
 CREATE INDEX IF NOT EXISTS idx_battle_reports_date ON battle_reports(created_at);
 CREATE INDEX IF NOT EXISTS idx_moons_planet ON moons(planet_id);
 CREATE INDEX IF NOT EXISTS idx_debris_fields_coord ON debris_fields(galaxy, system);
+
+-- ============================================================================
+-- NFT ASSETS (Solana compressed NFTs)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS nft_assets (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL,
+  mint_address TEXT,
+  asset_type TEXT NOT NULL,       -- 'ship_skin' | 'planet_theme' | 'booster' | 'rare_ship'
+  name TEXT NOT NULL,
+  image_url TEXT,
+  metadata_uri TEXT,
+  solana_tx TEXT,
+  network TEXT DEFAULT 'devnet',  -- 'devnet' | 'mainnet-beta'
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_nft_player ON nft_assets(player_id);

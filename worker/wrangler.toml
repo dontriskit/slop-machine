@@ -23,5 +23,17 @@ id = "local"
 [ai]
 binding = "AI"
 
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "cosmic-protocol-assets"
+
 [[triggers.crons]]
 cron = "*/1 * * * *"
+
+# Solana devnet configuration
+[vars]
+SOLANA_RPC_URL = "https://api.devnet.solana.com"
+SOLANA_NETWORK = "devnet"
+# MINT_AUTHORITY_KEY and MERKLE_TREE_ADDRESS should be set as secrets:
+#   wrangler secret put MINT_AUTHORITY_KEY
+#   wrangler secret put MERKLE_TREE_ADDRESS
