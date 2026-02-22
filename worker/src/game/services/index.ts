@@ -104,3 +104,13 @@ export {
   getDefaultPreferences as getDefaultNotificationPreferences,
 } from './notificationService';
 export type { GetNotificationsOptions } from './notificationService';
+
+export type {
+  AbandonPlanetResult,
+  FleetSaveResult,
+  RecallFleetResult,
+} from './planetManagementService';
+export {
+  PlanetManagementService,
+  createPlanetManagementService,
+} from './planetManagementService';
