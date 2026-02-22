@@ -40,6 +40,7 @@ import { PlanetManagementService } from './game/services/planetManagementService
 import { defenseService, buildDefense, cancelDefenseBuild, createEmptyDefenseQueue, processDefenseQueue, getDefenseBuildQueue, rebuildDefensesAfterBattle, launchMissileAttack } from './game/services/defenseService';
 import { createNotification, getNotifications, markRead as markNotifRead, markAllRead as markAllNotifsRead, deleteNotification, getUnreadCount as getNotifUnreadCount, getPreferences as getNotifPreferences, setPreferences as setNotifPreferences, getDefaultPreferences as getDefaultNotifPreferences } from './game/services/notificationService';
 <<<<<<< HEAD
+import { enableVacationMode, disableVacationMode, isOnVacation, getVacationInfo, checkVacationStatus } from './game/services/vacationService';
 import { simulateBattlePreview, getBreakEvenFleet, compareFleetCompositions } from './game/services/battleSimulatorService';
 =======
 import { getDarkMatter, addDarkMatter, spendDarkMatter, getDarkMatterHistory, instantFinish, merchantTrade } from './game/services/darkMatterService';
@@ -1242,6 +1243,98 @@ app.get('/api/player/:id/stats', async (c) => {
     return c.json(stats);
   } catch (error) {
     return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+/**
+ * POST /api/player/:id/vacation/enable
+ * Enable vacation mode for a player.
+ * 
+ * Requirements:
+ *  - No active fleet missions
+ *  - No active research
+ *  - No active builds
+ * 
+ * Minimum vacation period: 2 days
+ */
+app.post('/api/player/:id/vacation/enable', async (c) => {
+  const playerId = c.req.param('id');
+  const DB = c.env.DB;
+
+  if (!playerId) {
+    return c.json({ error: 'playerId required' }, 400);
+  }
+
+  try {
+    const result = await enableVacationMode(DB, playerId);
+    if (!result.success) {
+      return c.json({ error: result.reason || 'Failed to enable vacation mode' }, 400);
+    }
+    return c.json({ success: true, message: 'Vacation mode enabled. Minimum 2 days required.' });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/player/:id/vacation/disable
+ * Disable vacation mode for a player.
+ * 
+ * Requirements:
+ *  - Must be on vacation
+ *  - Minimum 2 days must have passed
+ */
+app.post('/api/player/:id/vacation/disable', async (c) => {
+  const playerId = c.req.param('id');
+  const DB = c.env.DB;
+
+  if (!playerId) {
+    return c.json({ error: 'playerId required' }, 400);
+  }
+
+  try {
+    const result = await disableVacationMode(DB, playerId);
+    if (!result.success) {
+      return c.json({ error: result.reason || 'Failed to disable vacation mode' }, 400);
+    }
+    return c.json({ success: true, message: 'Vacation mode disabled.' });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/player/:id/vacation
+ * Get vacation status and information for a player.
+ * 
+ * Returns:
+ *  - isOnVacation: boolean
+ *  - vacationStart: unix seconds or null
+ *  - vacationMinEnd: unix seconds or null
+ *  - daysRemaining: number or null
+ *  - canEnable: boolean
+ *  - canDisable: boolean
+ */
+app.get('/api/player/:id/vacation', async (c) => {
+  const playerId = c.req.param('id');
+  const DB = c.env.DB;
+
+  if (!playerId) {
+    return c.json({ error: 'playerId required' }, 400);
+  }
+
+  try {
+    const [vacationInfo, vacationStatus] = await Promise.all([
+      getVacationInfo(DB, playerId),
+      checkVacationStatus(DB, playerId),
+    ]);
+
+    return c.json({
+      ...vacationInfo,
+      ...vacationStatus,
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
   }
 });
 

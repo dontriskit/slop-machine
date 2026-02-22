@@ -452,3 +452,7 @@ CREATE TABLE IF NOT EXISTS strategy_history (
 CREATE INDEX IF NOT EXISTS idx_strategy_history_player ON strategy_history(player_id);
 CREATE INDEX IF NOT EXISTS idx_strategy_history_planet ON strategy_history(planet_id);
 CREATE INDEX IF NOT EXISTS idx_strategy_history_date ON strategy_history(created_at);
+
+-- Vacation mode columns for player protection
+ALTER TABLE players ADD COLUMN vacation_start INTEGER;  -- unix seconds when vacation started, null = not on vacation
+ALTER TABLE players ADD COLUMN vacation_min_end INTEGER;  -- unix seconds minimum when vacation can end

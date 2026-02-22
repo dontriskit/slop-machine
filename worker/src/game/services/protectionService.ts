@@ -175,7 +175,7 @@ export async function logAttack(
   attackerId: string,
   defenderId: string
 ): Promise<void> {
-  const id = `${attackerId}-${defenderId}-${Date.now()}`;
+  const id = `${attackerId}-${defenderId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const timestamp = Math.floor(Date.now() / 1000);
 
   await db
