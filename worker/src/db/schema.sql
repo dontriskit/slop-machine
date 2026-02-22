@@ -414,23 +414,31 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 );
 
 -- ============================================================================
--- WEEKLY EVENTS SYSTEM
+-- MOON BUILDING LEVELS (per-moon building state)
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS game_events (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT NOT NULL DEFAULT '',
-  type TEXT NOT NULL,                -- EventType: double_production | double_xp | reduced_build_time | combat_weekend | harvest_bonus | fleet_speed
-  modifier_type TEXT NOT NULL,       -- ModifierType: production_multiplier | xp_multiplier | build_time_multiplier | attack_multiplier | debris_multiplier | fleet_speed_multiplier
-  modifier_value REAL NOT NULL,      -- Multiplier value (e.g. 2.0 = double, 0.5 = half time)
-  start_time INTEGER NOT NULL,       -- Unix seconds
-  end_time INTEGER NOT NULL,         -- Unix seconds
-  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
-  created_by TEXT NOT NULL DEFAULT 'system'
+CREATE TABLE IF NOT EXISTS moon_building_levels (
+  moon_id TEXT PRIMARY KEY REFERENCES moons(id),
+  lunar_base INTEGER NOT NULL DEFAULT 0,
+  sensor_phalanx INTEGER NOT NULL DEFAULT 0,
+  jump_gate INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
+CREATE INDEX IF NOT EXISTS idx_moon_building_levels_moon ON moon_building_levels(moon_id);
 
-CREATE INDEX IF NOT EXISTS idx_game_events_active ON game_events(start_time, end_time);
-CREATE INDEX IF NOT EXISTS idx_game_events_type ON game_events(type);
-CREATE INDEX IF NOT EXISTS idx_game_events_upcoming ON game_events(start_time);
-CREATE INDEX IF NOT EXISTS idx_game_events_history ON game_events(end_time DESC);
+-- ============================================================================
+-- JUMP GATE TELEPORTATION LOGS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS jump_gate_logs (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  source_moon_id TEXT NOT NULL REFERENCES moons(id),
+  destination_moon_id TEXT NOT NULL REFERENCES moons(id),
+  ships_json TEXT NOT NULL,       -- JSON serialized Ships object
+  teleported_at INTEGER NOT NULL  -- Unix timestamp of teleportation
+);
+CREATE INDEX IF NOT EXISTS idx_jump_gate_logs_player ON jump_gate_logs(player_id);
+CREATE INDEX IF NOT EXISTS idx_jump_gate_logs_source ON jump_gate_logs(source_moon_id, teleported_at);
+CREATE INDEX IF NOT EXISTS idx_jump_gate_logs_dest ON jump_gate_logs(destination_moon_id, teleported_at);
+CREATE INDEX IF NOT EXISTS idx_jump_gate_logs_time ON jump_gate_logs(teleported_at);

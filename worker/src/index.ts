@@ -5871,6 +5871,70 @@ app.get('/api/events/check/:type', async (c) => {
 });
 
 
+app.get('/api/jumpgate/status/:moonId', async (c) => {
+  const DB = c.env.DB;
+  const moonId = c.req.param('moonId');
+
+  try {
+    const status = await getJumpGateStatus(moonId, DB);
+    return c.json(status);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.post('/api/jumpgate/teleport', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json() as {
+      playerId: string;
+      sourceMoonId: string;
+      destinationMoonId: string;
+      ships: Record<string, number>;
+    };
+
+    if (!body.playerId || !body.sourceMoonId || !body.destinationMoonId || !body.ships) {
+      return c.json(
+        { error: 'playerId, sourceMoonId, destinationMoonId, and ships are required' },
+        400
+      );
+    }
+
+    const result = await teleportFleet(
+      {
+        playerId: body.playerId,
+        sourceMoonId: body.sourceMoonId,
+        destinationMoonId: body.destinationMoonId,
+        ships: body.ships as any,
+      },
+      DB
+    );
+
+    if (!result.success) {
+      return c.json({ error: result.error }, 400);
+    }
+
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.get('/api/jumpgate/logs/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+  const limit = parseInt(c.req.query('limit') ?? '20', 10);
+
+  try {
+    const logs = await getJumpGateLogs(playerId, DB, limit);
+    return c.json({ logs });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+
 export default {
   async fetch(request: Request, env: Bindings): Promise<Response> {
     return app.fetch(request, env);

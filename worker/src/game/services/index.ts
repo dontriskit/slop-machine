@@ -105,33 +105,21 @@ export {
 } from './notificationService';
 export type { GetNotificationsOptions } from './notificationService';
 
+// Jump Gate Teleportation
 export type {
-  EventType,
-  ModifierType,
-  GameEvent,
-  EventModifiers,
-  CreateEventParams,
-} from './eventService';
+  JumpGateStatus,
+  TeleportRequest,
+  TeleportResult,
+  JumpGateLog,
+} from './jumpGateService';
 export {
-  EVENT_TYPE_DEFAULTS,
-  VALID_EVENT_TYPES,
-  NEUTRAL_MODIFIERS,
-  getActiveEvents,
-  getUpcomingEvents,
-  getEventHistory,
-  getEventById,
-  createEvent,
-  deleteEvent,
-  getActiveModifiers,
-  computeModifiers,
-  applyProductionModifier,
-  applyBuildTimeModifier,
-  applyXpModifier,
-  applyAttackModifier,
-  applyDebrisModifier,
-  applyFleetSpeedModifier,
-  isEventTypeActive,
-  scheduleWeekendEvent,
-  EventService,
-  eventService,
-} from './eventService';
+  jumpGateService,
+  JUMP_GATE_COOLDOWN_SECONDS,
+  hasShipsToTransfer,
+  validateFleetAvailability,
+  isJumpGateReady,
+  getCooldownRemaining,
+  getJumpGateStatus,
+  teleportFleet,
+  getJumpGateLogs,
+} from './jumpGateService';
