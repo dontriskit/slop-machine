@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
 import { GameStore } from '../store/gameStore'
 
@@ -40,7 +40,7 @@ export default function Planet({
     }
   })
 
-  const handleClick = (e: THREE.Event) => {
+  const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()
     onSelectPlanet(planet.id)
   }
