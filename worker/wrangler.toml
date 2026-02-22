@@ -1,0 +1,46 @@
+name = "cosmic-protocol"
+main = "src/index.ts"
+compatibility_date = "2024-12-18"
+
+# Environment configuration
+env = {}
+
+# Triggers
+[triggers]
+crons = ["*/1 * * * *"]  # Run every minute
+
+# Durable Objects
+[[durable_objects.bindings]]
+name = "PLANET_DO"
+class_name = "PlanetDO"
+script_name = "cosmic-protocol"
+
+# D1 Database (SQLite)
+[[d1_databases]]
+binding = "DB"
+database_name = "og-game"
+
+# KV Namespaces
+[[kv_namespaces]]
+binding = "KV"
+namespace_id = "og-game-kv"
+
+# R2 Buckets
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "og-game"
+
+# Workers AI
+[ai]
+binding = "AI"
+
+# Build configuration
+[build]
+command = "npm run build"
+
+# Watch paths during development
+[env.development]
+vars = { ENVIRONMENT = "development" }
+
+[env.production]
+vars = { ENVIRONMENT = "production" }
