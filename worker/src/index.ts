@@ -50,7 +50,8 @@ app.get('/api/planet/:id/state', async (c) => {
   const PLANET_DO = c.env.PLANET_DO;
 
   try {
-    const stub = PLANET_DO.get(planetId);
+    const doId = PLANET_DO.idFromName(planetId);
+    const stub = PLANET_DO.get(doId);
     const response = await stub.fetch(new Request('https://planet/state'));
     const state = await response.json();
     return c.json(state);
@@ -68,7 +69,8 @@ app.get('/api/planet/:id/resources', async (c) => {
   const PLANET_DO = c.env.PLANET_DO;
 
   try {
-    const stub = PLANET_DO.get(planetId);
+    const doId = PLANET_DO.idFromName(planetId);
+    const stub = PLANET_DO.get(doId);
     const response = await stub.fetch(new Request('https://planet/resources'));
     const data = await response.json();
     return c.json(data);
@@ -86,7 +88,8 @@ app.get('/api/planet/:id/buildings', async (c) => {
   const PLANET_DO = c.env.PLANET_DO;
 
   try {
-    const stub = PLANET_DO.get(planetId);
+    const doId = PLANET_DO.idFromName(planetId);
+    const stub = PLANET_DO.get(doId);
     const response = await stub.fetch(new Request('https://planet/buildings'));
     const buildings = await response.json();
     return c.json(buildings);
@@ -104,7 +107,8 @@ app.get('/api/planet/:id/queue', async (c) => {
   const PLANET_DO = c.env.PLANET_DO;
 
   try {
-    const stub = PLANET_DO.get(planetId);
+    const doId = PLANET_DO.idFromName(planetId);
+    const stub = PLANET_DO.get(doId);
     const response = await stub.fetch(new Request('https://planet/queue/list'));
     const queue = await response.json();
     return c.json(queue);
@@ -125,14 +129,15 @@ app.post('/api/planet/:id/queue', async (c) => {
 
   try {
     const body = await c.req.json();
-    const stub = PLANET_DO.get(planetId);
+    const doId = PLANET_DO.idFromName(planetId);
+    const stub = PLANET_DO.get(doId);
     const response = await stub.fetch(new Request('https://planet/queue/add', { method: 'POST', body: JSON.stringify(body) }));
 
     if (!response.ok) {
-      return c.json({ error: await response.text() }, response.status);
+      return c.json({ error: await response.text() }, response.status as 400 | 404 | 500);
     }
 
-    const result = await response.json();
+    const result = (await response.json()) as { queueItem?: { buildingId: number; targetLevel: number } };
 
     // Log to build_history
     if (result.queueItem) {
@@ -168,11 +173,12 @@ app.post('/api/planet/:id/initialize', async (c) => {
 
   try {
     const body = await c.req.json();
-    const stub = PLANET_DO.get(planetId);
+    const doId = PLANET_DO.idFromName(planetId);
+    const stub = PLANET_DO.get(doId);
     const response = await stub.fetch(new Request('https://planet/initialize', { method: 'POST', body: JSON.stringify(body) }));
 
     if (!response.ok) {
-      return c.json({ error: await response.text() }, response.status);
+      return c.json({ error: await response.text() }, response.status as 400 | 404 | 500);
     }
 
     return c.json(await response.json());
@@ -276,7 +282,8 @@ app.post('/api/planet/:id/agent/run', async (c) => {
 
   try {
     // Get planet state
-    const planetStub = PLANET_DO.get(planetId);
+    const planetDoId = PLANET_DO.idFromName(planetId);
+    const planetStub = PLANET_DO.get(planetDoId);
     const stateRes = await planetStub.fetch(new Request('https://planet/state'));
     const planetState = (await stateRes.json()) as PlanetState;
 
@@ -295,12 +302,7 @@ app.post('/api/planet/:id/agent/run', async (c) => {
     };
 
     // Run agent
-    const decision = await runBuildOrderAgent(planetState, strategy, AI, {
-      planetId,
-      playerId: planetState.playerId,
-      coordinate: planetState.coordinate,
-      timestamp: Date.now(),
-    });
+    const decision = await runBuildOrderAgent(planetState, strategy.steps, { AI });
 
     if (!decision) {
       return c.json({ error: 'Agent failed to make decision' }, 500);
@@ -645,7 +647,8 @@ async function handleScheduled(event: ScheduledEvent, env: Bindings): Promise<vo
 
     for (const planet of planets) {
       // Get planet state
-      const stub = PLANET_DO.get(planet.id);
+      const doId = PLANET_DO.idFromName(planet.id);
+      const stub = PLANET_DO.get(doId);
       planetDOs.set(planet.id, stub);
 
       const stateRes = await stub.fetch(new Request('https://planet/state'));

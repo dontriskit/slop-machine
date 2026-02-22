@@ -381,7 +381,8 @@ export class GalaxyService {
 
     // --- Initialize PlanetDO ---
     const coordinate: Coordinate = { galaxy, system, position };
-    const stub = this.planetDO.get(planetId);
+    const doId = this.planetDO.idFromName(planetId);
+    const stub = this.planetDO.get(doId);
 
     await stub.fetch(
       new Request('https://planet/initialize', {
@@ -410,7 +411,8 @@ export class GalaxyService {
    */
   private async checkColonyShip(planetId: string): Promise<boolean> {
     try {
-      const stub = this.planetDO.get(planetId);
+      const doId = this.planetDO.idFromName(planetId);
+      const stub = this.planetDO.get(doId);
       const res = await stub.fetch(new Request('https://planet/state'));
       if (!res.ok) return false;
       const state = (await res.json()) as { fleet?: { colonyShip?: number } };

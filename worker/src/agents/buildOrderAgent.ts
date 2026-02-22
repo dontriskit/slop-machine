@@ -1,5 +1,7 @@
 import type { PlanetState, StrategyStep, AgentDecision } from '../game';
-import { BUILDING_NAME, BUILDING_ID, BUILDING_FACTORS, BUILDING_COSTS } from '../game/formulas';
+import { BUILDING_NAME, BUILDING_ID } from '../game/types';
+import { BUILDING_FACTORS, BUILDING_COSTS } from '../game/formulas';
+import type { BuildingLevels } from '../game/types';
 
 interface CloudflareEnv {
   AI: Ai;
@@ -29,7 +31,8 @@ export async function runBuildOrderAgent(
 
     // Call Workers AI with GLM-4.7-Flash model
     // Model ID: @cf/thudm/glm-4-0520 (GLM-4.7-Flash)
-    const response = await env.AI.run('@cf/thudm/glm-4-0520', {
+    // GLM-4-0520 model may not be in the type definitions yet; cast model name
+    const response = await (env.AI as { run(model: string, input: Record<string, unknown>): Promise<{ response?: string }> }).run('@cf/thudm/glm-4-0520', {
       messages: [
         {
           role: 'system',
@@ -45,7 +48,8 @@ Respond ONLY with a JSON object (no markdown, no explanation):
     });
 
     // Parse response
-    const responseText = String(response.response || response.text || '');
+    const aiResult = response as Record<string, unknown>;
+    const responseText = String(aiResult.response || aiResult.text || '');
 
     // Extract JSON from response (handle markdown code blocks)
     let jsonStr = responseText;
@@ -171,14 +175,15 @@ function generateBuildableInfo(state: PlanetState): string {
     // Get base cost from BUILDING_COSTS
     const buildingKey = Object.keys(BUILDING_ID).find(
       (k) => BUILDING_ID[k as keyof typeof BUILDING_ID] === buildingId
-    ) as keyof typeof BUILDING_ID;
+    ) as keyof BuildingLevels | undefined;
 
     if (!buildingKey) return;
 
-    const baseCost = BUILDING_COSTS[buildingKey];
+    const typedKey: keyof typeof BUILDING_COSTS = buildingKey;
+    const baseCost = BUILDING_COSTS[typedKey];
     if (!baseCost) return;
 
-    const factor = BUILDING_FACTORS[buildingKey] || 1.5;
+    const factor = BUILDING_FACTORS[typedKey] || 1.5;
     const nextLevel = level + 1;
 
     const costMetal = Math.floor(baseCost.metal * Math.pow(factor, nextLevel - 1));
@@ -304,4 +309,4 @@ async function runSingleAgentWithExecution(
 }
 
 // Legacy export for compatibility
-export { AgentDecision };
+export type { AgentDecision };
