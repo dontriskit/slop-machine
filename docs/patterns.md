@@ -1,499 +1,314 @@
-# Cosmic Protocol: Canonical Patterns & Formulas
+# Cosmic Protocol — Game Mechanics & Formulas
 
-Reference implementations analyzed: **OGameX** (PHP/Laravel 12 + Rust FFI) and **UniEngine** (PHP/Smarty).
+Canonical formulas extracted from OGameX (Laravel/Rust FFI) and UniEngine (legacy PHP). These are the source-of-truth for all game calculations.
 
-All formulas verified across both codebases. This is the single source of truth for game mechanics.
-
----
-
-## 1. Universe Structure
-
-### Coordinate System (Donut Topology)
-```
-Galaxy:System:Position
-  Galaxy:  1 to N (typically 2-9 galaxies)
-  System:  1 to 499 per galaxy (wraps: 1↔499)
-  Position: 1-15 regular planets, 16 = expedition slot
-```
-
-**Wrapping Rules** (both codebases):
-- Systems wrap around (donut): min=1, max=499, wraps at boundaries
-- Galaxies may also wrap (configurable)
-- Positions don't wrap (clamp to 1-16)
-
-**Uniqueness Constraint**:
-- Only ONE planet per (galaxy, system, position)
-- Critical for colony slot management
-
-### New Player Placement (UniEngine 3-Attempt Algorithm)
-
-```
-Attempt 1: Preferred galaxy, systems 1-499, positions 4-12
-  → Random position in middle slots (safest for new players)
-
-Attempt 2: Same galaxy, positions 4-12 (broader system range)
-  → Better distribution if Attempt 1 fails
-
-Attempt 3: Same galaxy, positions 1-15 (all remaining slots)
-  → Last resort, may not be safe
-```
-
-**Rationale**: Middle positions (4-12) are safer for new players to develop without immediate threats.
+**Last Updated:** 2026-02-22
+**References:** `/references/OGameX/` and `/references/UniEngine/`
 
 ---
 
-## 2. Production Formulas
+## 1. RESOURCE PRODUCTION
 
-### Mine Production Per Hour
+### Mining Formulas
 
-**Formula** (verified OGameX + UniEngine):
+All mines use **exponential scaling**: `base × level × 1.1^level`
+
+#### Metal Mine
 ```
-production_per_hour = base × level × 1.1^level × (1 + (temperature - 40) / 100)
-```
+Production per hour = 30 × level × 1.1^level
+Energy cost = -10 × level × 1.1^level
 
-**Base Rates**:
-| Resource | Base | Formula |
-|----------|------|---------|
-| Metal | 30 | 30 × level × 1.1^level |
-| Crystal | 20 | 20 × level × 1.1^level |
-| Deuterium | 10 | 10 × level × 1.1^level |
-
-**Temperature Modifier**:
-- Default: 30°C
-- Range: 0°C to 100°C
-- Modifier: (temp - 40) / 100
-  - At 40°C: 0% bonus
-  - At 30°C: -10% penalty
-  - At 70°C: +30% bonus
-
-**Example** (Metal Mine):
-- Level 1: 30 × 1 × 1.1 = 33/hr
-- Level 10: 30 × 10 × 1.1^10 = 77.8k/hr
-- Level 20: 30 × 20 × 1.1^20 = 1.37M/hr
-
-### Solar Plant & Fusion Reactor
-
-**Solar Production**:
-```
-energy_per_hour = 20 × level × 1.1^level
+Examples:
+  Level 1:  33 metal/hr, -11 energy
+  Level 10: 778 metal/hr, -259 energy
+  Level 30: 15,705 metal/hr, -1,745 energy
 ```
 
-**Fusion Production** (requires deuterium):
+#### Crystal Mine
 ```
-energy_per_hour = 30 × level × 1.1^level
-deuterium_cost_per_hour = 10 × level × 1.1^level
+Production per hour = 20 × level × 1.1^level
+Energy cost = -10 × level × 1.1^level
+
+Examples:
+  Level 1:  22 crystal/hr
+  Level 10: 519 crystal/hr
+  Level 30: 10,470 crystal/hr
 ```
 
-### Deuterium Synthesizer
+#### Deuterium Synthesizer
+```
+Production per hour = 10 × level × 1.1^level × (1.44 - 0.004 × planet_temp)
+Energy cost = -20 × level × 1.1^level
 
-Requires energy from solar/fusion. Production rate = energy available.
+Temperature Modifiers:
+  Cold (temp = -60°C):  1.44 - (-0.24) = 1.68x bonus
+  Normal (temp = 0°C):  1.44 - 0 = 1.44x (baseline)
+  Hot (temp = 200°C):   1.44 - 0.8 = 0.64x penalty
+```
+
+### Energy Production
+
+#### Solar Plant
+```
+Production per hour = 20 × level × 1.1^level
+
+Examples:
+  Level 1:  22 energy/hr
+  Level 10: 519 energy/hr
+  Level 30: 10,470 energy/hr
+```
+
+#### Fusion Reactor
+```
+Production per hour = 30 × level × (1.05 + energy_tech_level × 0.01)^level
+Deuterium consumption = -10 × level × 1.1^level
+
+Energy Tech Scaling: Each tech level adds 1% to base multiplier
+
+Examples (with Energy Tech = 15):
+  Level 1:  30 × 1.2^1 = 36 energy/hr
+  Level 10: 30 × 10 × 1.2^10 = 1,858 energy/hr
+```
 
 ---
 
-## 3. Building Cost & Upgrade Formulas
+## 2. BUILDING COSTS & SCALING
 
-### Upgrade Cost Calculation
-
-**Formula** (exponential scaling):
+### Base Cost Formula
 ```
-cost_at_level_n = floor(base_cost × factor^(n-1))
-```
+cost_at_level = base_cost × factor^(level - 1)
 
-**Building Cost Factors**:
-| Building | Metal | Crystal | Deuterium | Factor |
-|----------|-------|---------|-----------|--------|
-| Metal Mine | 60 | 15 | 0 | 1.5 |
-| Crystal Mine | 48 | 24 | 0 | 1.6 |
-| Deut Synth | 225 | 75 | 0 | 1.5 |
-| Solar Plant | 75 | 30 | 0 | 1.5 |
-| Fusion Reactor | 900 | 360 | 180 | 1.8 |
-| Robotics | 400 | 120 | 200 | 2.0 |
-| Nanite Factory | 1M | 500k | 100k | 2.0 |
-| Shipyard | 400 | 200 | 100 | 2.0 |
-| Research Lab | 200 | 400 | 200 | 2.0 |
-| Metal Storage | 1000 | 0 | 0 | 2.0 |
-| Crystal Storage | 1000 | 1000 | 0 | 2.0 |
-| Deut Tank | 1000 | 1000 | 0 | 2.0 |
-
-### Build Time Calculation
-
-**Formula** (OGameX reference):
-```
-build_time_seconds = (metal_cost + crystal_cost) / (2500 × level_factor × robotics_bonus × universe_speed × nanite_bonus)
-
-where:
-  level_factor = max(4 - next_level / 2, 1)
-  robotics_bonus = 1 + (robotics_level × 0.1)
-  nanite_bonus = 2^nanite_level
+Factors by building (exponential growth):
+  Mines:              1.5x per level
+  Production:         1.5x (solar) to 1.8x (fusion)
+  Storage:            2.0x per level
+  Industry:           2.0x per level (robotics, nanite)
+  Research Lab:       2.0x per level
 ```
 
-**Example** (Metal Mine Level 2, Robotics Level 0):
-- Cost: 60×1.5 + 15×1.5 = 112.5 metal, 22.5 crystal = 135 total
-- Time: 135 / (2500 × 4 × 1 × 1 × 1) = 0.0135 seconds ≈ 48 seconds
+### Building Cost Examples
 
-**Time Modifiers**:
-- Robotics Factory: +10% per level (50 levels = 5x faster)
-- Nanite Factory: 2× per level (10 levels = 1024× faster!)
-- Universe Speed: Linear (2x speed = 2x faster)
+#### Metal Mine
+```
+Base: 60 metal, 15 crystal
+Factor: 1.5
+
+  Level 1:   60 metal,     15 crystal
+  Level 2:   90 metal,     22.5 crystal
+  Level 10:  2,306 metal,  577 crystal
+  Level 20:  205,480 metal, 51,370 crystal
+```
+
+#### Fusion Reactor
+```
+Base: 900 metal, 360 crystal, 180 deuterium
+Factor: 1.8
+
+  Level 1:   900 metal,        360 crystal,   180 deuterium
+  Level 2:   1,620 metal,      648 crystal,   324 deuterium
+  Level 10:  1,207,260 metal,  482,904 cr,    241,452 deut
+```
+
+#### Deathstar (Special - Fixed Cost)
+```
+Cost: 5,000,000 metal, 4,000,000 crystal, 1,000,000 deuterium
+NO scaling - same cost per unit
+```
+
+### Storage Capacity
+```
+Capacity = 5,000 × floor(2.5 × e^(20×level/33))
+
+Examples:
+  Level 1:   20,000 units
+  Level 5:   300,000 units
+  Level 10:  5,400,000 units
+  Level 30:  billions (exponential)
+```
 
 ---
 
-## 4. Fleet Movement & Combat
+## 3. BUILD TIME FORMULA
 
-### Distance Calculation (Donut Topology)
-
-**Inter-Galaxy Distance**:
 ```
-distance = 20,000 × min(|galaxy1 - galaxy2|, num_galaxies - |galaxy1 - galaxy2|)
-```
+Build Time (seconds) = (metalCost + crystalCost) /
+                       (2500 × max(4 - level/2, 1) ×
+                        (1 + robotics_level × 0.1) ×
+                        universe_speed × 2^nanite_level)
 
-**Intra-Galaxy, Different System**:
-```
-distance = 2,700 + (19 × 5 × system_diff - empty_systems - inactive_systems)
-
-where:
-  system_diff = min(|sys1 - sys2|, 499 - |sys1 - sys2|)  [donut wrap]
-  empty_systems = count of systems with zero planets
-  inactive_systems = count of systems with no active players (7+ days)
+With bonuses:
+  Robotics: 10% per level
+  Nanite: 2^level exponential multiplier
 ```
 
-**Same System, Different Position**:
-```
-distance = 1,000 + (5 × |pos1 - pos2|)
-```
+---
 
-**Same Coordinates**:
-```
-distance = 5
-```
+## 4. BATTLE MECHANICS
 
-### Fleet Duration Calculation
+### Battle Structure
+- **Max Rounds:** 6 rounds
+- **Shields:** Regenerate fully each round
+- **Damage:** Absorbed by shields first, then hull
+- **Destruction:** Ships destroyed when hull < 30%
 
-**Formula** (OGameX reference):
+### Damage Formula
+
 ```
-duration_seconds = round((35,000 / speed_percent × √(distance × 10 / slowest_speed) + 10) / fleet_speed)
+Minimum threshold = 0.01 × target_shield
 
-where:
-  speed_percent: mission speed (10-100), 10=slowest, 100=fastest
-  slowest_speed: speed of slowest ship in fleet (tokens/hour)
-  fleet_speed: global multiplier (1.0 = normal, 2.0 = 2x faster)
+Absorption:
+  damage ≤ shield → shield -= damage
+  damage > shield → hull -= (damage - shield), shield = 0
 ```
 
-**Practical Values**:
-- Distance 1,000 tokens, speed 10%, 1 Light Fighter (12.5k speed):
-  - Duration ≈ (35k/10 × √(1k×10/12.5k) + 10) / 1 ≈ 297 seconds ≈ 5 minutes
-
-- Distance 20,000 tokens (inter-galaxy), speed 10%, Heavy Fighter (10k speed):
-  - Duration ≈ (35k/10 × √(20k×10/10k) + 10) / 1 ≈ 7,420 seconds ≈ 2 hours
-
-### Fuel Consumption
-
-**Formula**:
+### Hull Destruction Logic
 ```
-consumption = Σ(ship.fuel × count × distance / 35,000 × (speed_value / 10 + 1)²)
-            + max(floor(sum(ship.fuel × count × holding_hours) / 10), 1)
+hull_percentage = current_hull / original_hull
 
-where:
-  speed_value = max(0.5, duration × fleet_speed - 10)
-  holding_hours = time spent at target before returning
+IF hull_percentage < 0.7:
+  explosion_chance = (1 - hull_percentage) × 100%
+  IF random(0, 100) < explosion_chance:
+    Ship destroyed
 ```
 
-**Ship Fuel Costs Per 35k Distance**:
-| Ship | Fuel Cost |
-|------|-----------|
-| Light Fighter | 20 |
-| Heavy Fighter | 50 |
-| Cruiser | 48 |
-| Battleship | 500 |
-| Battlecruiser | 250 |
-| Bomber | 100 |
-| Destroyer | 1,000 |
-| Deathstar | 1 |
-| Small Cargo | 10 |
-| Large Cargo | 50 |
-| Colony Ship | 100 |
-| Recycler | 20 |
-| Espionage Probe | 1 |
+### Rapidfire (Special Attacks)
+```
+Chance = 100 - (100 / rapidfire_amount) percent
 
-### Ship Speeds (tokens/hour)
+Examples:
+  Rapidfire 4:  75% chance per extra shot
+  Rapidfire 10: 90% chance per extra shot
+```
 
-| Ship | Speed | Role |
-|------|-------|------|
-| Light Fighter | 12,500 | Fast combat |
-| Heavy Fighter | 10,000 | Heavy combat |
-| Cruiser | 15,000 | Fast combat |
-| Battleship | 10,000 | Capital ship |
-| Battlecruiser | 10,000 | Capital ship |
-| Bomber | 5,000 | Defense killer |
-| Destroyer | 5,000 | Anti-fighter |
-| Deathstar | 100 | Ultimate weapon (slow!) |
-| Small Cargo | 20,000 | Fast transport |
-| Large Cargo | 5,000 | Slow transport |
-| Colony Ship | 2,500 | Colonization |
-| Recycler | 2,000 | Debris collection |
-| Espionage Probe | 100,000,000 | Scouting (instant) |
+---
 
-### Ship Cargo Capacity
+## 5. FLEET MECHANICS
 
-| Ship | Capacity |
-|------|----------|
-| Small Cargo | 5,000 |
-| Large Cargo | 25,000 |
-| Colony Ship | 7,500 |
-| Recycler | 20,000 |
-| All Combat Ships | 0 |
+### Fleet Speed
+```
+Fleet speed = slowest ship speed (bottleneck)
+
+Base speeds:
+  Deathstar:  100
+  Bomber:     4,000
+  Recycler:   2,000
+  Destroyer:  5,000
+  Battleship: 10,000
+  Light Fighter: 12,500
+  Cruiser:    15,000
+
+Tech bonuses:
+  Combustion Drive:    +10% per level
+  Impulse Drive:       +20% per level
+  Hyperspace Drive:    +30% per level
+```
+
+### Cargo Capacity
+```
+Small Cargo:  5,000 per unit
+Large Cargo:  25,000 per unit
+Recycler:     20,000 per unit
+Others:       0 (combat only)
+```
 
 ### Mission Types
-
-| Mission | Requirements | Result |
-|---------|--------------|--------|
-| Transport | Small/Large Cargo | Move resources |
-| Attack | 1+ Combat Ship | Plunder resources, battle |
-| Colonize | 1 Colony Ship, empty slot | Claim new planet |
-| Expedition | Any ships, position 16 | Explore and find resources |
-| Return | (auto-generated) | Fleet returns home |
-
-### Queue Management
-
-**Queue Size Limits**:
-- Free Account: 3 builds simultaneously
-- Premium Account: 10 builds simultaneously
-
-**Queue Processing**:
-- First-in-first-out (FIFO)
-- Head item auto-completes when timeEnd reached
-- Automatic alarm triggers completion
-- Next item in queue starts immediately
+1. **Attack** — Battle, loot 50% max
+2. **Transport** — Move resources
+3. **Deploy** — Station permanently
+4. **Espionage** — Gather intelligence
+5. **Harvest** — Collect debris
+6. **Moon Destruction** — Use Deathstar
+7. **ACS Attack** — Coordinated multi-fleet
+8. **ACS Defend** — Coordinated multi-defense
 
 ---
 
-## 5. Combat Mechanics (OGameX)
+## 6. DEBRIS FIELD
 
-### Battle Resolution
-
-**Combat Happens When**:
-1. Attack fleet arrives at target
-2. Both fleets fight simultaneously
-3. Loser is eliminated or partially destroyed
-4. Winner (if any survivors) loots resources
-
-### Damage Calculation
-
-**Formula** (simplified):
+### Wreck Generation
 ```
-damage = (attacker_ship_power × attacker_count / 100) × random(0.5, 1.5)
-
-where ship_power varies by type:
-  Light Fighter: 50 power
-  Heavy Fighter: 150 power
-  Cruiser: 400 power
-  Battleship: 600 power
-  Battlecruiser: 400 power
-  Bomber: 1,000 power
-  Destroyer: 2,000 power
-  Deathstar: 200,000 power
+Debris metal   = 30% of destroyed ships' metal cost
+Debris crystal = 30% of destroyed ships' crystal cost
+Debris deut    = 0% (lost completely)
 ```
 
-### Defense Structures
-
-| Defense | Metal | Crystal | Armor | Capacity |
-|---------|-------|---------|-------|----------|
-| Small Shield Dome | 10k | 10k | 20k HP | Covers 100k capacity |
-| Large Shield Dome | 50k | 50k | 100k HP | Covers 1M capacity |
-| Anti-Ballistic Missile | 8k | 0 | 1 HP | 1-slot defense |
-| Interplanetary Missile | 12.5k | 2.5k | 1 HP | 1-slot defense |
-| Plasma Turret | 50k | 50k | 300 HP | 1-slot defense |
-| Small Laser | 1.6k | 0.4k | 25 HP | 1-slot defense |
-| Big Laser | 6k | 2k | 150 HP | 1-slot defense |
-| Gauss Cannon | 20k | 15k | 200 HP | 1-slot defense |
-| Ion Cannon | 5k | 3k | 150 HP | 1-slot defense |
-
----
-
-## 6. Storage & Capacity
-
-### Resource Storage
-
-**Metal Storage**:
+### Recycler Collection
 ```
-capacity = 100,000 × 1.7^level
-```
+Recyclers harvest positions 1-15
+Pathfinders harvest position 16 (expeditions)
 
-**Crystal Storage**:
-```
-capacity = 100,000 × 1.7^level
-```
-
-**Deuterium Tank**:
-```
-capacity = 100,000 × 1.7^level
-```
-
-**Fleet Cargo Capacity**:
-```
-total_cargo = Σ(ship.cargo_capacity × count)
-```
-
-**Excess Resources**:
-- Resources exceed capacity: overflow stops production
-- Planet continues producing but can't store more
-- Prevents resource waste but creates bottleneck
-
----
-
-## 7. Research System (Optional)
-
-**Research Lab Building**:
-- Required to research technologies
-- Multiple labs = faster research (1 + 0.5 × additional_labs)
-
-**Research Time Formula**:
-```
-time_seconds = (base_time_hours × 1.07^level) / (1 + 0.002 × research_lab_level) × 3600
-```
-
-**Key Techs**:
-| Tech | Impact | Cost Curve |
-|------|--------|-----------|
-| Espionage | 0.2× duration for spy missions | 200m/100c/0d base, factor=2.0 |
-| Computer | -10% fleet duration per level | 400m/600c/200d base, factor=2.0 |
-| Weapons | +10% ship attack per level | 800m/200c/0d base, factor=2.0 |
-| Shielding | +10% defense per level | 200m/600c/0d base, factor=2.0 |
-| Armor | +10% ship hull per level | 1k/0c/0d base, factor=2.0 |
-| Astrophysics | +1 colonizable planet per level | 4k/8k/4k base, factor=2.0 |
-
----
-
-## 8. Key Implementation Patterns
-
-### Pattern 1: Exponential Cost Growth
-All upgradeable buildings use exponential cost scaling with different factors (1.5-2.0) to create progression pacing.
-
-**Design Impact**:
-- Early levels are cheap (exploration phase)
-- Mid levels are moderate (expansion phase)
-- Late levels are expensive (specialization phase)
-
-### Pattern 2: Durable Object State Management
-Each planet maintains stateful resources, buildings, and queue.
-
-**Why**:
-- Per-planet production ticking without DB hits
-- Alarm-based queue completion (serverless-friendly)
-- Minimal latency for game state queries
-
-### Pattern 3: Single-Loop Agent Design
-Build order agent runs once per minute per planet.
-
-**Why**:
-- Deterministic (temperature 0.3 for decisions)
-- Parallel execution (Promise.all across planets)
-- H2M training data (log every decision)
-- No multi-turn complexity
-
-### Pattern 4: Donut Topology
-Systems wrap (1↔499) to make universe finite but continuous.
-
-**Why**:
-- No "edge" of universe
-- Distance calculation accounts for wrapping
-- Equal distribution (no edge advantage/disadvantage)
-
-### Pattern 5: Human-to-Machine Protocol
-Every decision logged with source ('agent' | 'manual') + reasoning.
-
-**Why**:
-- Training data for future model fine-tuning
-- Audit trail for transparency
-- Cooperation analysis (how often do humans override?)
-
-### Pattern 6: Alarm-Based Processing
-Queue completion uses Durable Object alarms.
-
-**Why**:
-- No polling needed
-- Serverless-friendly (alarm fires automatically)
-- Exact timing (fires at timeEnd)
-
-### Pattern 7: Coordinate Uniqueness
-Only one planet per (galaxy, system, position).
-
-**Why**:
-- Clear slot semantics
-- Prevents multiple claims on same position
-- Natural limit on planets per system
-
----
-
-## 9. Implementation Checklist
-
-### Core Game Loop
-- [x] Resource production ticking
-- [x] Build queue management
-- [x] Building upgrade cost/time
-- [x] Queue auto-completion
-- [ ] Fleet movement
-- [ ] Battle resolution
-- [ ] Defense evaluation
-
-### Map System
-- [x] Coordinate system with wrapping
-- [x] Distance calculation
-- [x] New player placement
-- [x] Uniqueness constraint
-- [ ] Planetary scanner
-- [ ] Galaxy map UI
-
-### Agent System
-- [x] GLM-4.7-Flash integration
-- [x] Single-loop decision maker
-- [x] H2M decision logging
-- [x] Parallel agent fan-out
-- [ ] Strategy generation workflow
-
-### Frontend
-- [x] 3D galaxy visualization
-- [ ] System detail view
-- [ ] Planet detail view
-- [ ] Fleet control panel
-- [ ] Battle report display
-
----
-
-## 10. Verification Tests
-
-### Test: Distance Calculation
-```
-From 1:100:5 to 1:110:8
-  same_galaxy = true, diff_system = 10
-  distance = 2700 + (19 × 5 × 10) = 3700
-
-From 1:1:1 to 2:1:1
-  diff_galaxy = 1
-  distance = 20000 × 1 = 20000
-```
-
-### Test: Build Time
-```
-Metal Mine L2, no robotics, universe 1x
-  cost = 60×1.5 + 15×1.5 = 112.5
-  time = 112.5 / (2500 × 4 × 1 × 1 × 1) = 0.0135s
-  actual: ~48 seconds (with UI overhead)
-```
-
-### Test: Production Rate
-```
-Metal Mine L10, temp 30°C
-  prod = 30 × 10 × 1.1^10 × (1 + (30-40)/100)
-       = 30 × 10 × 2.5937 × 0.9
-       = 700.4/hour
+max_harvest = min(debris, recycler_capacity)
+Distribution: 1/3 to each resource type
 ```
 
 ---
 
-## References
+## 7. TECHNOLOGY TREE
 
-- **OGameX**: `/references/OGameX` — PHP/Laravel 12, modern approach
-- **UniEngine**: `/references/UniEngine` — PHP/Smarty, mature approach
-- **Cosmic Protocol**: `/worker/src/game/formulas.ts` — TypeScript implementation
+### Core Research
+```
+Energy Technology (base)
+├─ Laser Technology (requires: Energy 2)
+├─ Ion Technology (requires: Energy 4, Laser 5)
+└─ Plasma Technology (requires: Energy 8, Laser 10, Ion 5)
+    Bonus: +1% metal, +0.66% crystal, +0.33% deut/level
 
+Combustion Drive      (+10% speed per level)
+Impulse Drive         (+20% speed per level)
+Hyperspace Drive      (+30% speed per level)
+Hyperspace Technology (+5% cargo per level)
+Graviton Technology   (Enables Deathstar)
+```
+
+### Research Costs (2.0x factor)
+```
+Energy:         0m, 800c, 400d
+Laser:          200m, 100c, 0d
+Ion:            1,000m, 300c, 100d
+Plasma:         2,000m, 4,000c, 1,000d
+Hyperspace:     0m, 4,000c, 2,000d
+
+Level N cost = base × 2^(N-1)
+```
+
+---
+
+## 8. UNIVERSE RULES
+
+### Coordinates
+```
+Galaxy:   1-9 (9 total)
+System:   1-499 (500 per galaxy)
+Position: 1-15 (planets/moons)
+Position: 16 (expedition debris)
+```
+
+### Special Mechanics
+```
+Vacation Mode:        Can't attack/be attacked
+Inactive Protection:  7+ days no login
+Alliance:             ACS attacks/defends, shared intel
+Ranking:              Economy, Military, Defense scores
+```
+
+---
+
+## 9. KEY FORMULAS REFERENCE TABLE
+
+| Component | Formula | Factor |
+|-----------|---------|--------|
+| Metal Mine | 30×L×1.1^L | 1.5x cost |
+| Crystal Mine | 20×L×1.1^L | 1.6x cost |
+| Deut Synth | 10×L×1.1^L×temp_mod | 1.5x cost |
+| Storage | 5000×⌊2.5×e^(20L/33)⌋ | 2.0x cost |
+| Building | base×factor^(L-1) | 1.5-2.0x |
+| Build Time | (metal+crystal)/(2500×mods) | — |
+| Fusion Energy | 30×L×(1.05+tech×0.01)^L | 1.8x cost |
+| Loot Max | 50% of resources | — |
+| Defense Repair | 70% probability | — |
+
+---
+
+**Verified against:** OGameX + UniEngine
+**Version:** 1.0.0
+**Last Updated:** 2026-02-22

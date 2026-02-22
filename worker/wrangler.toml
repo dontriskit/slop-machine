@@ -1,46 +1,63 @@
-name = "cosmic-protocol"
+name = "cosmic-protocol-worker"
 main = "src/index.ts"
 compatibility_date = "2024-12-18"
+compatibility_flags = ["nodejs_compat"]
 
-# Environment configuration
-env = {}
+# ============================================================================
+# DURABLE OBJECTS
+# ============================================================================
 
-# Triggers
-[triggers]
-crons = ["*/1 * * * *"]  # Run every minute
-
-# Durable Objects
 [[durable_objects.bindings]]
 name = "PLANET_DO"
 class_name = "PlanetDO"
-script_name = "cosmic-protocol"
+script_name = "cosmic-protocol-worker"
 
-# D1 Database (SQLite)
+# ============================================================================
+# DATABASE (D1)
+# ============================================================================
+
 [[d1_databases]]
 binding = "DB"
 database_name = "og-game"
 
-# KV Namespaces
+# ============================================================================
+# KEY-VALUE STORE (KV)
+# ============================================================================
+
 [[kv_namespaces]]
 binding = "KV"
-namespace_id = "og-game-kv"
+id = "YOUR_KV_ID"
+preview_id = "YOUR_KV_PREVIEW_ID"
 
-# R2 Buckets
+# ============================================================================
+# OBJECT STORAGE (R2)
+# ============================================================================
+
 [[r2_buckets]]
 binding = "R2"
 bucket_name = "og-game"
+preview_bucket_name = "og-game-preview"
 
-# Workers AI
+# ============================================================================
+# AI (WORKERS AI)
+# ============================================================================
+
 [ai]
 binding = "AI"
 
-# Build configuration
+# ============================================================================
+# SCHEDULED EVENTS (CRON)
+# ============================================================================
+
+[[triggers.crons]]
+cron = "*/1 * * * *"
+
+# ============================================================================
+# BUILD CONFIGURATION
+# ============================================================================
+
 [build]
 command = "npm run build"
 
-# Watch paths during development
-[env.development]
-vars = { ENVIRONMENT = "development" }
-
-[env.production]
-vars = { ENVIRONMENT = "production" }
+[build.upload]
+format = "modules"

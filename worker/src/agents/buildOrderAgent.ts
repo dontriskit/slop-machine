@@ -203,5 +203,105 @@ function generateBuildableInfo(state: PlanetState): string {
   return buildable.length > 0 ? buildable.join('\n') : '  No buildings currently buildable';
 }
 
+// ============================================================================
+// BATCH AGENT EXECUTION (for Cron)
+// ============================================================================
+
+export interface RunAgentAllPlanetsResult {
+  total: number;
+  succeeded: number;
+  failed: number;
+}
+
+/**
+ * Run build order agent for all planets in parallel
+ * Called from Cron trigger every minute
+ */
+export async function runAgentForAllPlanets(
+  planetStates: PlanetState[],
+  strategies: Map<string, any>,
+  planetDOs: Map<string, any>,
+  ai: Ai,
+  db: D1Database
+): Promise<RunAgentAllPlanetsResult> {
+  const results = await Promise.allSettled(
+    planetStates.map((state) =>
+      runSingleAgentWithExecution(state, strategies.get(state.planetId), planetDOs.get(state.planetId), ai, db)
+    )
+  );
+
+  const succeeded = results.filter((r) => r.status === 'fulfilled' && r.value).length;
+  const failed = results.filter((r) => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value)).length;
+
+  return {
+    total: planetStates.length,
+    succeeded,
+    failed,
+  };
+}
+
+/**
+ * Run agent for a single planet and execute the decision
+ */
+async function runSingleAgentWithExecution(
+  state: PlanetState,
+  strategy: any,
+  planetDO: any,
+  ai: Ai,
+  db: D1Database
+): Promise<boolean> {
+  try {
+    const decision = await runBuildOrderAgent(state, strategy?.steps || [], { AI: ai });
+
+    if (!decision || decision.action !== 'build' || !decision.buildingId) {
+      return false;
+    }
+
+    // Execute the build
+    const response = await planetDO.fetch(
+      new Request('https://planet/queue/add', {
+        method: 'POST',
+        body: JSON.stringify({
+          buildingId: decision.buildingId,
+          targetLevel: (state.buildings[
+            Object.keys(state.buildings).find(
+              (k) => BUILDING_ID[k as keyof typeof BUILDING_ID] === decision.buildingId
+            ) as keyof typeof state.buildings
+          ] || 0) + 1,
+        }),
+      })
+    );
+
+    if (!response.ok) {
+      return false;
+    }
+
+    // Log the decision
+    await db.prepare(
+      `INSERT INTO build_history (id, planet_id, building_id, level, source, ai_reason, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(
+        `${state.planetId}-${Date.now()}`,
+        state.planetId,
+        decision.buildingId,
+        (state.buildings[
+          Object.keys(state.buildings).find(
+            (k) => BUILDING_ID[k as keyof typeof BUILDING_ID] === decision.buildingId
+          ) as keyof typeof state.buildings
+        ] || 0) + 1,
+        'agent',
+        decision.reason,
+        Math.floor(Date.now() / 1000)
+      )
+      .run();
+
+    return true;
+  } catch (error) {
+    console.error(`Agent execution error for planet ${state.planetId}:`, error);
+    return false;
+  }
+}
+
 // Legacy export for compatibility
 export { AgentDecision };
