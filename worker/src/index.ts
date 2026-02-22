@@ -4,6 +4,22 @@ import { runBuildOrderAgent, runAgentForAllPlanets } from './agents/buildOrderAg
 import { Coordinate, Strategy, PlanetState } from './game/types';
 import { GalaxyService } from './game/services/galaxyService';
 import { fleetService } from './game/services/fleetService';
+import {
+  createAlliance,
+  dissolveAlliance,
+  applyToAlliance,
+  acceptApplication,
+  rejectApplication,
+  kickMember,
+  leaveAlliance,
+  promoteToOfficer,
+  demoteToMember,
+  getAllianceMembers,
+  getAllianceApplications,
+  getPlayerAlliance,
+  getAllianceById,
+  searchAlliances,
+} from './game/services/allianceService';
 
 /**
  * Cosmic Protocol Worker
@@ -734,6 +750,378 @@ app.post('/api/galaxy/colonize', async (c) => {
     }
 
     return c.json(result, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// ============================================================================
+// ALLIANCE ENDPOINTS
+// ============================================================================
+
+/**
+ * POST /api/alliance
+ * Create a new alliance.
+ * Body: { playerId, name, tag, description? }
+ */
+app.post('/api/alliance', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<{
+      playerId: string;
+      name: string;
+      tag: string;
+      description?: string;
+    }>();
+
+    if (!body.playerId || !body.name || !body.tag) {
+      return c.json({ error: 'playerId, name, and tag are required' }, 400);
+    }
+
+    const alliance = await createAlliance(
+      body.playerId,
+      body.name,
+      body.tag,
+      body.description ?? '',
+      DB,
+    );
+
+    return c.json(alliance, 201);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('UNIQUE') || msg.includes('already')) {
+      return c.json({ error: msg }, 409);
+    }
+    if (msg.includes('not found') || msg.includes('required')) {
+      return c.json({ error: msg }, 400);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * GET /api/alliance/:id
+ * Get alliance details.
+ */
+app.get('/api/alliance/:id', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const alliance = await getAllianceById(c.req.param('id'), DB);
+    return c.json(alliance);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found')) return c.json({ error: msg }, 404);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * DELETE /api/alliance/:id
+ * Dissolve alliance (founder only).
+ * Body: { requesterId }
+ */
+app.delete('/api/alliance/:id', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<{ requesterId: string }>();
+
+    if (!body.requesterId) {
+      return c.json({ error: 'requesterId is required' }, 400);
+    }
+
+    await dissolveAlliance(c.req.param('id'), body.requesterId, DB);
+    return c.json({ success: true });
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found')) return c.json({ error: msg }, 404);
+    if (msg.includes('Only the founder')) return c.json({ error: msg }, 403);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * GET /api/alliance/:id/members
+ * List all members and their roles.
+ */
+app.get('/api/alliance/:id/members', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const members = await getAllianceMembers(c.req.param('id'), DB);
+    return c.json(members);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found')) return c.json({ error: msg }, 404);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * GET /api/alliance/:id/applications
+ * List pending applications (officers/founders only in practice).
+ */
+app.get('/api/alliance/:id/applications', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const applications = await getAllianceApplications(c.req.param('id'), DB);
+    return c.json(applications);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/alliance/:id/apply
+ * Submit an application to join the alliance.
+ * Body: { playerId, message? }
+ */
+app.post('/api/alliance/:id/apply', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<{ playerId: string; message?: string }>();
+
+    if (!body.playerId) {
+      return c.json({ error: 'playerId is required' }, 400);
+    }
+
+    const application = await applyToAlliance(
+      body.playerId,
+      c.req.param('id'),
+      body.message ?? '',
+      DB,
+    );
+
+    return c.json(application, 201);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found')) return c.json({ error: msg }, 404);
+    if (msg.includes('already')) return c.json({ error: msg }, 409);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * POST /api/alliance/:id/accept/:playerId
+ * Accept a membership application.
+ * Body: { officerId }
+ */
+app.post('/api/alliance/:id/accept/:playerId', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<{ officerId: string }>();
+
+    if (!body.officerId) {
+      return c.json({ error: 'officerId is required' }, 400);
+    }
+
+    const member = await acceptApplication(
+      c.req.param('id'),
+      c.req.param('playerId'),
+      body.officerId,
+      DB,
+    );
+
+    return c.json(member);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found')) return c.json({ error: msg }, 404);
+    if (msg.includes('Only officers') || msg.includes('Cannot')) return c.json({ error: msg }, 403);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * POST /api/alliance/:id/reject/:playerId
+ * Reject a membership application.
+ * Body: { officerId }
+ */
+app.post('/api/alliance/:id/reject/:playerId', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<{ officerId: string }>();
+
+    if (!body.officerId) {
+      return c.json({ error: 'officerId is required' }, 400);
+    }
+
+    await rejectApplication(
+      c.req.param('id'),
+      c.req.param('playerId'),
+      body.officerId,
+      DB,
+    );
+
+    return c.json({ success: true });
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found')) return c.json({ error: msg }, 404);
+    if (msg.includes('Only officers')) return c.json({ error: msg }, 403);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * POST /api/alliance/:id/kick/:playerId
+ * Kick a member from the alliance.
+ * Body: { officerId }
+ */
+app.post('/api/alliance/:id/kick/:playerId', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<{ officerId: string }>();
+
+    if (!body.officerId) {
+      return c.json({ error: 'officerId is required' }, 400);
+    }
+
+    await kickMember(
+      c.req.param('id'),
+      c.req.param('playerId'),
+      body.officerId,
+      DB,
+    );
+
+    return c.json({ success: true });
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found')) return c.json({ error: msg }, 404);
+    if (msg.includes('Only officers') || msg.includes('Cannot kick')) return c.json({ error: msg }, 403);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * POST /api/alliance/:id/promote/:playerId
+ * Promote a member to officer (founder only).
+ * Body: { founderId }
+ */
+app.post('/api/alliance/:id/promote/:playerId', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<{ founderId: string }>();
+
+    if (!body.founderId) {
+      return c.json({ error: 'founderId is required' }, 400);
+    }
+
+    const member = await promoteToOfficer(
+      c.req.param('id'),
+      c.req.param('playerId'),
+      body.founderId,
+      DB,
+    );
+
+    return c.json(member);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found')) return c.json({ error: msg }, 404);
+    if (msg.includes('Only the founder') || msg.includes('Cannot promote')) return c.json({ error: msg }, 403);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * POST /api/alliance/:id/demote/:playerId
+ * Demote an officer to member (founder only).
+ * Body: { founderId }
+ */
+app.post('/api/alliance/:id/demote/:playerId', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<{ founderId: string }>();
+
+    if (!body.founderId) {
+      return c.json({ error: 'founderId is required' }, 400);
+    }
+
+    const member = await demoteToMember(
+      c.req.param('id'),
+      c.req.param('playerId'),
+      body.founderId,
+      DB,
+    );
+
+    return c.json(member);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found')) return c.json({ error: msg }, 404);
+    if (msg.includes('Only the founder') || msg.includes('Cannot demote')) return c.json({ error: msg }, 403);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * POST /api/alliance/:id/leave
+ * Leave the alliance (member/officer initiated).
+ * Body: { playerId }
+ */
+app.post('/api/alliance/:id/leave', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<{ playerId: string }>();
+
+    if (!body.playerId) {
+      return c.json({ error: 'playerId is required' }, 400);
+    }
+
+    await leaveAlliance(body.playerId, c.req.param('id'), DB);
+    return c.json({ success: true });
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found') || msg.includes('not a member')) return c.json({ error: msg }, 404);
+    if (msg.includes('Founder cannot leave')) return c.json({ error: msg }, 403);
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * GET /api/alliances/search
+ * Search alliances by name or tag.
+ * Query param: ?q=xxx
+ */
+app.get('/api/alliances/search', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const query = c.req.query('q') ?? '';
+
+    if (!query.trim()) {
+      return c.json({ error: 'q query param required' }, 400);
+    }
+
+    const results = await searchAlliances(query, DB);
+    return c.json(results);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/player/:id/alliance
+ * Get the alliance a player belongs to (and their role).
+ */
+app.get('/api/player/:id/alliance', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const result = await getPlayerAlliance(c.req.param('id'), DB);
+
+    if (!result) {
+      return c.json({ alliance: null, role: null });
+    }
+
+    return c.json(result);
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
