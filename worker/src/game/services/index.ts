@@ -104,3 +104,22 @@ export {
   getDefaultPreferences as getDefaultNotificationPreferences,
 } from './notificationService';
 export type { GetNotificationsOptions } from './notificationService';
+
+// Jump Gate Teleportation
+export type {
+  JumpGateStatus,
+  TeleportRequest,
+  TeleportResult,
+  JumpGateLog,
+} from './jumpGateService';
+export {
+  jumpGateService,
+  JUMP_GATE_COOLDOWN_SECONDS,
+  hasShipsToTransfer,
+  validateFleetAvailability,
+  isJumpGateReady,
+  getCooldownRemaining,
+  getJumpGateStatus,
+  teleportFleet,
+  getJumpGateLogs,
+} from './jumpGateService';

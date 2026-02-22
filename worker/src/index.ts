@@ -57,6 +57,7 @@ import { createNotification, getNotifications, markRead as markNotifRead, markAl
   getNextStep,
   TUTORIAL_STEPS,
 } from './game/services/tutorialService';
+import { jumpGateService, getJumpGateStatus, teleportFleet, getJumpGateLogs } from './game/services/jumpGateService';
 
 /**
  * Cosmic Protocol Worker
@@ -2056,6 +2057,90 @@ app.post('/api/tutorial/:playerId/claim-reward', async (c) => {
     return c.json({ error: String(error) }, 500);
   }
 });
+
+
+
+// ============================================================================
+// JUMP GATE TELEPORTATION ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/jumpgate/status/:moonId
+ * Get jump gate status for a moon (cooldown timer + availability)
+ */
+app.get('/api/jumpgate/status/:moonId', async (c) => {
+  const DB = c.env.DB;
+  const moonId = c.req.param('moonId');
+
+  try {
+    const status = await getJumpGateStatus(moonId, DB);
+    return c.json(status);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/jumpgate/teleport
+ * Teleport fleet between two moons via Jump Gate
+ *
+ * Body: { playerId, sourceMoonId, destinationMoonId, ships: Ships }
+ */
+app.post('/api/jumpgate/teleport', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json() as {
+      playerId: string;
+      sourceMoonId: string;
+      destinationMoonId: string;
+      ships: Record<string, number>;
+    };
+
+    if (!body.playerId || !body.sourceMoonId || !body.destinationMoonId || !body.ships) {
+      return c.json(
+        { error: 'playerId, sourceMoonId, destinationMoonId, and ships are required' },
+        400
+      );
+    }
+
+    const result = await teleportFleet(
+      {
+        playerId: body.playerId,
+        sourceMoonId: body.sourceMoonId,
+        destinationMoonId: body.destinationMoonId,
+        ships: body.ships as any,
+      },
+      DB
+    );
+
+    if (!result.success) {
+      return c.json({ error: result.error }, 400);
+    }
+
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/jumpgate/logs/:playerId
+ * Get jump gate teleportation history for a player
+ */
+app.get('/api/jumpgate/logs/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+  const limit = parseInt(c.req.query('limit') ?? '20', 10);
+
+  try {
+    const logs = await getJumpGateLogs(playerId, DB, limit);
+    return c.json({ logs });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
 
 
 // ============================================================================

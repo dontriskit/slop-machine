@@ -412,3 +412,33 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
   minimum_priority TEXT NOT NULL DEFAULT 'info',  -- 'critical' | 'warning' | 'info'
   updated_at INTEGER NOT NULL
 );
+
+-- ============================================================================
+-- MOON BUILDING LEVELS (per-moon building state)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS moon_building_levels (
+  moon_id TEXT PRIMARY KEY REFERENCES moons(id),
+  lunar_base INTEGER NOT NULL DEFAULT 0,
+  sensor_phalanx INTEGER NOT NULL DEFAULT 0,
+  jump_gate INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_moon_building_levels_moon ON moon_building_levels(moon_id);
+
+-- ============================================================================
+-- JUMP GATE TELEPORTATION LOGS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS jump_gate_logs (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  source_moon_id TEXT NOT NULL REFERENCES moons(id),
+  destination_moon_id TEXT NOT NULL REFERENCES moons(id),
+  ships_json TEXT NOT NULL,       -- JSON serialized Ships object
+  teleported_at INTEGER NOT NULL  -- Unix timestamp of teleportation
+);
+CREATE INDEX IF NOT EXISTS idx_jump_gate_logs_player ON jump_gate_logs(player_id);
+CREATE INDEX IF NOT EXISTS idx_jump_gate_logs_source ON jump_gate_logs(source_moon_id, teleported_at);
+CREATE INDEX IF NOT EXISTS idx_jump_gate_logs_dest ON jump_gate_logs(destination_moon_id, teleported_at);
+CREATE INDEX IF NOT EXISTS idx_jump_gate_logs_time ON jump_gate_logs(teleported_at);
