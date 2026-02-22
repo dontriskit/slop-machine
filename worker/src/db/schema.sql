@@ -412,3 +412,16 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
   minimum_priority TEXT NOT NULL DEFAULT 'info',  -- 'critical' | 'warning' | 'info'
   updated_at INTEGER NOT NULL
 );
+
+-- ============================================================================
+-- PROTECTION SYSTEM
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS attack_log (
+  id TEXT PRIMARY KEY,
+  attacker_id TEXT NOT NULL REFERENCES players(id),
+  defender_id TEXT NOT NULL REFERENCES players(id),
+  timestamp INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_attack_log_attacker_defender ON attack_log(attacker_id, defender_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_attack_log_timestamp ON attack_log(timestamp);
