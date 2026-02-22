@@ -3,6 +3,7 @@ import { PlanetDO } from './durable-objects/PlanetDO';
 import { runBuildOrderAgent, runAgentForAllPlanets } from './agents/buildOrderAgent';
 import { Coordinate, Strategy, PlanetState } from './game/types';
 import { GalaxyService } from './game/services/galaxyService';
+import { fleetService } from './game/services/fleetService';
 
 /**
  * Cosmic Protocol Worker
@@ -26,10 +27,39 @@ type Bindings = {
 const app = new Hono<{ Bindings: Bindings }>();
 
 // ============================================================================
+// CORS MIDDLEWARE
+// ============================================================================
+
+app.use('*', async (c, next) => {
+  c.header('Access-Control-Allow-Origin', '*');
+  c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  c.header('Access-Control-Allow-Headers', 'Content-Type');
+  if (c.req.method === 'OPTIONS') return c.text('', 204);
+  await next();
+});
+
+// ============================================================================
+// HELPER: get Durable Object stub from planet ID
+// ============================================================================
+
+function getPlanetStub(PLANET_DO: DurableObjectNamespace, planetId: string) {
+  const id = PLANET_DO.idFromName(planetId);
+  return PLANET_DO.get(id);
+}
+
+// ============================================================================
 // HEALTH CHECK
 // ============================================================================
 
 app.get('/', (c) => {
+  return c.json({
+    status: 'ok',
+    service: 'Cosmic Protocol Worker',
+    version: '0.1.0',
+  });
+});
+
+app.get('/health', (c) => {
   return c.json({
     status: 'ok',
     service: 'Cosmic Protocol Worker',
@@ -50,7 +80,7 @@ app.get('/api/planet/:id/state', async (c) => {
   const PLANET_DO = c.env.PLANET_DO;
 
   try {
-    const stub = PLANET_DO.get(planetId);
+    const stub = getPlanetStub(PLANET_DO, planetId);
     const response = await stub.fetch(new Request('https://planet/state'));
     const state = await response.json();
     return c.json(state);
@@ -68,7 +98,7 @@ app.get('/api/planet/:id/resources', async (c) => {
   const PLANET_DO = c.env.PLANET_DO;
 
   try {
-    const stub = PLANET_DO.get(planetId);
+    const stub = getPlanetStub(PLANET_DO, planetId);
     const response = await stub.fetch(new Request('https://planet/resources'));
     const data = await response.json();
     return c.json(data);
@@ -86,7 +116,7 @@ app.get('/api/planet/:id/buildings', async (c) => {
   const PLANET_DO = c.env.PLANET_DO;
 
   try {
-    const stub = PLANET_DO.get(planetId);
+    const stub = getPlanetStub(PLANET_DO, planetId);
     const response = await stub.fetch(new Request('https://planet/buildings'));
     const buildings = await response.json();
     return c.json(buildings);
@@ -104,7 +134,7 @@ app.get('/api/planet/:id/queue', async (c) => {
   const PLANET_DO = c.env.PLANET_DO;
 
   try {
-    const stub = PLANET_DO.get(planetId);
+    const stub = getPlanetStub(PLANET_DO, planetId);
     const response = await stub.fetch(new Request('https://planet/queue/list'));
     const queue = await response.json();
     return c.json(queue);
@@ -125,7 +155,7 @@ app.post('/api/planet/:id/queue', async (c) => {
 
   try {
     const body = await c.req.json();
-    const stub = PLANET_DO.get(planetId);
+    const stub = getPlanetStub(PLANET_DO, planetId);
     const response = await stub.fetch(new Request('https://planet/queue/add', { method: 'POST', body: JSON.stringify(body) }));
 
     if (!response.ok) {
@@ -168,7 +198,7 @@ app.post('/api/planet/:id/initialize', async (c) => {
 
   try {
     const body = await c.req.json();
-    const stub = PLANET_DO.get(planetId);
+    const stub = getPlanetStub(PLANET_DO, planetId);
     const response = await stub.fetch(new Request('https://planet/initialize', { method: 'POST', body: JSON.stringify(body) }));
 
     if (!response.ok) {
@@ -276,7 +306,7 @@ app.post('/api/planet/:id/agent/run', async (c) => {
 
   try {
     // Get planet state
-    const planetStub = PLANET_DO.get(planetId);
+    const planetStub = getPlanetStub(PLANET_DO, planetId);
     const stateRes = await planetStub.fetch(new Request('https://planet/state'));
     const planetState = (await stateRes.json()) as PlanetState;
 
@@ -351,8 +381,103 @@ app.post('/api/planet/:id/agent/disable', async (c) => {
 // ============================================================================
 
 /**
+ * POST /api/fleet/dispatch
+ * Dispatch a fleet mission using the FleetService.
+ * Body: { fromPlanetId, toCoord: {galaxy,system,position}, ships, missionType,
+ *         resources?, speedPercent?, playerId? }
+ */
+app.post('/api/fleet/dispatch', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json<{
+      fromPlanetId: string;
+      toCoord: Coordinate;
+      ships: Record<string, number>;
+      missionType: string;
+      resources?: { metal: number; crystal: number; deuterium: number };
+      speedPercent?: number;
+      playerId?: string;
+    }>();
+
+    const { fromPlanetId, toCoord, ships, missionType, resources, speedPercent } = body;
+
+    if (!fromPlanetId || !toCoord || !ships || !missionType) {
+      return c.json({ error: 'fromPlanetId, toCoord, ships, and missionType are required' }, 400);
+    }
+
+    // Get the source planet state from the DO
+    const planetStub = getPlanetStub(PLANET_DO, fromPlanetId);
+    const stateRes = await planetStub.fetch(new Request('https://planet/state'));
+    if (!stateRes.ok) {
+      return c.json({ error: 'Could not retrieve source planet state' }, 404);
+    }
+    const planetState = (await stateRes.json()) as PlanetState;
+
+    // Use the fleet service to dispatch
+    const result = fleetService.dispatchFleet(
+      {
+        missionId: `fleet-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        playerId: body.playerId ?? planetState.playerId,
+        fromPlanetId,
+        toPlanetId: null,
+        from: planetState.coordinate,
+        to: toCoord,
+        ships: ships as any,
+        resources: resources ?? { metal: 0, crystal: 0, deuterium: 0 },
+        missionType: missionType as any,
+        speedPercent: speedPercent ?? 100,
+      },
+      planetState,
+    );
+
+    if (!result.mission) {
+      return c.json({ error: result.reason ?? 'Fleet dispatch failed' }, 400);
+    }
+
+    // Persist updated planet state back to DO
+    await planetStub.fetch(
+      new Request('https://planet/setState', {
+        method: 'POST',
+        body: JSON.stringify(planetState),
+      })
+    );
+
+    // Persist fleet mission to D1
+    const m = result.mission;
+    await DB.prepare(
+      `INSERT INTO fleet_missions
+         (id, player_id, mission_type, mission_status, time_departure, time_arrival,
+          planet_id_from, galaxy_to, system_to, position_to, ships_json, resources_json, fuel_consumed)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(
+        m.id,
+        m.playerId,
+        m.missionType,
+        m.missionStatus,
+        m.timeDeparture,
+        m.timeArrival,
+        m.planetIdFrom,
+        m.targetCoordinate.galaxy,
+        m.targetCoordinate.system,
+        m.targetCoordinate.position,
+        JSON.stringify(m.ships),
+        JSON.stringify(m.resources),
+        m.fuelConsumed,
+      )
+      .run();
+
+    return c.json({ mission: m }, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
  * POST /api/fleet/send
- * Launch a fleet mission
+ * Launch a fleet mission (legacy endpoint, delegates to /api/fleet/dispatch)
  * Body: { fromPlanetId, toCoord, ships, missionType, resources?, holdTime? }
  */
 app.post('/api/fleet/send', async (c) => {
@@ -372,7 +497,7 @@ app.post('/api/fleet/send', async (c) => {
 
     return c.json(
       {
-        error: 'Fleet send not yet implemented',
+        error: 'Fleet send not yet implemented — use POST /api/fleet/dispatch instead',
       },
       501
     );
@@ -644,8 +769,8 @@ async function handleScheduled(event: ScheduledEvent, env: Bindings): Promise<vo
     const planetDOs: Map<string, any> = new Map();
 
     for (const planet of planets) {
-      // Get planet state
-      const stub = PLANET_DO.get(planet.id);
+      // Get planet state using correct DO binding pattern
+      const stub = getPlanetStub(PLANET_DO, planet.id);
       planetDOs.set(planet.id, stub);
 
       const stateRes = await stub.fetch(new Request('https://planet/state'));
