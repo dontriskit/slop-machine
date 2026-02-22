@@ -20,6 +20,8 @@
   backdrop-filter: blur(5px);
 }
 
+/* ---- Info panel (top-left) ---- */
+
 .info-panel {
   position: absolute;
   top: 20px;
@@ -50,6 +52,257 @@
   font-weight: bold;
   color: #00ffff;
 }
+
+/* ---- Resource panel (top-right) ---- */
+
+.resource-panel {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 260px;
+}
+
+.resource-panel h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #ffff00;
+  text-shadow: 0 0 8px #ffff00;
+}
+
+.resource-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  font-size: 13px;
+}
+
+.res-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.metal-icon {
+  background: rgba(160, 160, 160, 0.4);
+  border: 1px solid #a0a0a0;
+  color: #e0e0e0;
+}
+
+.crystal-icon {
+  background: rgba(100, 180, 255, 0.3);
+  border: 1px solid #64b4ff;
+  color: #a0d4ff;
+}
+
+.deut-icon {
+  background: rgba(0, 200, 100, 0.3);
+  border: 1px solid #00c864;
+  color: #80ffb0;
+}
+
+.res-value {
+  flex: 1;
+  text-align: right;
+  color: #ffffff;
+  font-weight: bold;
+}
+
+.res-rate {
+  width: 80px;
+  text-align: right;
+  opacity: 0.6;
+  font-size: 11px;
+}
+
+/* ---- Buildings panel (middle-right) ---- */
+
+.buildings-panel {
+  position: absolute;
+  top: 140px;
+  right: 20px;
+  width: 260px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.buildings-panel h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+}
+
+.buildings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.building-stat .value {
+  color: #00ffff;
+}
+
+/* ---- Queue panel (bottom-right above controls) ---- */
+
+.queue-panel {
+  position: absolute;
+  bottom: 130px;
+  right: 20px;
+  width: 260px;
+}
+
+.queue-panel h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+}
+
+.queue-empty {
+  opacity: 0.5;
+  font-size: 12px;
+  margin: 4px 0;
+}
+
+.queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.queue-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid rgba(0, 255, 0, 0.15);
+  border-radius: 3px;
+}
+
+.queue-active {
+  border-color: #00ffff;
+  background: rgba(0, 255, 255, 0.08);
+}
+
+.queue-name {
+  opacity: 0.9;
+}
+
+.queue-time {
+  color: #ffff00;
+  font-weight: bold;
+}
+
+/* ---- Agent panel (left, below info) ---- */
+
+.agent-panel {
+  position: absolute;
+  top: 200px;
+  left: 20px;
+  width: 250px;
+}
+
+.agent-panel h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.agent-dot.active {
+  background: #00ff00;
+  box-shadow: 0 0 8px #00ff00;
+}
+
+.agent-dot.inactive {
+  background: #666;
+}
+
+.agent-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.agent-btn {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  border: 1px solid #00ff00;
+  background: rgba(0, 255, 0, 0.1);
+  color: #00ff00;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.2s;
+}
+
+.agent-btn:hover:not(:disabled) {
+  background: rgba(0, 255, 0, 0.25);
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+.agent-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.agent-btn.enabled {
+  border-color: #ff4444;
+  color: #ff4444;
+  background: rgba(255, 68, 68, 0.1);
+}
+
+.agent-btn.enabled:hover {
+  background: rgba(255, 68, 68, 0.25);
+  box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+}
+
+.run-btn {
+  border-color: #00ffff;
+  color: #00ffff;
+  background: rgba(0, 255, 255, 0.1);
+}
+
+.run-btn:hover:not(:disabled) {
+  background: rgba(0, 255, 255, 0.25);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.agent-decision {
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.agent-decision .label {
+  opacity: 0.6;
+}
+
+.agent-decision .value {
+  color: #ffff00;
+  margin-left: 4px;
+}
+
+.agent-reason {
+  margin: 4px 0 0 0;
+  opacity: 0.5;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+/* ---- Galaxy selector (bottom-left) ---- */
 
 .galaxy-selector {
   position: absolute;
@@ -90,6 +343,8 @@
   font-weight: bold;
 }
 
+/* ---- Controls panel (bottom-right) ---- */
+
 .controls-panel {
   position: absolute;
   bottom: 20px;
@@ -106,4 +361,45 @@
 .control-item {
   margin: 6px 0;
   opacity: 0.8;
+}
+
+/* ---- Loading / Error indicators ---- */
+
+.loading-indicator {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #ffff00;
+  animation: pulse 1s infinite;
+}
+
+.error-indicator {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #ff4444;
+  text-shadow: 0 0 8px #ff4444;
+  word-break: break-word;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Scrollbar styling for buildings panel */
+.buildings-panel::-webkit-scrollbar {
+  width: 4px;
+}
+
+.buildings-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.buildings-panel::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 0, 0.3);
+  border-radius: 2px;
 }
