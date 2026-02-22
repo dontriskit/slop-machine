@@ -5,6 +5,7 @@ import { generateAsset, GenerateAssetRequest } from './agents/assetGenerator';
 import { Coordinate, Strategy, PlanetState } from './game/types';
 import { GalaxyService } from './game/services/galaxyService';
 import { fleetService } from './game/services/fleetService';
+import { expeditionService, calculateFleetValue } from './game/services/expeditionService';
 import { espionageService } from './game/services/espionageService';
 import { createAlliance, dissolveAlliance, applyToAlliance, acceptApplication, rejectApplication, kickMember, leaveAlliance, promoteToOfficer, demoteToMember, getAllianceMembers, getPlayerAlliance, getAllianceById, searchAlliances, getAllianceApplications } from './game/services/allianceService';
 import { getLeaderboard, getPlayerProfile } from './game/services/leaderboardService';
@@ -1668,6 +1669,252 @@ app.delete('/api/messages/:id', async (c) => {
     }
 
     return c.json({ deleted: true });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+
+// ============================================================================
+// EXPEDITION ENDPOINTS
+// ============================================================================
+
+/**
+ * POST /api/fleet/expedition
+ * Send a fleet on an expedition to position 16.
+ *
+ * Expeditions go to position 16 of the target system (special slot).
+ * The fleet resolves a random event on arrival:
+ *   - find_resources, find_ships, find_dark_matter
+ *   - alien_contact, pirates (combat)
+ *   - nothing, delayed, black_hole
+ *
+ * Body: { fromPlanetId, galaxy, system, ships, speedPercent?, playerId? }
+ */
+app.post('/api/fleet/expedition', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json<{
+      fromPlanetId: string;
+      galaxy: number;
+      system: number;
+      ships: Record<string, number>;
+      speedPercent?: number;
+      playerId?: string;
+    }>();
+
+    const { fromPlanetId, galaxy, system, ships, speedPercent } = body;
+
+    if (!fromPlanetId || !galaxy || !system || !ships) {
+      return c.json(
+        { error: 'fromPlanetId, galaxy, system, and ships are required' },
+        400
+      );
+    }
+
+    // Expedition always targets position 16
+    const toCoord: Coordinate = { galaxy, system, position: 16 };
+
+    // Get source planet state from Durable Object
+    const planetStub = getPlanetStub(PLANET_DO, fromPlanetId);
+    const stateRes = await planetStub.fetch(new Request('https://planet/state'));
+    if (!stateRes.ok) {
+      return c.json({ error: 'Source planet not found' }, 404);
+    }
+    const planetState = (await stateRes.json()) as PlanetState;
+
+    // Preview fleet value before dispatch
+    const fleetValuePreview = calculateFleetValue(ships as any);
+
+    // Dispatch fleet as expedition mission
+    const result = fleetService.dispatchFleet(
+      {
+        missionId: `exp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        playerId: body.playerId ?? planetState.playerId,
+        fromPlanetId,
+        toPlanetId: null,
+        from: planetState.coordinate,
+        to: toCoord,
+        ships: ships as any,
+        resources: { metal: 0, crystal: 0, deuterium: 0 },
+        missionType: 'expedition',
+        speedPercent: speedPercent ?? 100,
+      },
+      planetState,
+    );
+
+    if (!result.mission) {
+      return c.json({ error: result.reason ?? 'Expedition dispatch failed' }, 400);
+    }
+
+    // Persist updated planet state (ships deducted, fuel consumed)
+    await planetStub.fetch(
+      new Request('https://planet/setState', {
+        method: 'POST',
+        body: JSON.stringify(planetState),
+      })
+    );
+
+    // Persist expedition mission to D1
+    const m = result.mission;
+    await DB.prepare(
+      `INSERT INTO fleet_missions
+         (id, player_id, mission_type, mission_status, time_departure, time_arrival,
+          planet_id_from, galaxy_to, system_to, position_to, ships_json, resources_json, fuel_consumed)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(
+        m.id,
+        m.playerId,
+        m.missionType,
+        m.missionStatus,
+        m.timeDeparture,
+        m.timeArrival,
+        m.planetIdFrom,
+        m.targetCoordinate.galaxy,
+        m.targetCoordinate.system,
+        m.targetCoordinate.position,
+        JSON.stringify(m.ships),
+        JSON.stringify(m.resources),
+        m.fuelConsumed,
+      )
+      .run();
+
+    return c.json({
+      mission: m,
+      expeditionTarget: toCoord,
+      fleetValue: fleetValuePreview,
+    }, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/expedition/result/:missionId
+ * Get the result of a completed expedition mission.
+ *
+ * Returns mission details including loot, event type (stored in ships_json meta),
+ * and mission status. The expedition event is resolved server-side on arrival.
+ */
+app.get('/api/expedition/result/:missionId', async (c) => {
+  const missionId = c.req.param('missionId');
+  const DB = c.env.DB;
+
+  try {
+    const mission = await DB.prepare(
+      `SELECT id, player_id, mission_type, mission_status,
+              time_departure, time_arrival,
+              planet_id_from, galaxy_to, system_to, position_to,
+              ships_json, resources_json, fuel_consumed
+       FROM fleet_missions
+       WHERE id = ? AND mission_type = 'expedition'`
+    )
+      .bind(missionId)
+      .first();
+
+    if (!mission) {
+      return c.json({ error: 'Expedition mission not found' }, 404);
+    }
+
+    // Parse JSON fields
+    const ships = mission.ships_json ? JSON.parse(mission.ships_json as string) : {};
+    const resources = mission.resources_json ? JSON.parse(mission.resources_json as string) : {};
+
+    // Compute fleet value for client display
+    const fleetValue = calculateFleetValue(ships);
+
+    return c.json({
+      missionId: mission.id,
+      playerId: mission.player_id,
+      missionType: mission.mission_type,
+      missionStatus: mission.mission_status,
+      timeDeparture: mission.time_departure,
+      timeArrival: mission.time_arrival,
+      planetIdFrom: mission.planet_id_from,
+      targetCoordinate: {
+        galaxy: mission.galaxy_to,
+        system: mission.system_to,
+        position: mission.position_to,
+      },
+      ships,
+      resources,
+      fleetValue,
+      fuelConsumed: mission.fuel_consumed,
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/expedition/history/:playerId
+ * Get a player's expedition history (past and active).
+ *
+ * Query params:
+ *   - limit (default 20, max 50)
+ *   - status: filter by mission_status (dispatched|returning|completed)
+ */
+app.get('/api/expedition/history/:playerId', async (c) => {
+  const playerId = c.req.param('playerId');
+  const DB = c.env.DB;
+
+  const limitParam = parseInt(c.req.query('limit') ?? '20', 10);
+  const limit = Math.min(Math.max(1, limitParam), 50);
+  const statusFilter = c.req.query('status');
+
+  try {
+    let query: string;
+    let bindings: (string | number)[];
+
+    if (statusFilter) {
+      query = `SELECT id, mission_type, mission_status,
+                      time_departure, time_arrival,
+                      galaxy_to, system_to, position_to,
+                      ships_json, resources_json, fuel_consumed
+               FROM fleet_missions
+               WHERE player_id = ? AND mission_type = 'expedition' AND mission_status = ?
+               ORDER BY time_departure DESC
+               LIMIT ?`;
+      bindings = [playerId, statusFilter, limit];
+    } else {
+      query = `SELECT id, mission_type, mission_status,
+                      time_departure, time_arrival,
+                      galaxy_to, system_to, position_to,
+                      ships_json, resources_json, fuel_consumed
+               FROM fleet_missions
+               WHERE player_id = ? AND mission_type = 'expedition'
+               ORDER BY time_departure DESC
+               LIMIT ?`;
+      bindings = [playerId, limit];
+    }
+
+    const stmt = DB.prepare(query).bind(...bindings);
+    const result = await stmt.all();
+
+    const missions = (result.results || []).map((row: any) => ({
+      missionId: row.id,
+      missionStatus: row.mission_status,
+      timeDeparture: row.time_departure,
+      timeArrival: row.time_arrival,
+      targetCoordinate: {
+        galaxy: row.galaxy_to,
+        system: row.system_to,
+        position: row.position_to,
+      },
+      fleetValue: calculateFleetValue(
+        row.ships_json ? JSON.parse(row.ships_json) : {}
+      ),
+      fuelConsumed: row.fuel_consumed,
+    }));
+
+    return c.json({
+      playerId,
+      total: missions.length,
+      missions,
+    });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
