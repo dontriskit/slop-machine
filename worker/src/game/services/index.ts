@@ -88,3 +88,24 @@ export {
   ExpeditionService,
   expeditionService,
 } from './expeditionService';
+
+export type {
+  TutorialStep,
+  TutorialReward,
+  TutorialRequirement,
+  TutorialProgress,
+  TutorialStepResult,
+} from './tutorialService';
+export {
+  TUTORIAL_STEPS,
+  TUTORIAL_STEP_MAP,
+  getTutorialProgress,
+  completeTutorialStep,
+  claimReward,
+  skipTutorial,
+  getNextStep,
+  getTutorialCompletionPercent,
+  isValidStepId,
+  TutorialService,
+  tutorialService,
+} from './tutorialService';

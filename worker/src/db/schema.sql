@@ -385,3 +385,26 @@ CREATE TABLE IF NOT EXISTS tournament_rewards (
 );
 CREATE INDEX IF NOT EXISTS idx_tournament_rewards_tournament ON tournament_rewards(tournament_id);
 CREATE INDEX IF NOT EXISTS idx_tournament_rewards_player ON tournament_rewards(player_id);
+
+-- ============================================================================
+-- TUTORIAL SYSTEM
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS tutorial_progress (
+  player_id      TEXT PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+  completed_steps TEXT NOT NULL DEFAULT '[]',   -- JSON array of completed step IDs
+  claimed_steps   TEXT NOT NULL DEFAULT '[]',   -- JSON array of claimed reward step IDs
+  current_step_id TEXT,                         -- ID of the next step to complete, NULL = done/skipped
+  skipped         INTEGER NOT NULL DEFAULT 0,   -- 1 if player skipped the tutorial
+  started_at      INTEGER NOT NULL DEFAULT (unixepoch()),
+  completed_at    INTEGER                        -- unix seconds when all steps were done
+);
+CREATE INDEX IF NOT EXISTS idx_tutorial_progress_skipped ON tutorial_progress(skipped);
+
+CREATE TABLE IF NOT EXISTS tutorial_step_log (
+  player_id    TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  step_id      TEXT NOT NULL,
+  completed_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  PRIMARY KEY (player_id, step_id)
+);
+CREATE INDEX IF NOT EXISTS idx_tutorial_step_log_player ON tutorial_step_log(player_id);
