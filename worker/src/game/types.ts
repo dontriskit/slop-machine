@@ -331,3 +331,59 @@ export interface NotificationPreferences {
   minimumPriority: NotificationPriority;
   updatedAt: number;   // unix seconds
 }
+
+// ============================================================================
+// OFFICERS & DARK MATTER
+// ============================================================================
+
+export type OfficerType = 'commander' | 'admiral' | 'engineer' | 'geologist' | 'technocrat';
+
+export interface OfficerBonuses {
+  buildQueueSlots?: number;
+  fleetSlots?: number;
+  defenseRepairFactor?: number;  // multiplier: 0.5 means 50% faster
+  energyProductionBonus?: number;  // additive: 0.10 means +10%
+  mineProductionBonus?: number;
+  espionageLevelBonus?: number;
+  researchSpeedBonus?: number;  // additive: 0.25 means +25% speed
+  fleetShortcuts?: boolean;
+  fleetRecall?: boolean;
+}
+
+export interface OfficerDefinition {
+  type: OfficerType;
+  name: string;
+  description: string;
+  cost: number;  // dark matter cost
+  durationDays: number;
+  bonuses: OfficerBonuses;
+}
+
+export interface ActiveOfficer {
+  id: string;
+  playerId: string;
+  officerType: OfficerType;
+  activatedAt: number;  // unix seconds
+  expiresAt: number;    // unix seconds
+}
+
+export interface DarkMatterBalance {
+  playerId: string;
+  balance: number;
+  updatedAt: number;  // unix seconds
+}
+
+export type DarkMatterSource = 'expedition' | 'achievement' | 'purchase' | 'reward';
+export type DarkMatterPurpose = 'officer' | 'instant_finish' | 'merchant' | 'cosmetic';
+
+export interface DarkMatterTransaction {
+  id: string;
+  playerId: string;
+  amount: number;
+  source?: DarkMatterSource;  // for income
+  purpose?: DarkMatterPurpose;  // for spending
+  reference?: string;  // expedition ID, achievement ID, etc.
+  balanceBefore: number;
+  balanceAfter: number;
+  createdAt: number;  // unix seconds
+}

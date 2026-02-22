@@ -38,6 +38,7 @@ import type { OfficerType } from './game/types';
 import { ColonizationService } from './game/services/colonizationService';
 import { defenseService, buildDefense, cancelDefenseBuild, createEmptyDefenseQueue, processDefenseQueue, getDefenseBuildQueue, rebuildDefensesAfterBattle, launchMissileAttack } from './game/services/defenseService';
 import { createNotification, getNotifications, markRead as markNotifRead, markAllRead as markAllNotifsRead, deleteNotification, getUnreadCount as getNotifUnreadCount, getPreferences as getNotifPreferences, setPreferences as setNotifPreferences, getDefaultPreferences as getDefaultNotifPreferences } from './game/services/notificationService';
+import { getDarkMatter, addDarkMatter, spendDarkMatter, getDarkMatterHistory, instantFinish, merchantTrade } from './game/services/darkMatterService';
 
     const result = await svc.colonize({ playerId, fromPlanetId, galaxy, system, position });
     const result = await svc.colonizePlanet({ playerId, fromPlanetId, galaxy, system, position });
@@ -3188,6 +3189,107 @@ app.delete('/api/notifications/:id', async (c) => {
       return c.json({ error: 'Notification not found' }, 404);
     }
     return c.json({ deleted: true });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+
+// ============================================================================
+// DARK MATTER API
+// ============================================================================
+
+/**
+ * GET /api/dm/:playerId
+ * Get dark matter balance and transaction history
+ */
+app.get('/api/dm/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+  const limitStr = c.req.query('limit') || '50';
+
+  try {
+    const balance = await getDarkMatter(DB, playerId);
+    const history = await getDarkMatterHistory(DB, playerId, parseInt(limitStr, 10));
+
+    return c.json({
+      balance,
+      history,
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/dm/instant-finish
+ * Spend dark matter to instantly complete a queue item
+ * Body: { playerId, planetId, queueType, queueIndex }
+ */
+app.post('/api/dm/instant-finish', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<{
+      playerId: string;
+      planetId: string;
+      queueType: 'building' | 'research';
+      queueIndex: number;
+    }>();
+
+    const { playerId, planetId, queueType, queueIndex } = body;
+
+    if (!playerId || !planetId || !queueType || queueIndex === undefined) {
+      return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    const balance = await instantFinish(DB, playerId, planetId, queueType, queueIndex);
+
+    return c.json({
+      success: true,
+      balance,
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/dm/merchant
+ * Trade resources using the NPC merchant
+ * Body: { playerId, planetId, offerResource, offerAmount, wantResource }
+ */
+app.post('/api/dm/merchant', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<{
+      playerId: string;
+      planetId: string;
+      offerResource: 'metal' | 'crystal' | 'deuterium';
+      offerAmount: number;
+      wantResource: 'metal' | 'crystal' | 'deuterium';
+    }>();
+
+    const { playerId, planetId, offerResource, offerAmount, wantResource } = body;
+
+    if (!playerId || !planetId || !offerResource || offerAmount === undefined || !wantResource) {
+      return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    const result = await merchantTrade(
+      DB,
+      playerId,
+      planetId,
+      offerResource,
+      offerAmount,
+      wantResource
+    );
+
+    return c.json({
+      success: true,
+      trade: result,
+    });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }

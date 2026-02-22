@@ -104,3 +104,14 @@ export {
   getDefaultPreferences as getDefaultNotificationPreferences,
 } from './notificationService';
 export type { GetNotificationsOptions } from './notificationService';
+
+export {
+  getDarkMatter,
+  addDarkMatter,
+  spendDarkMatter,
+  getDarkMatterHistory,
+  instantFinish,
+  merchantTrade,
+  DarkMatterService,
+  darkMatterService,
+} from './darkMatterService';
