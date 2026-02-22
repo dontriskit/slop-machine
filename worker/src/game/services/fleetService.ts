@@ -22,6 +22,7 @@ import {
 import { coordinateService } from './coordinateService';
 import { battleService, BattleReport } from './battleService';
 import { DefenseStructures } from '../defenses';
+import { expeditionService, ExpeditionResult } from './expeditionService';
 
 // ============================================================================
 // TYPES
@@ -490,6 +491,9 @@ export class FleetService {
       case 'colonize':
         return this.processColonizeArrival(mission, targetOccupied);
 
+      case 'expedition':
+        return this.processExpeditionArrival(mission, fleetSpeed);
+
       default:
         return {
           missionId: mission.id,
@@ -753,6 +757,93 @@ export class FleetService {
     };
   }
 
+  /**
+   * EXPEDITION: position 16 random event with combat/loot possibilities
+   *
+   * Procedure:
+   * 1. Resolve expedition event (weighted random selection)
+   * 2. If alien_contact or pirates: run battle simulation
+   * 3. If find_resources/find_ships: add loot to mission.loot
+   * 4. If delayed: create return mission with 2x duration
+   * 5. If black_hole: destroy fleet (no return)
+   * 6. Otherwise: return fleet empty
+   */
+  private processExpeditionArrival(
+    mission: FleetMission,
+    fleetSpeed: number = 1.0,
+  ): FleetArrivalResult {
+    const fleetValue = this.calculateFleetValue(mission.ships);
+
+    // Resolve the random expedition event
+    const expeditionEvent = expeditionService.resolveExpedition(fleetValue, 0);
+    mission.missionStatus = 'arrived';
+
+    // Handle black hole: fleet destroyed, no return mission
+    if (expeditionEvent.eventType === 'black_hole') {
+      mission.missionStatus = 'completed'; // Fleet lost
+      return {
+        missionId: mission.id,
+        success: false,
+        missionType: 'expedition',
+        survivingShips: this.getEmptyFleet(), // All ships destroyed
+      };
+    }
+
+    let survivingShips = { ...mission.ships };
+    const returnResources: Resources = { ...mission.resources };
+
+    // Handle combat events (alien_contact or pirates)
+    if (expeditionEvent.battleOccurs && expeditionEvent.npcFleet) {
+      const battle = battleService.resolveBattle(
+        { ships: mission.ships, name: `Expedition Fleet ${mission.id}` },
+        { ships: expeditionEvent.npcFleet, name: `${expeditionEvent.eventType === 'alien_contact' ? 'Alien' : 'Pirate'} Fleet` },
+      );
+
+      const lastRound = battle.rounds[battle.rounds.length - 1];
+      survivingShips = lastRound ? { ...lastRound.attacker.ships } : this.getEmptyFleet();
+
+      // If attacker won the battle, collect loot (same as attack mission)
+      if (battle.winner === 'attacker') {
+        mission.loot = expeditionService.calculateExpeditionLoot(survivingShips, expeditionEvent);
+        returnResources.metal += mission.loot.metal;
+        returnResources.crystal += mission.loot.crystal;
+        returnResources.deuterium += mission.loot.deuterium;
+      }
+    } else {
+      // Non-combat events: add resources/ships/dark matter found
+      mission.loot = expeditionService.calculateExpeditionLoot(survivingShips, expeditionEvent);
+      returnResources.metal += mission.loot.metal;
+      returnResources.crystal += mission.loot.crystal;
+      returnResources.deuterium += mission.loot.deuterium;
+
+      // Add ships found to returning fleet
+      survivingShips = this.addFleets(survivingShips, expeditionEvent.shipsFound);
+
+      // Note: darkMatterFound would be handled separately in a future integration
+      // (stored in planet.darkMatter or account.darkMatter)
+    }
+
+    // Create return mission
+    let returnMission = this.createReturnMission(mission, survivingShips, returnResources, fleetSpeed);
+
+    // If delayed event: double the return duration
+    if (expeditionEvent.eventType === 'delayed') {
+      const delayedDuration = returnMission.timeArrival - returnMission.timeDeparture;
+      returnMission.timeArrival = returnMission.timeDeparture + delayedDuration * 2;
+    }
+
+    mission.missionStatus = 'returning';
+
+    return {
+      missionId: mission.id,
+      success: expeditionEvent.eventType !== 'nothing' && expeditionEvent.eventType !== 'delayed' ? true : false,
+      missionType: 'expedition',
+      survivingShips,
+      loot: { ...mission.loot },
+      returnMission,
+    };
+  }
+
   // --------------------------------------------------------------------------
   // FLEET RETURN PROCESSING
   // --------------------------------------------------------------------------
@@ -993,6 +1084,11 @@ export class FleetService {
       }
     }
     return true;
+  }
+
+  /** Calculate total resource cost (metal value) of a fleet. */
+  calculateFleetValue(ships: Ships): number {
+    return expeditionService.calculateFleetValue(ships);
   }
 }
 
