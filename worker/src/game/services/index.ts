@@ -104,3 +104,20 @@ export {
   getDefaultPreferences as getDefaultNotificationPreferences,
 } from './notificationService';
 export type { GetNotificationsOptions } from './notificationService';
+
+export type {
+  BattleSimulationResult,
+  FleetComparisonResult,
+  BreakEvenResult,
+  AverageLosses,
+  RoundDistribution,
+  ConfidenceInterval,
+  AverageSurvivors,
+} from './battleSimulatorService';
+export {
+  simulateBattlePreview,
+  getBreakEvenFleet,
+  compareFleetCompositions,
+  BattleSimulatorService,
+  battleSimulatorService,
+} from './battleSimulatorService';
