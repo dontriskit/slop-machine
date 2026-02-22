@@ -1,0 +1,179 @@
+================================================================================
+COSMIC PROTOCOL — PR COORDINATION CHECKLIST
+================================================================================
+Generated: 2026-02-22
+Project: Cosmic Protocol (OGame-like game engine)
+Status: 6 Feature Branches Documented & Ready
+
+================================================================================
+PR FILES CREATED (545 total lines)
+================================================================================
+
+1. ✓ feat-battle-engine.md (43 lines)
+   Title: feat: 6-round battle simulation engine
+   Type: Core Game Engine
+   Depends: None
+   Blocks: fleet-movement, defense-system
+
+2. ✓ feat-defense-system.md (46 lines)
+   Title: feat: planetary defense system
+   Type: Game System
+   Depends: battle-engine
+   Blocks: fleet-movement
+
+3. ✓ feat-fleet-movement.md (54 lines)
+   Title: feat: fleet movement & mission system
+   Type: Game System
+   Depends: battle-engine, defense-system
+   Blocks: frontend-wiring, galaxy-map
+
+4. ✓ feat-frontend-wiring.md (64 lines)
+   Title: feat: connect frontend UI to Worker API
+   Type: Integration
+   Depends: ALL backend PRs (1, 2, 3, 5, 6)
+   Blocks: None (final step)
+
+5. ✓ feat-research-system.md (63 lines)
+   Title: feat: research & technology tree
+   Type: Game System
+   Depends: None
+   Blocks: frontend-wiring, galaxy-map
+
+6. ✓ feat-galaxy-map.md (66 lines)
+   Title: feat: galaxy map navigation & colonization
+   Type: Game System
+   Depends: fleet-movement, research-system
+   Blocks: None
+
+7. ✓ README.md (209 lines)
+   Comprehensive guide with dependency graph, critical path, testing strategy
+
+================================================================================
+DEPENDENCY GRAPH (ASCII)
+================================================================================
+
+PHASE 1 (Can start in parallel):
+  ├─ feat/battle-engine (no dependencies)
+  ├─ feat/defense-system (lightweight, depends on battle-engine)
+  └─ feat/research-system (no dependencies)
+
+PHASE 2 (Depends on Phase 1):
+  ├─ feat/fleet-movement (depends on battle-engine + defense-system)
+  └─ feat/galaxy-map (depends on fleet-movement + research-system)
+
+PHASE 3 (Final integration):
+  └─ feat/frontend-wiring (depends on ALL Phase 1-2)
+
+================================================================================
+CRITICAL CROSS-DEPENDENCIES
+================================================================================
+
+battle-engine ← needs defense-system types for battle integration
+  ↓ (provides)
+defense-system + fleet-movement ← needs battle-engine for attack missions
+  ↓ (combined)
+fleet-movement + research-system → galaxy-map colonization/espionage
+  ↓ (combined)
+ALL ABOVE → frontend-wiring (final integration)
+
+================================================================================
+IMPLEMENTATION SEQUENCE (RECOMMENDED)
+================================================================================
+
+Week 1: Phase 1 Parallel (3 branches)
+  ☐ Start feat/battle-engine
+  ☐ Start feat/defense-system (after battle-engine basics)
+  ☐ Start feat/research-system (parallel, no dependencies)
+
+Week 2: Phase 2 Sequential (2 branches)
+  ☐ Merge Phase 1 PRs
+  ☐ Start feat/fleet-movement (after battle-engine + defense-system merged)
+  ☐ Start feat/galaxy-map (can overlap with fleet-movement)
+
+Week 3: Phase 3 Integration (1 branch)
+  ☐ Merge Phase 2 PRs
+  ☐ Start feat/frontend-wiring (after all backend PRs stable)
+
+================================================================================
+EACH PR INCLUDES
+================================================================================
+
+✓ Detailed feature summary (2-4 bullet points)
+✓ Key files changed (main implementation files)
+✓ Game mechanics from docs/patterns.md (formulas & systems)
+✓ Testing checklist (unit, integration, manual, reference verification)
+✓ Dependencies (what this PR needs)
+✓ Cross-dependencies (what other PRs need this PR)
+✓ Implementation notes (design decisions, caching strategy, etc.)
+✓ Reference to canonical formulas (OGameX + UniEngine)
+
+================================================================================
+GAME MECHANICS COVERAGE
+================================================================================
+
+ALL 9 SECTIONS OF docs/patterns.md ARE COVERED:
+
+Section 1: Resource Production
+  → Covered by building/mining systems across all PRs
+
+Section 2: Building Costs & Scaling (1.5-2.0x exponential)
+  → feat/research-system (tech costs: 2.0x factor)
+
+Section 3: Build Time Formula
+  → All construction systems (buildings, research, defenses)
+
+Section 4: Battle Mechanics (6 rounds, shields, destruction)
+  → feat/battle-engine (core implementation)
+
+Section 5: Fleet Mechanics (speed bottleneck, missions, cargo)
+  → feat/fleet-movement (8 mission types, speed bonuses)
+
+Section 6: Debris Field (30% metal, 30% crystal, 0% deut)
+  → feat/fleet-movement (debris generation + recycler harvesting)
+
+Section 7: Technology Tree (12+ techs, dependencies, bonuses)
+  → feat/research-system (complete implementation)
+
+Section 8: Universe Rules (9 galaxies, 500 systems, 15+16 positions)
+  → feat/galaxy-map (coordinate system + colonization)
+
+Section 9: Formula Reference Table
+  → All formulas referenced in individual PR files
+
+================================================================================
+QUICK LINKS
+================================================================================
+
+Main README with full dependency graph:
+  → docs/prs/README.md
+
+Individual PR descriptions:
+  → docs/prs/feat-battle-engine.md
+  → docs/prs/feat-defense-system.md
+  → docs/prs/feat-fleet-movement.md
+  → docs/prs/feat-frontend-wiring.md
+  → docs/prs/feat-research-system.md
+  → docs/prs/feat-galaxy-map.md
+
+Game mechanics canonical formulas:
+  → docs/patterns.md (all formulas referenced in PRs)
+
+Branches ready for implementation:
+  $ git branch -a | grep feat/
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Team members review PR files (especially their assigned branch)
+2. Clarify any blockers or missing requirements
+3. Create tracking issues for each feature branch
+4. Assign developers based on dependency graph (Phase 1 parallel teams)
+5. Begin Phase 1 implementation with these PRs as specifications
+6. Reference docs/patterns.md for all formula implementations
+7. Use PR files to validate testing completeness
+8. Update PRs as implementation reveals new requirements
+
+================================================================================
+Generated by Claude Code | 2026-02-22
+================================================================================
