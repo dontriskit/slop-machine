@@ -88,3 +88,18 @@ export {
   ExpeditionService,
   expeditionService,
 } from './expeditionService';
+
+export type {
+  ColonizationRequest,
+  ColonizationResult,
+  AbandonResult,
+  PlayerPlanet,
+  PlanetProperties,
+} from './colonizationService';
+export {
+  MAX_PLANETS,
+  generatePlanetProperties,
+  validateCoordinate,
+  ColonizationService,
+  createColonizationService,
+} from './colonizationService';

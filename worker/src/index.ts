@@ -24,6 +24,7 @@ import {
   getTopPlayers,
 } from './game/services/statsService';
 import type { LeaderboardStat } from './game/services/statsService';
+import { ColonizationService } from './game/services/colonizationService';
 
 /**
  * Cosmic Protocol Worker
@@ -851,6 +852,98 @@ app.post('/api/galaxy/colonize', async (c) => {
     }
 
     return c.json(result, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+
+// ============================================================================
+// COLONIZATION ENDPOINTS
+// ============================================================================
+
+/**
+ * POST /api/colonize
+ * Colonize an empty planet slot using a Colony Ship.
+ * Body: { playerId, fromPlanetId, galaxy, system, position }
+ */
+app.post('/api/colonize', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json<{
+      playerId: string;
+      fromPlanetId: string;
+      galaxy: number;
+      system: number;
+      position: number;
+    }>();
+
+    const { playerId, fromPlanetId, galaxy, system, position } = body;
+
+    if (!playerId || !fromPlanetId || !galaxy || !system || !position) {
+      return c.json(
+        { error: 'playerId, fromPlanetId, galaxy, system, position are required' },
+        400,
+      );
+    }
+
+    const svc = new ColonizationService(DB, PLANET_DO);
+    const result = await svc.colonizePlanet({ playerId, fromPlanetId, galaxy, system, position });
+
+    if (!result.success) {
+      return c.json({ error: result.error }, 400);
+    }
+
+    return c.json(result, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * DELETE /api/planet/:id/abandon
+ * Abandon a colony. Fleet is returned to homeworld.
+ * Query: ?playerId=...
+ */
+app.delete('/api/planet/:id/abandon', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+  const planetId = c.req.param('id');
+  const playerId = c.req.query('playerId');
+
+  if (!playerId) {
+    return c.json({ error: 'playerId query parameter is required' }, 400);
+  }
+
+  try {
+    const svc = new ColonizationService(DB, PLANET_DO);
+    const result = await svc.abandonPlanet(playerId, planetId);
+
+    if (!result.success) {
+      return c.json({ error: result.error }, 400);
+    }
+
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/planets/:playerId
+ * Get all planets (homeworld + colonies) for a player.
+ */
+app.get('/api/planets/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const svc = new ColonizationService(DB, PLANET_DO);
+    const planets = await svc.getPlayerPlanets(playerId);
+    return c.json({ planets });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
