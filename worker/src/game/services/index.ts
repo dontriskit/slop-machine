@@ -88,3 +88,24 @@ export {
   ExpeditionService,
   expeditionService,
 } from './expeditionService';
+
+export type {
+  DefenseBuildOrder,
+  DefenseQueue,
+  RebuildResult,
+  MissileAttackResult,
+  DefenseInfo,
+} from './defenseService';
+export {
+  buildDefense,
+  cancelDefenseBuild,
+  createEmptyDefenseQueue,
+  processDefenseQueue,
+  getDefenseBuildQueue,
+  getNextDefenseCompletionTime,
+  rebuildDefensesAfterBattle,
+  launchMissileAttack,
+  getAllDefenseInfo,
+  DefenseService,
+  defenseService,
+} from './defenseService';

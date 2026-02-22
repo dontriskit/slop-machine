@@ -10,6 +10,7 @@ import { createAlliance, dissolveAlliance, applyToAlliance, acceptApplication, r
 import { getLeaderboard, getPlayerProfile } from './game/services/leaderboardService';
 import { sendMessage, getInbox, getOutbox, getMessage, deleteMessage, getUnreadCount, markAllRead, sendSystemMessage } from './game/services/messageService';
 import { getEmptyDefenses } from './game/defenses';
+import { defenseService, buildDefense, cancelDefenseBuild, createEmptyDefenseQueue, processDefenseQueue, getDefenseBuildQueue, rebuildDefensesAfterBattle, launchMissileAttack } from './game/services/defenseService';
 import { getEmptyTechLevels } from './game/services/researchService';
 import { mintCompressedNFT, buildMetadata } from './solana/mint';
 import type { MintRequest, NFTAsset, AssetType } from './solana/types';
@@ -1746,6 +1747,242 @@ async function handleScheduled(event: ScheduledEvent, env: Bindings): Promise<vo
     console.error('Cron handler error:', error);
   }
 }
+
+// ============================================================================
+// DEFENSE ENDPOINTS
+// ============================================================================
+
+/**
+ * POST /api/defense/build
+ * Queue a defense build order
+ * Body: { planetId, defenseType, count, shipyardLevel?, universeSpeed? }
+ */
+app.post('/api/defense/build', async (c) => {
+  try {
+    const body = await c.req.json() as any;
+    const { planetId, defenseType, count, shipyardLevel = 5, universeSpeed = 1 } = body;
+
+    if (!planetId || !defenseType || !count) {
+      return c.json({ error: 'planetId, defenseType, and count are required' }, 400);
+    }
+
+    // Get planet resources and tech levels from DB
+    const DB = c.env.DB;
+    const planet = await DB.prepare('SELECT * FROM planets WHERE id = ?').bind(planetId).first() as any;
+    if (!planet) {
+      return c.json({ error: 'Planet not found' }, 404);
+    }
+
+    const resources = {
+      metal: planet.metal ?? 0,
+      crystal: planet.crystal ?? 0,
+      deuterium: planet.deuterium ?? 0,
+    };
+
+    const tech = {
+      laserTech: planet.laser_tech ?? 0,
+      energyTech: planet.energy_tech ?? 0,
+      weaponTech: planet.weapon_tech ?? 0,
+      shieldingTech: planet.shielding_tech ?? 0,
+      ionTech: planet.ion_tech ?? 0,
+      plasmaTech: planet.plasma_tech ?? 0,
+      impulseDrive: planet.impulse_drive ?? 0,
+      missileSilo: planet.missile_silo ?? 0,
+    };
+
+    const currentDefenses = planet.defenses_json
+      ? JSON.parse(planet.defenses_json)
+      : { rocketLauncher: 0, lightLaser: 0, heavyLaser: 0, gaussCannon: 0, ionCannon: 0, plasmaTurret: 0, smallShieldDome: 0, largeShieldDome: 0, antiBallisticMissile: 0, interplanetaryMissile: 0 };
+
+    const order = buildDefense(
+      planetId,
+      defenseType,
+      count,
+      tech,
+      currentDefenses,
+      resources,
+      shipyardLevel,
+      universeSpeed,
+    );
+
+    // Persist updated resources
+    await DB.prepare(
+      'UPDATE planets SET metal = ?, crystal = ?, deuterium = ? WHERE id = ?'
+    ).bind(resources.metal, resources.crystal, resources.deuterium, planetId).run();
+
+    // Store queue order in KV
+    const KV = c.env.KV;
+    const queueKey = `defense_queue:${planetId}`;
+    const existingQueue = await KV.get(queueKey, 'json') as any ?? createEmptyDefenseQueue();
+    existingQueue.orders.push(order);
+    await KV.put(queueKey, JSON.stringify(existingQueue));
+
+    return c.json({ success: true, order });
+  } catch (error) {
+    return c.json({ error: String(error) }, 400);
+  }
+});
+
+/**
+ * GET /api/defense/:planetId
+ * Get current defenses on a planet
+ */
+app.get('/api/defense/:planetId', async (c) => {
+  const planetId = c.req.param('planetId');
+  const DB = c.env.DB;
+
+  try {
+    const planet = await DB.prepare('SELECT defenses_json FROM planets WHERE id = ?').bind(planetId).first() as any;
+    if (!planet) {
+      return c.json({ error: 'Planet not found' }, 404);
+    }
+
+    const defenses = planet.defenses_json ? JSON.parse(planet.defenses_json) : {
+      rocketLauncher: 0, lightLaser: 0, heavyLaser: 0, gaussCannon: 0, ionCannon: 0,
+      plasmaTurret: 0, smallShieldDome: 0, largeShieldDome: 0,
+      antiBallisticMissile: 0, interplanetaryMissile: 0,
+    };
+
+    return c.json({ planetId, defenses });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/defense/queue/:planetId
+ * Get the defense build queue for a planet
+ */
+app.get('/api/defense/queue/:planetId', async (c) => {
+  const planetId = c.req.param('planetId');
+  const KV = c.env.KV;
+
+  try {
+    const queueKey = `defense_queue:${planetId}`;
+    const queue = await KV.get(queueKey, 'json') as any ?? createEmptyDefenseQueue();
+
+    const status = getDefenseBuildQueue(queue, Date.now());
+    return c.json({ planetId, ...status });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * DELETE /api/defense/cancel/:queueId
+ * Cancel a queued defense order and refund resources
+ * Query: ?planetId=...
+ */
+app.delete('/api/defense/cancel/:queueId', async (c) => {
+  const queueId = c.req.param('queueId');
+  const planetId = c.req.query('planetId');
+
+  if (!planetId) {
+    return c.json({ error: 'planetId query parameter is required' }, 400);
+  }
+
+  const DB = c.env.DB;
+  const KV = c.env.KV;
+
+  try {
+    const planet = await DB.prepare('SELECT * FROM planets WHERE id = ?').bind(planetId).first() as any;
+    if (!planet) {
+      return c.json({ error: 'Planet not found' }, 404);
+    }
+
+    const resources = {
+      metal: planet.metal ?? 0,
+      crystal: planet.crystal ?? 0,
+      deuterium: planet.deuterium ?? 0,
+    };
+
+    const queueKey = `defense_queue:${planetId}`;
+    const queue = await KV.get(queueKey, 'json') as any ?? createEmptyDefenseQueue();
+
+    const cancelled = cancelDefenseBuild(queue, queueId, resources);
+    if (!cancelled) {
+      return c.json({ error: 'Queue item not found or already building' }, 404);
+    }
+
+    // Persist refund
+    await DB.prepare(
+      'UPDATE planets SET metal = ?, crystal = ?, deuterium = ? WHERE id = ?'
+    ).bind(resources.metal, resources.crystal, resources.deuterium, planetId).run();
+
+    await KV.put(queueKey, JSON.stringify(queue));
+
+    return c.json({ success: true, cancelled, refunded: cancelled.totalCost });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/defense/missile-attack
+ * Launch interplanetary missiles at a target planet
+ * Body: { fromPlanetId, toPlanetId, missileCount, targetDefense? }
+ */
+app.post('/api/defense/missile-attack', async (c) => {
+  try {
+    const body = await c.req.json() as any;
+    const { fromPlanetId, toPlanetId, missileCount, targetDefense } = body;
+
+    if (!fromPlanetId || !toPlanetId || !missileCount) {
+      return c.json({ error: 'fromPlanetId, toPlanetId, and missileCount are required' }, 400);
+    }
+
+    const DB = c.env.DB;
+
+    // Get attacker's planet (check IPM supply and weaponTech)
+    const attacker = await DB.prepare('SELECT * FROM planets WHERE id = ?').bind(fromPlanetId).first() as any;
+    if (!attacker) {
+      return c.json({ error: 'Attacker planet not found' }, 404);
+    }
+
+    const attackerDefenses = attacker.defenses_json ? JSON.parse(attacker.defenses_json) : { interplanetaryMissile: 0 };
+    if ((attackerDefenses.interplanetaryMissile ?? 0) < missileCount) {
+      return c.json({ error: `Not enough Interplanetary Missiles. Have: ${attackerDefenses.interplanetaryMissile ?? 0}, Need: ${missileCount}` }, 400);
+    }
+
+    // Get target planet defenses
+    const target = await DB.prepare('SELECT * FROM planets WHERE id = ?').bind(toPlanetId).first() as any;
+    if (!target) {
+      return c.json({ error: 'Target planet not found' }, 404);
+    }
+
+    const targetDefenses = target.defenses_json ? JSON.parse(target.defenses_json) : {
+      rocketLauncher: 0, lightLaser: 0, heavyLaser: 0, gaussCannon: 0, ionCannon: 0,
+      plasmaTurret: 0, smallShieldDome: 0, largeShieldDome: 0,
+      antiBallisticMissile: 0, interplanetaryMissile: 0,
+    };
+
+    const weaponTech = attacker.weapon_tech ?? 0;
+
+    // Simulate attack
+    const result = launchMissileAttack(targetDefenses, missileCount, weaponTech, targetDefense);
+
+    // Deduct missiles from attacker
+    attackerDefenses.interplanetaryMissile -= missileCount;
+    await DB.prepare(
+      'UPDATE planets SET defenses_json = ? WHERE id = ?'
+    ).bind(JSON.stringify(attackerDefenses), fromPlanetId).run();
+
+    // Update target defenses
+    await DB.prepare(
+      'UPDATE planets SET defenses_json = ? WHERE id = ?'
+    ).bind(JSON.stringify(result.remainingDefenses), toPlanetId).run();
+
+    return c.json({
+      success: true,
+      fromPlanetId,
+      toPlanetId,
+      missilesLaunched: missileCount,
+      result,
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 400);
+  }
+});
 
 // Export Durable Object
 export { PlanetDO };
