@@ -2,7 +2,7 @@
 
 > **This is a live MMORPG.** Player availability is the top priority — 24/7 gameplay, zero downtime tolerance. Every decision, feature, and deployment must serve one goal: players can always connect, build, fight, and trade. If it breaks the game, it doesn't ship.
 
-![Tests](https://img.shields.io/badge/tests-1600%2B%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-1650%2B%20passing-brightgreen)
 ![Coverage Statements](https://img.shields.io/badge/coverage%20statements-62.2%25-yellow)
 ![Coverage Branches](https://img.shields.io/badge/coverage%20branches-81.82%25-green)
 

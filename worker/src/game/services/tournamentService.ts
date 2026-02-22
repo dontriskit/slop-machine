@@ -1025,3 +1025,139 @@ async function advanceBracket(
     await awardAchievement(winnerId, 'tournament_champion', db);
   }
 }
+
+// ============================================================================
+// SEASON REWARDS
+// ============================================================================
+
+export interface SeasonRewardResult {
+  playerId: string;
+  playerName: string;
+  placement: number;
+  metalReward: number;
+  crystalReward: number;
+  deuteriumReward: number;
+  totalRewardValue: number;
+  achievementsAwarded: string[];
+}
+
+/**
+ * Distribute season-end rewards to top players.
+ *
+ * Resource rewards (top 3 only):
+ *   1st: 50 000 metal / 30 000 crystal / 10 000 deuterium  (×1.0)
+ *   2nd: ×0.6
+ *   3rd: ×0.3
+ *
+ * Achievement rewards:
+ *   Top 1 : season_champion
+ *   Top 10: season_top_10
+ */
+export async function distributeSeasonRewards(
+  seasonId: string,
+  db: D1Database
+): Promise<SeasonRewardResult[]> {
+  // Fetch leaderboard (up to 10 entries)
+  const entries = await getSeasonLeaderboard(seasonId, 10, db);
+
+  if (entries.length === 0) {
+    return [];
+  }
+
+  const BASE_METAL = 50_000;
+  const BASE_CRYSTAL = 30_000;
+  const BASE_DEUTERIUM = 10_000;
+  const MULTIPLIERS = [1.0, 0.6, 0.3]; // 1st, 2nd, 3rd
+
+  const results: SeasonRewardResult[] = [];
+
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    const placement = i + 1;
+    const multiplier = MULTIPLIERS[i] ?? 0;
+
+    const metalReward = Math.round(BASE_METAL * multiplier);
+    const crystalReward = Math.round(BASE_CRYSTAL * multiplier);
+    const deuteriumReward = Math.round(BASE_DEUTERIUM * multiplier);
+    const totalRewardValue = metalReward + crystalReward + deuteriumReward;
+
+    const achievementsAwarded: string[] = [];
+
+    // Every top-10 player gets the top-10 achievement
+    achievementsAwarded.push('season_top_10');
+
+    // Only 1st place gets the champion achievement
+    if (placement === 1) {
+      achievementsAwarded.push('season_champion');
+    }
+
+    // Persist achievements
+    for (const achievementId of achievementsAwarded) {
+      await awardAchievement(entry.playerId, achievementId, db);
+    }
+
+    // Credit resources to player's home planet (if resources > 0)
+    if (totalRewardValue > 0) {
+      const planet = await db
+        .prepare('SELECT id FROM planets WHERE player_id = ? LIMIT 1')
+        .bind(entry.playerId)
+        .first<{ id: string }>();
+
+      if (planet) {
+        await db
+          .prepare(
+            `UPDATE planets
+             SET metal = metal + ?, crystal = crystal + ?, deuterium = deuterium + ?
+             WHERE id = ?`
+          )
+          .bind(metalReward, crystalReward, deuteriumReward, planet.id)
+          .run();
+      }
+    }
+
+    results.push({
+      playerId: entry.playerId,
+      playerName: entry.playerName,
+      placement,
+      metalReward,
+      crystalReward,
+      deuteriumReward,
+      totalRewardValue,
+      achievementsAwarded,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Get season leaderboard enriched with tournament win counts.
+ */
+export async function getSeasonLeaderboardWithPoints(
+  seasonId: string,
+  limit: number = 100,
+  db: D1Database
+): Promise<SeasonLeaderboardEntry[]> {
+  const entries = await getSeasonLeaderboard(seasonId, limit, db);
+
+  // Enrich each entry with the number of tournament wins
+  const enriched: SeasonLeaderboardEntry[] = [];
+  for (const entry of entries) {
+    const winRow = await db
+      .prepare(
+        `SELECT COUNT(*) AS count
+         FROM matches m
+         JOIN tournaments t ON t.id = m.tournament_id
+         WHERE t.season_id = ? AND m.winner_id = ?`
+      )
+      .bind(seasonId, entry.playerId)
+      .first<{ count: number }>();
+
+    enriched.push({
+      ...entry,
+      tournaments_won: winRow?.count ?? 0,
+    });
+  }
+
+  return enriched;
+}
