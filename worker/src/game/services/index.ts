@@ -114,3 +114,12 @@ export {
   PlanetManagementService,
   createPlanetManagementService,
 } from './planetManagementService';
+
+export type { VacationInfo, VacationStatus } from './vacationService';
+export {
+  enableVacationMode,
+  disableVacationMode,
+  isOnVacation,
+  getVacationInfo,
+  checkVacationStatus,
+} from './vacationService';
