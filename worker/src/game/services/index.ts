@@ -105,6 +105,7 @@ export {
 } from './notificationService';
 export type { GetNotificationsOptions } from './notificationService';
 
+<<<<<<< HEAD
 export type {
   HallOfFameCategory,
   HallOfFameRecord,
@@ -124,3 +125,15 @@ export {
   HallOfFameService,
   hallOfFameService,
 } from './hallOfFameService';
+=======
+export {
+  getDarkMatter,
+  addDarkMatter,
+  spendDarkMatter,
+  getDarkMatterHistory,
+  instantFinish,
+  merchantTrade,
+  DarkMatterService,
+  darkMatterService,
+} from './darkMatterService';
+>>>>>>> agent/wave3-7

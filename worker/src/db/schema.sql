@@ -414,6 +414,7 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 );
 
 -- ============================================================================
+<<<<<<< HEAD
 -- HALL OF FAME
 -- ============================================================================
 
@@ -430,3 +431,41 @@ CREATE TABLE IF NOT EXISTS hall_of_fame (
 CREATE INDEX IF NOT EXISTS idx_hof_category_active ON hall_of_fame(category, is_active);
 CREATE INDEX IF NOT EXISTS idx_hof_player ON hall_of_fame(player_id);
 CREATE INDEX IF NOT EXISTS idx_hof_achieved ON hall_of_fame(category, achieved_at DESC);
+=======
+-- DARK MATTER & OFFICERS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS dark_matter (
+  player_id TEXT PRIMARY KEY REFERENCES players(id),
+  balance INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_dark_matter_balance ON dark_matter(balance);
+
+CREATE TABLE IF NOT EXISTS officers (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  officer_type TEXT NOT NULL,  -- 'commander' | 'admiral' | 'engineer' | 'geologist' | 'technocrat'
+  activated_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_officers_player ON officers(player_id);
+CREATE INDEX IF NOT EXISTS idx_officers_expires ON officers(player_id, expires_at);
+CREATE INDEX IF NOT EXISTS idx_officers_type ON officers(player_id, officer_type);
+
+CREATE TABLE IF NOT EXISTS dark_matter_transactions (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  amount INTEGER NOT NULL,
+  source TEXT,  -- 'expedition' | 'achievement' | 'purchase' | 'reward'
+  purpose TEXT,  -- 'officer' | 'instant_finish' | 'merchant' | 'cosmetic'
+  reference TEXT,  -- expedition ID, achievement ID, etc
+  balance_before INTEGER NOT NULL,
+  balance_after INTEGER NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_dark_matter_txn_player ON dark_matter_transactions(player_id);
+CREATE INDEX IF NOT EXISTS idx_dark_matter_txn_created ON dark_matter_transactions(player_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_dark_matter_txn_source ON dark_matter_transactions(player_id, source);
+>>>>>>> agent/wave3-7

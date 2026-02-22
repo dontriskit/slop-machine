@@ -38,7 +38,11 @@ import type { OfficerType } from './game/types';
 import { ColonizationService } from './game/services/colonizationService';
 import { defenseService, buildDefense, cancelDefenseBuild, createEmptyDefenseQueue, processDefenseQueue, getDefenseBuildQueue, rebuildDefensesAfterBattle, launchMissileAttack } from './game/services/defenseService';
 import { createNotification, getNotifications, markRead as markNotifRead, markAllRead as markAllNotifsRead, deleteNotification, getUnreadCount as getNotifUnreadCount, getPreferences as getNotifPreferences, setPreferences as setNotifPreferences, getDefaultPreferences as getDefaultNotifPreferences } from './game/services/notificationService';
+<<<<<<< HEAD
 import { simulateBattlePreview, getBreakEvenFleet, compareFleetCompositions } from './game/services/battleSimulatorService';
+=======
+import { getDarkMatter, addDarkMatter, spendDarkMatter, getDarkMatterHistory, instantFinish, merchantTrade } from './game/services/darkMatterService';
+>>>>>>> agent/wave3-7
 
     const result = await svc.colonize({ playerId, fromPlanetId, galaxy, system, position });
     const result = await svc.colonizePlanet({ playerId, fromPlanetId, galaxy, system, position });
@@ -3211,6 +3215,7 @@ app.delete('/api/notifications/:id', async (c) => {
 
 
 // ============================================================================
+<<<<<<< HEAD
 // BATTLE SIMULATOR ENDPOINTS
 // ============================================================================
 
@@ -4028,12 +4033,35 @@ app.post('/api/espionage/send', async (c) => {
       .run();
 
     return c.json({ report }, 201);
+=======
+// DARK MATTER API
+// ============================================================================
+
+/**
+ * GET /api/dm/:playerId
+ * Get dark matter balance and transaction history
+ */
+app.get('/api/dm/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+  const limitStr = c.req.query('limit') || '50';
+
+  try {
+    const balance = await getDarkMatter(DB, playerId);
+    const history = await getDarkMatterHistory(DB, playerId, parseInt(limitStr, 10));
+
+    return c.json({
+      balance,
+      history,
+    });
+>>>>>>> agent/wave3-7
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
 });
 
 /**
+<<<<<<< HEAD
  * GET /api/espionage/reports
  * List espionage reports for a player.
  * Query: ?player_id=xxx&limit=50
@@ -4109,10 +4137,18 @@ app.get('/api/espionage/reports/:id', async (c) => {
  * Body: { fromPlayerId, toPlayerId, subject, body }
  */
 app.post('/api/messages/send', async (c) => {
+=======
+ * POST /api/dm/instant-finish
+ * Spend dark matter to instantly complete a queue item
+ * Body: { playerId, planetId, queueType, queueIndex }
+ */
+app.post('/api/dm/instant-finish', async (c) => {
+>>>>>>> agent/wave3-7
   const DB = c.env.DB;
 
   try {
     const body = await c.req.json<{
+<<<<<<< HEAD
       fromPlayerId: string;
       toPlayerId: string;
       subject: string;
@@ -5500,11 +5536,73 @@ app.delete('/api/notifications/:id', async (c) => {
       return c.json({ error: 'Notification not found' }, 404);
     }
     return c.json({ deleted: true });
+=======
+      playerId: string;
+      planetId: string;
+      queueType: 'building' | 'research';
+      queueIndex: number;
+    }>();
+
+    const { playerId, planetId, queueType, queueIndex } = body;
+
+    if (!playerId || !planetId || !queueType || queueIndex === undefined) {
+      return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    const balance = await instantFinish(DB, playerId, planetId, queueType, queueIndex);
+
+    return c.json({
+      success: true,
+      balance,
+    });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
 });
 
+/**
+ * POST /api/dm/merchant
+ * Trade resources using the NPC merchant
+ * Body: { playerId, planetId, offerResource, offerAmount, wantResource }
+ */
+app.post('/api/dm/merchant', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<{
+      playerId: string;
+      planetId: string;
+      offerResource: 'metal' | 'crystal' | 'deuterium';
+      offerAmount: number;
+      wantResource: 'metal' | 'crystal' | 'deuterium';
+    }>();
+
+    const { playerId, planetId, offerResource, offerAmount, wantResource } = body;
+
+    if (!playerId || !planetId || !offerResource || offerAmount === undefined || !wantResource) {
+      return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    const result = await merchantTrade(
+      DB,
+      playerId,
+      planetId,
+      offerResource,
+      offerAmount,
+      wantResource
+    );
+
+    return c.json({
+      success: true,
+      trade: result,
+    });
+>>>>>>> agent/wave3-7
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+<<<<<<< HEAD
 
 // ============================================================================
 // PLAYER PUBLIC PROFILE ROUTES
@@ -5621,6 +5719,33 @@ app.get('/api/hall-of-fame/player/:playerId', async (c) => {
     return c.json({ error: String(error) }, 500);
   }
 });
+
+
+=======
+>>>>>>> agent/wave3-7
+app.post('/api/dm/instant-finish', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<{
+      playerId: string;
+      planetId: string;
+      queueType: 'building' | 'research';
+      queueIndex: number;
+    }>();
+
+    const { playerId, planetId, queueType, queueIndex } = body;
+
+    if (!playerId || !planetId || !queueType || queueIndex === undefined) {
+      return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    const balance = await instantFinish(DB, playerId, planetId, queueType, queueIndex);
+
+    return c.json({
+      success: true,
+      balance,
+    });
 
 
 export default {
