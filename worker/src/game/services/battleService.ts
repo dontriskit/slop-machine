@@ -327,7 +327,16 @@ interface DefenseSpec {
 }
 
 const DEFENSE_BATTLE_SPECS: Record<keyof DefenseStructures, DefenseSpec> = {
-  smallLaser: {
+  rocketLauncher: {
+    hull: 2000,
+    shield: 20,
+    attack: 80,
+    metal: 2000,
+    crystal: 0,
+    deuterium: 0,
+    rapidfire: {},
+  },
+  lightLaser: {
     hull: 2000,
     shield: 25,
     attack: 100,
@@ -336,7 +345,7 @@ const DEFENSE_BATTLE_SPECS: Record<keyof DefenseStructures, DefenseSpec> = {
     deuterium: 0,
     rapidfire: {},
   },
-  bigLaser: {
+  heavyLaser: {
     hull: 8000,
     shield: 100,
     attack: 250,
@@ -372,7 +381,7 @@ const DEFENSE_BATTLE_SPECS: Record<keyof DefenseStructures, DefenseSpec> = {
     deuterium: 30000,
     rapidfire: {},
   },
-  smallShield: {
+  smallShieldDome: {
     hull: 20000,
     shield: 2000,
     attack: 1,
@@ -381,7 +390,7 @@ const DEFENSE_BATTLE_SPECS: Record<keyof DefenseStructures, DefenseSpec> = {
     deuterium: 0,
     rapidfire: {},
   },
-  largeShield: {
+  largeShieldDome: {
     hull: 100000,
     shield: 10000,
     attack: 1,
@@ -436,15 +445,16 @@ function emptyShips(): Ships {
 /** Create an empty DefenseStructures object with all counts at zero */
 function emptyDefenses(): DefenseStructures {
   return {
-    smallShield: 0,
-    largeShield: 0,
-    smallLaser: 0,
-    bigLaser: 0,
+    rocketLauncher: 0,
+    lightLaser: 0,
+    heavyLaser: 0,
     gaussCannon: 0,
     ionCannon: 0,
+    plasmaTurret: 0,
+    smallShieldDome: 0,
+    largeShieldDome: 0,
     antiBallisticMissile: 0,
     interplanetaryMissile: 0,
-    plasmaTurret: 0,
   };
 }
 

@@ -1,5 +1,6 @@
 import type { PlanetState, StrategyStep, AgentDecision } from '../game';
-import { BUILDING_NAME, BUILDING_ID, BUILDING_FACTORS, BUILDING_COSTS } from '../game/formulas';
+import { BUILDING_NAME, BUILDING_ID } from '../game/types';
+import { BUILDING_FACTORS, BUILDING_COSTS } from '../game/formulas';
 
 interface CloudflareEnv {
   AI: Ai;
@@ -29,7 +30,7 @@ export async function runBuildOrderAgent(
 
     // Call Workers AI with GLM-4.7-Flash model
     // Model ID: @cf/thudm/glm-4-0520 (GLM-4.7-Flash)
-    const response = await env.AI.run('@cf/thudm/glm-4-0520', {
+    const response = await (env.AI as any).run('@cf/thudm/glm-4-0520', {
       messages: [
         {
           role: 'system',
@@ -45,7 +46,7 @@ Respond ONLY with a JSON object (no markdown, no explanation):
     });
 
     // Parse response
-    const responseText = String(response.response || response.text || '');
+    const responseText = typeof response === 'string' ? response : String((response as any).response || (response as any).text || '');
 
     // Extract JSON from response (handle markdown code blocks)
     let jsonStr = responseText;
@@ -175,10 +176,10 @@ function generateBuildableInfo(state: PlanetState): string {
 
     if (!buildingKey) return;
 
-    const baseCost = BUILDING_COSTS[buildingKey];
+    const baseCost = (BUILDING_COSTS as Record<string, { metal: number; crystal: number; deuterium: number }>)[buildingKey];
     if (!baseCost) return;
 
-    const factor = BUILDING_FACTORS[buildingKey] || 1.5;
+    const factor = (BUILDING_FACTORS as Record<string, number>)[buildingKey] || 1.5;
     const nextLevel = level + 1;
 
     const costMetal = Math.floor(baseCost.metal * Math.pow(factor, nextLevel - 1));
@@ -221,7 +222,7 @@ export async function runAgentForAllPlanets(
   planetStates: PlanetState[],
   strategies: Map<string, any>,
   planetDOs: Map<string, any>,
-  ai: Ai,
+  ai: any,
   db: D1Database
 ): Promise<RunAgentAllPlanetsResult> {
   const results = await Promise.allSettled(
@@ -247,7 +248,7 @@ async function runSingleAgentWithExecution(
   state: PlanetState,
   strategy: any,
   planetDO: any,
-  ai: Ai,
+  ai: any,
   db: D1Database
 ): Promise<boolean> {
   try {

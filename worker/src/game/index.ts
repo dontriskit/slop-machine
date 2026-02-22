@@ -24,7 +24,7 @@ export type {
 export { BUILDING_ID, BUILDING_NAME, SHIP_KEYS } from './types';
 
 // Defenses
-export type { DefenseStructure, DefenseStructures, TechLevels } from './defenses';
+export type { DefenseStructure, DefenseStructures } from './defenses';
 export {
   DefenseType,
   DEFENSE_STATS,
