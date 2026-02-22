@@ -25,6 +25,23 @@ import {
 } from './game/services/statsService';
 import type { LeaderboardStat } from './game/services/statsService';
 import {
+  OFFICER_DEFINITIONS,
+  OFFICER_TYPES,
+  activateOfficer,
+  deactivateOfficer,
+  getActiveOfficers,
+  getOfficerBonuses,
+} from './game/services/officerService';
+import type { OfficerType } from './game/types';
+  return c.json(Object.values(OFFICER_DEFINITIONS));
+    if (!OFFICER_TYPES.includes(officerType as OfficerType)) {
+        { error: `Invalid officerType. Valid: ${OFFICER_TYPES.join(', ')}` },
+    const officer = await activateOfficer(playerId, officerType as OfficerType, DB);
+    const officers = await getActiveOfficers(playerId, DB);
+    if (!OFFICER_TYPES.includes(officerType as OfficerType)) {
+        { error: `Invalid officerType. Valid: ${OFFICER_TYPES.join(', ')}` },
+    const deactivated = await deactivateOfficer(playerId, officerType as OfficerType, DB);
+    const bonuses = await getOfficerBonuses(playerId, DB);
   getTutorialProgress,
   completeTutorialStep,
   claimReward as claimTutorialReward,
@@ -1788,6 +1805,8 @@ app.post('/api/tutorial/:playerId/claim-reward', async (c) => {
 
 
 // ============================================================================
+// OFFICERS ENDPOINTS
+
 // CRON TRIGGER
 // ============================================================================
 

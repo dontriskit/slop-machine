@@ -89,23 +89,29 @@ export {
   expeditionService,
 } from './expeditionService';
 
-export type {
-  TutorialStep,
-  TutorialReward,
-  TutorialRequirement,
-  TutorialProgress,
-  TutorialStepResult,
-} from './tutorialService';
+export type { OfficerDefinition, OfficerBonuses, ActiveOfficer, OfficerType } from '../types';
 export {
-  TUTORIAL_STEPS,
-  TUTORIAL_STEP_MAP,
-  getTutorialProgress,
-  completeTutorialStep,
-  claimReward,
-  skipTutorial,
-  getNextStep,
-  getTutorialCompletionPercent,
-  isValidStepId,
-  TutorialService,
-  tutorialService,
-} from './tutorialService';
+  OFFICER_DEFINITIONS,
+  OFFICER_TYPES,
+  OfficerService,
+  officerService,
+  activateOfficer,
+  deactivateOfficer,
+  getActiveOfficers,
+  getOfficerBonuses,
+  hasOfficer,
+  getOfficerHistory,
+  getOfficerDefinition,
+  isOfficerActive,
+  mergeOfficerBonuses,
+  calculateExpiry,
+  applyMineProductionBonus,
+  applyEnergyProductionBonus,
+  applyResearchSpeedBonus,
+  getEffectiveEspionageLevel,
+  applyDefenseRepairBonus,
+  getTotalBuildQueueSlots,
+  getTotalFleetSlots,
+  hasFleetRecall,
+  hasFleetShortcuts,
+} from './officerService';

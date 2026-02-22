@@ -281,3 +281,47 @@ export interface ResearchQueueItem {
   timeStart: number;   // unix ms
   timeEnd: number;     // unix ms
 }
+
+// ============================================================================
+// OFFICERS SYSTEM
+// ============================================================================
+
+export type OfficerType = 'commander' | 'admiral' | 'engineer' | 'geologist' | 'technocrat';
+
+export interface OfficerDefinition {
+  type: OfficerType;
+  name: string;
+  description: string;
+  cost: number;          // dark matter cost
+  durationDays: number;  // how long the officer stays active
+  bonuses: OfficerBonuses;
+}
+
+export interface OfficerBonuses {
+  /** Commander: extra build queue slots */
+  buildQueueSlots?: number;
+  /** Commander: fleet shortcuts enabled */
+  fleetShortcuts?: boolean;
+  /** Admiral: extra fleet slots */
+  fleetSlots?: number;
+  /** Admiral: fleet recall enabled */
+  fleetRecall?: boolean;
+  /** Engineer: defense repair time multiplier (0.5 = 50% faster) */
+  defenseRepairFactor?: number;
+  /** Engineer: energy production bonus (0.10 = +10%) */
+  energyProductionBonus?: number;
+  /** Geologist: mine production bonus (0.10 = +10%) */
+  mineProductionBonus?: number;
+  /** Technocrat: espionage level bonus (+2 effective levels) */
+  espionageLevelBonus?: number;
+  /** Technocrat: research speed bonus (0.25 = +25% faster) */
+  researchSpeedBonus?: number;
+}
+
+export interface ActiveOfficer {
+  id: string;
+  playerId: string;
+  officerType: OfficerType;
+  activatedAt: number;   // unix seconds
+  expiresAt: number;     // unix seconds
+}
