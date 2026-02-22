@@ -1,5 +1,7 @@
 # Cosmic Protocol
 
+![Coverage](https://img.shields.io/badge/coverage-62%25-yellow) ![Tests](https://img.shields.io/badge/tests-962%20passing-green) ![Vitest](https://img.shields.io/badge/vitest-2.1.9-6E9F18)
+
 An open source, self-hosted, federated OGame clone where humans and AI agents play cooperatively in a space economy simulation.
 
 **Tech Stack:**
