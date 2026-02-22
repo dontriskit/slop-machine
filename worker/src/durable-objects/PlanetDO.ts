@@ -1,4 +1,4 @@
-import { Coordinate, PlanetState, QueueItem, BuildingLevels, Resources } from '../game/types';
+import { Coordinate, PlanetState, QueueItem, BuildingLevels, Resources, Ships } from '../game/types';
 import { calculateProduction, BASE_PRODUCTION, calculateBuildTime } from '../game/formulas';
 
 /**
@@ -22,6 +22,7 @@ interface PlanetDOState {
   universeSpeed: number;
   buildings: BuildingLevels;
   resources: Resources;
+  ships: Ships;
   queue: QueueItem[];
   lastTickAt: number; // unix ms
   alarmAt: number | null;
@@ -72,6 +73,21 @@ export class PlanetDO implements DurableObject {
           deutTank: 1,
         },
         resources: { metal: 500, crystal: 300, deuterium: 100 },
+        ships: {
+          lightFighter: 0,
+          heavyFighter: 0,
+          cruiser: 0,
+          battleship: 0,
+          battlecruiser: 0,
+          bomber: 0,
+          destroyer: 0,
+          deathstar: 0,
+          smallCargo: 0,
+          largeCargo: 0,
+          colonyShip: 0,
+          recycler: 0,
+          espionageProbe: 0,
+        },
         queue: [],
         lastTickAt: Date.now(),
         alarmAt: null,
@@ -393,6 +409,7 @@ export class PlanetDO implements DurableObject {
       universeSpeed: this.planetState.universeSpeed,
       buildings: this.planetState.buildings,
       resources: currentResources,
+      ships: this.planetState.ships,
       queue: this.planetState.queue,
       lastTickAt: nowMs,
     };
@@ -508,6 +525,7 @@ export class PlanetDO implements DurableObject {
     if (body.universeSpeed !== undefined) this.planetState.universeSpeed = body.universeSpeed;
     if (body.buildings) this.planetState.buildings = body.buildings;
     if (body.resources) this.planetState.resources = body.resources;
+    if (body.ships) this.planetState.ships = body.ships;
 
     this.planetState.lastTickAt = Date.now();
 

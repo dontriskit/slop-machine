@@ -153,23 +153,42 @@ export interface Fleet {
   updatedAt: number; // unix ms
 }
 
-export type FleetMissionType = 'attack' | 'transport' | 'colonize' | 'expedition' | 'return';
-export type FleetMissionStatus = 'in_transit' | 'arrived' | 'returned' | 'canceled';
+export type FleetMissionType =
+  | 'attack'
+  | 'transport'
+  | 'deploy'
+  | 'espionage'
+  | 'harvest'
+  | 'colonize'
+  | 'expedition'
+  | 'return';
+
+export type FleetMissionStatus =
+  | 'dispatched'
+  | 'in_transit'
+  | 'arrived'
+  | 'returning'
+  | 'completed'
+  | 'canceled';
 
 export interface FleetMission {
   id: string;
   playerId: string;
   planetIdFrom: string;
-  planetIdTo: string | null;     // null if colonizing to empty coords
-  targetCoordinate: Coordinate;   // Where the fleet is going
+  planetIdTo: string | null;       // null if colonizing to empty coords
+  sourceCoordinate: Coordinate;    // Where the fleet departed from
+  targetCoordinate: Coordinate;    // Where the fleet is going
   missionType: FleetMissionType;
   missionStatus: FleetMissionStatus;
   timeDeparture: number;  // unix seconds
   timeArrival: number;    // unix seconds
   holdTime: number;       // hours at target before returning
-  resources: Resources;
+  speedPercent: number;   // 10-100, mission speed setting
+  resources: Resources;   // resources being carried
+  loot: Resources;        // resources looted (populated after arrival for attack/harvest)
   ships: Ships;
-  createdAt: number; // unix ms
+  fuelConsumed: number;   // deuterium consumed for the trip
+  createdAt: number;      // unix ms
 }
 
 // ============================================================================
@@ -187,6 +206,7 @@ export interface PlanetState {
   universeSpeed: number;
   buildings: BuildingLevels;
   resources: Resources;
+  ships: Ships;
   queue: QueueItem[];
   lastTickAt: number; // unix ms
 }
