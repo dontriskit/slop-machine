@@ -536,7 +536,7 @@ export async function getPlayerAchievements(
     .bind(playerId)
     .all();
 
-  return (rows.results as PlayerAchievementRow[]).map((row) => ({
+  return (rows.results as unknown as PlayerAchievementRow[]).map((row) => ({
     achievementId: row.achievement_id,
     playerId: row.player_id,
     unlockedAt: row.unlocked_at,
