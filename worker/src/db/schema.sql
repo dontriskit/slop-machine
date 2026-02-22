@@ -414,33 +414,19 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 );
 
 -- ============================================================================
--- DAILY MISSIONS SYSTEM
+-- HALL OF FAME
 -- ============================================================================
 
--- One row per player per mission per day
-CREATE TABLE IF NOT EXISTS daily_missions (
+CREATE TABLE IF NOT EXISTS hall_of_fame (
   id TEXT PRIMARY KEY,
-  player_id TEXT NOT NULL REFERENCES players(id),
-  mission_type TEXT NOT NULL,
-  date_key TEXT NOT NULL,            -- 'YYYY-MM-DD' UTC
-  status TEXT NOT NULL DEFAULT 'active',  -- 'active' | 'completed' | 'claimed'
-  progress INTEGER NOT NULL DEFAULT 0,
-  target INTEGER NOT NULL,
-  assigned_at INTEGER NOT NULL DEFAULT (unixepoch()),
-  completed_at INTEGER,
-  claimed_at INTEGER
-);
-CREATE INDEX IF NOT EXISTS idx_daily_missions_player_date ON daily_missions(player_id, date_key);
-CREATE INDEX IF NOT EXISTS idx_daily_missions_status ON daily_missions(status, date_key);
-
--- Optional: track incremental progress events (for debug/audit)
-CREATE TABLE IF NOT EXISTS daily_mission_progress (
-  id TEXT PRIMARY KEY,
-  mission_id TEXT NOT NULL REFERENCES daily_missions(id),
+  category TEXT NOT NULL,          -- HallOfFameCategory value
   player_id TEXT NOT NULL,
-  delta INTEGER NOT NULL DEFAULT 0,  -- how much progress was added this event
-  event_type TEXT,                   -- e.g. 'fleet_dispatched', 'research_completed'
-  recorded_at INTEGER NOT NULL DEFAULT (unixepoch())
+  player_name TEXT NOT NULL,       -- denormalised for fast reads even after player deletion
+  value REAL NOT NULL,             -- numeric record value (ships, resources, seconds, etc.)
+  metadata TEXT NOT NULL DEFAULT '{}', -- JSON extra context
+  achieved_at INTEGER NOT NULL,    -- unix seconds
+  is_active INTEGER NOT NULL DEFAULT 1  -- 1 = current record, 0 = historical
 );
-CREATE INDEX IF NOT EXISTS idx_dm_progress_mission ON daily_mission_progress(mission_id);
-CREATE INDEX IF NOT EXISTS idx_dm_progress_player ON daily_mission_progress(player_id, recorded_at);
+CREATE INDEX IF NOT EXISTS idx_hof_category_active ON hall_of_fame(category, is_active);
+CREATE INDEX IF NOT EXISTS idx_hof_player ON hall_of_fame(player_id);
+CREATE INDEX IF NOT EXISTS idx_hof_achieved ON hall_of_fame(category, achieved_at DESC);

@@ -106,22 +106,21 @@ export {
 export type { GetNotificationsOptions } from './notificationService';
 
 export type {
-  MissionType,
-  MissionStatus,
-  MissionReward,
-  MissionDefinition,
-  MissionRequirement,
-  DailyMission,
-} from './dailyMissionService';
+  HallOfFameCategory,
+  HallOfFameRecord,
+  HallOfFameEntry,
+  CheckAndUpdateEvent,
+} from './hallOfFameService';
 export {
-  DAILY_MISSIONS,
-  MISSION_MAP,
-  getTodayKey,
-  pickMissions,
-  generateDailyMissions,
-  getDailyMissions,
-  checkMissionProgress,
-  claimMissionReward,
-  resetDailyMissions,
-  DailyMissionService,
-} from './dailyMissionService';
+  HALL_OF_FAME_CATEGORIES,
+  CATEGORY_META,
+  CATEGORY_LOWER_IS_BETTER,
+  submitRecord as submitHallOfFameRecord,
+  getHallOfFame,
+  getHallOfFameCategory,
+  getRecordHistory,
+  checkAndUpdateRecords,
+  getPlayerRecords as getPlayerHallOfFameRecords,
+  HallOfFameService,
+  hallOfFameService,
+} from './hallOfFameService';
