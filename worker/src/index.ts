@@ -34,6 +34,9 @@ import {
   getOfficerBonuses,
 } from './game/services/officerService';
 import type { OfficerType } from './game/types';
+import { ColonizationService } from './game/services/colonizationService';
+    const result = await svc.colonize({ playerId, fromPlanetId, galaxy, system, position });
+    const result = await svc.colonizePlanet({ playerId, fromPlanetId, galaxy, system, position });
   return c.json(Object.values(OFFICER_DEFINITIONS));
     if (!OFFICER_TYPES.includes(officerType as OfficerType)) {
         { error: `Invalid officerType. Valid: ${OFFICER_TYPES.join(', ')}` },
@@ -2131,6 +2134,351 @@ async function handleScheduled(event: ScheduledEvent, env: Bindings): Promise<vo
 export { PlanetDO };
 
 // Export handler for scheduled event (Cron)
+
+// COLONIZATION ENDPOINTS
+app.get('/api/planet/:id/state', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(new Request('https://planet/state'));
+    const state = await response.json();
+    return c.json(state);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.get('/api/planet/:id/resources', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(new Request('https://planet/resources'));
+    const data = await response.json();
+    return c.json(data);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.get('/api/planet/:id/buildings', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(new Request('https://planet/buildings'));
+    const buildings = await response.json();
+    return c.json(buildings);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.get('/api/planet/:id/queue', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(new Request('https://planet/queue/list'));
+    const queue = await response.json();
+    return c.json(queue);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.post('/api/planet/:id/queue', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json();
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(new Request('https://planet/queue/add', { method: 'POST', body: JSON.stringify(body) }));
+
+    if (!response.ok) {
+      return c.json({ error: await response.text() }, response.status as any);
+    }
+
+    const result = await response.json() as any;
+
+    // Log to build_history
+    if (result.queueItem) {
+      await DB.prepare(
+        `INSERT INTO build_history (id, planet_id, building_id, level, source, ai_reason, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      )
+        .bind(
+          `${planetId}-${Date.now()}`,
+          planetId,
+          result.queueItem.buildingId,
+          result.queueItem.targetLevel,
+          'manual',
+          'Manual build queue',
+          Math.floor(Date.now() / 1000)
+        )
+        .run();
+    }
+
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.post('/api/planet/:id/initialize', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json();
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(new Request('https://planet/initialize', { method: 'POST', body: JSON.stringify(body) }));
+
+    if (!response.ok) {
+      return c.json({ error: await response.text() }, response.status as any);
+    }
+
+    return c.json(await response.json());
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.post('/api/planet/:id/agent/run', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+  const DB = c.env.DB;
+  const AI = c.env.AI;
+
+  try {
+    // Get planet state
+    const planetStub = getPlanetStub(PLANET_DO, planetId);
+    const stateRes = await planetStub.fetch(new Request('https://planet/state'));
+    const planetState = (await stateRes.json()) as PlanetState;
+
+    // Get planet's strategy
+    const strategyResult = await DB.prepare('SELECT id, steps FROM build_strategies WHERE id = (SELECT strategy_id FROM planets WHERE id = ?)').bind(planetId).first();
+
+    if (!strategyResult) {
+      return c.json({ error: 'No strategy assigned to planet' }, 400);
+    }
+
+    const strategy: Strategy = {
+      id: strategyResult.id as string,
+      playerId: planetState.playerId,
+      name: '',
+      steps: JSON.parse((strategyResult.steps as string) || '[]'),
+    };
+
+    // Run agent
+    const decision = await runBuildOrderAgent(planetState, strategy.steps, { AI });
+
+    if (!decision) {
+      return c.json({ error: 'Agent failed to make decision' }, 500);
+    }
+
+    return c.json({ decision });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.post('/api/planet/:id/agent/enable', async (c) => {
+  const planetId = c.req.param('id');
+  const DB = c.env.DB;
+
+  try {
+    await DB.prepare('UPDATE planets SET agent_enabled = 1 WHERE id = ?').bind(planetId).run();
+
+    return c.json({ agent_enabled: true });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.post('/api/planet/:id/agent/disable', async (c) => {
+  const planetId = c.req.param('id');
+  const DB = c.env.DB;
+
+  try {
+    await DB.prepare('UPDATE planets SET agent_enabled = 0 WHERE id = ?').bind(planetId).run();
+
+    return c.json({ agent_enabled: false });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.post('/api/planet/:id/ships/build', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json();
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(
+      new Request('https://planet/ships/build', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    );
+
+    if (!response.ok) {
+      return new Response(response.body, { status: response.status, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    return c.json(await response.json());
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.get('/api/planet/:id/ships/queue', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(new Request('https://planet/ships/queue'));
+    return c.json(await response.json());
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.post('/api/planet/:id/ships/cancel', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json();
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(
+      new Request('https://planet/ships/cancel', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    );
+
+    if (!response.ok) {
+      return new Response(response.body, { status: response.status, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    return c.json(await response.json());
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.get('/api/planet/:id/ships/available', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(new Request('https://planet/ships/available'));
+    return c.json(await response.json());
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.post('/api/galaxy/colonize', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json<{
+      playerId: string;
+      fromPlanetId: string;
+      galaxy: number;
+      system: number;
+      position: number;
+    }>();
+
+    const { playerId, fromPlanetId, galaxy, system, position } = body;
+
+    if (!playerId || !fromPlanetId || !galaxy || !system || !position) {
+      return c.json({ error: 'playerId, fromPlanetId, galaxy, system, position are required' }, 400);
+    }
+
+    const svc = new GalaxyService(DB, PLANET_DO);
+    const result = await svc.colonize({ playerId, fromPlanetId, galaxy, system, position });
+
+    if (!result.success) {
+      return c.json({ error: result.error }, 400);
+    }
+
+    return c.json(result, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.post('/api/colonize', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json<{
+      playerId: string;
+      fromPlanetId: string;
+      galaxy: number;
+      system: number;
+      position: number;
+    }>();
+
+    const { playerId, fromPlanetId, galaxy, system, position } = body;
+
+    if (!playerId || !fromPlanetId || !galaxy || !system || !position) {
+      return c.json(
+        { error: 'playerId, fromPlanetId, galaxy, system, position are required' },
+        400,
+      );
+    }
+
+    const svc = new ColonizationService(DB, PLANET_DO);
+    const result = await svc.colonizePlanet({ playerId, fromPlanetId, galaxy, system, position });
+
+    if (!result.success) {
+      return c.json({ error: result.error }, 400);
+    }
+
+    return c.json(result, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.delete('/api/planet/:id/abandon', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+  const planetId = c.req.param('id');
+  const playerId = c.req.query('playerId');
+
+  if (!playerId) {
+    return c.json({ error: 'playerId query parameter is required' }, 400);
+  }
+
+  try {
+    const svc = new ColonizationService(DB, PLANET_DO);
+    const result = await svc.abandonPlanet(playerId, planetId);
+
+    if (!result.success) {
+      return c.json({ error: result.error }, 400);
+    }
+
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.get('/api/planets/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const svc = new ColonizationService(DB, PLANET_DO);
+    const planets = await svc.getPlayerPlanets(playerId);
+    return c.json({ planets });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
 export default {
   async fetch(request: Request, env: Bindings): Promise<Response> {
     return app.fetch(request, env);
