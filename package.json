@@ -1,8 +1,15 @@
 {
   "name": "og-game-test-4",
   "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "coverage:watch": "vitest --coverage",
+    "coverage:check": "vitest run --coverage --reporter=json"
+  },
   "devDependencies": {
-    "vitest": "^2.0.0",
-    "typescript": "^5.3.0"
+    "@vitest/coverage-v8": "^2.1.9",
+    "typescript": "^5.3.0",
+    "vitest": "^2.1.9"
   }
 }

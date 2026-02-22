@@ -18,21 +18,21 @@ import {
 describe('Moon Service', () => {
   describe('calculateMoonChance', () => {
     it('returns 0% for debris < 10k units', () => {
-      // 5000 units of debris
-      const chance = calculateMoonChance(2_500_000, 2_500_000); // 5k * 500 cost ratio
+      // 4999 units of debris: (2_499_000 + 0) / 500 = 4998 units
+      const chance = calculateMoonChance(2_499_000, 0); // ~4998 units
       expect(chance).toBe(0);
     });
 
-    it('returns 1% chance at 50k units', () => {
+    it('returns ~10% chance at 50k units', () => {
       // 50k units = (50000/100000)*20 = 10%
       const chance = calculateMoonChance(12_500_000, 12_500_000);
-      expect(chance).toBeCloseTo(1, 1); // ~1%
+      expect(chance).toBeCloseTo(10, 0); // 10%
     });
 
-    it('returns 10% at 50k units', () => {
-      // 50k units = (50000/100000)*20 = 10%
+    it('returns 20% at 100k units', () => {
+      // 100k units = min((100000/100000)*20, 20) = 20%
       const chance = calculateMoonChance(25_000_000, 25_000_000);
-      expect(chance).toBeCloseTo(10, 0);
+      expect(chance).toBeCloseTo(20, 0);
     });
 
     it('returns 20% max at 100k+ units', () => {
@@ -50,10 +50,10 @@ describe('Moon Service', () => {
       const chance50k = calculateMoonChance(12_500_000, 12_500_000); // 25k units
       const chance100k = calculateMoonChance(25_000_000, 25_000_000); // 50k units
 
-      // Should be roughly: 0%, ~5%, ~10%
-      expect(chance20k).toBe(0); // Below threshold
-      expect(chance50k).toBeGreaterThan(0);
-      expect(chance50k).toBeLessThan(chance100k);
+      // Should be roughly: 4%, ~10%, ~20%
+      expect(chance20k).toBeGreaterThan(0); // 20k units: 4%
+      expect(chance50k).toBeGreaterThan(chance20k); // 50k units: 10%
+      expect(chance50k).toBeLessThan(chance100k); // 100k units: 20%
     });
   });
 

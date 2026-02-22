@@ -1,5 +1,9 @@
 # Cosmic Protocol
 
+![Tests](https://img.shields.io/badge/tests-970%20passing-brightgreen)
+![Coverage Statements](https://img.shields.io/badge/coverage%20statements-62.2%25-yellow)
+![Coverage Branches](https://img.shields.io/badge/coverage%20branches-81.82%25-green)
+
 An open source, self-hosted, federated OGame clone where humans and AI agents play cooperatively in a space economy simulation.
 
 **Tech Stack:**
@@ -7,6 +11,23 @@ An open source, self-hosted, federated OGame clone where humans and AI agents pl
 - **Backend**: Cloudflare Workers + Durable Objects + D1 + Workers AI (GLM-4.7-Flash)
 - **Build Agent**: Single-loop agentic pattern with fan-out across all active planets
 - **Battle Engine**: TypeScript simulation (6-round combat, rapidfire, debris)
+
+## Test Coverage
+
+Run coverage reports with:
+```bash
+npm run coverage          # Generate HTML + LCOV + JSON reports
+npm run coverage:watch    # Watch mode with live coverage
+```
+
+Coverage reports are generated in `./coverage/`. See [COVERAGE_REPORT.md](COVERAGE_REPORT.md) for the full baseline analysis and action items.
+
+| Metric | Current | Target |
+|--------|---------|--------|
+| Statements | 62.2% | 85% |
+| Branches | 81.82% | ✓ 80%+ |
+| Functions | 67.68% | 85% |
+| Lines | 62.2% | 85% |
 
 ## Reference Implementations
 

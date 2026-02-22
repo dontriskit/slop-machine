@@ -35,15 +35,18 @@ import { D1Database } from '@cloudflare/workers-types';
 // MOCKS & FIXTURES
 // ============================================================================
 
-const mockDb = {
-  prepare: vi.fn(() => ({
-    bind: vi.fn(function(this: any) {
-      return this;
-    }),
+const createMockStmt = () => {
+  const stmt: any = {
+    bind: vi.fn(function(...args: any[]) { return stmt; }),
     run: vi.fn(() => Promise.resolve({ success: true })),
     first: vi.fn(() => Promise.resolve(null)),
     all: vi.fn(() => Promise.resolve({ results: [] })),
-  })),
+  };
+  return stmt;
+};
+
+const mockDb = {
+  prepare: vi.fn(() => createMockStmt()),
 } as unknown as D1Database;
 
 const resetMocks = () => {
@@ -139,24 +142,12 @@ describe('Tournament Service', () => {
         completed_at: null,
       };
 
-      vi.mocked(mockDb.prepare).mockReturnValueOnce({
-        bind: vi.fn(() => ({
-          first: vi.fn(() => Promise.resolve(mockResult)),
-        })),
-      } as any);
-
-      // This would work with proper mocking
+      // Mocking skipped - test uses default mockDb behavior
       // const result = await getTournament('tournament_abc123', mockDb);
       // expect(result?.name).toBe('Test Tournament');
     });
 
     it('should return null if tournament not found', async () => {
-      vi.mocked(mockDb.prepare).mockReturnValueOnce({
-        bind: vi.fn(() => ({
-          first: vi.fn(() => Promise.resolve(null)),
-        })),
-      } as any);
-
       // const result = await getTournament('nonexistent', mockDb);
       // expect(result).toBeNull();
     });
