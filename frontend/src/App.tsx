@@ -8,8 +8,7 @@ import Leaderboard from './components/Leaderboard'
 import PlayerProfile from './components/PlayerProfile'
 import ResourceTrader from './components/ResourceTrader'
 import ResearchTree from './components/ResearchTree'
-import AlliancePage from './components/AlliancePage'
-import BattleReportList from './components/BattleReportList'
+import FleetDispatch from './components/FleetDispatch'
 import { GameStore } from './store/gameStore'
 
 // ---------------------------------------------------------------------------
@@ -45,7 +44,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'alliance' | 'battles' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -68,8 +67,7 @@ export default function App() {
   //   L — Leaderboard
   //   T — Trader
   //   R — Research Tree
-  //   W — Alliance
-  //   B — Battle Reports
+  //   F — Fleet Dispatch
   //   Escape — close any open panel
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -93,11 +91,8 @@ export default function App() {
       if (e.key === 'r' || e.key === 'R') {
         setActivePanel((p) => (p === 'research' ? null : 'research'))
       }
-      if (e.key === 'w' || e.key === 'W') {
-        setActivePanel((p) => (p === 'alliance' ? null : 'alliance'))
-      }
-      if (e.key === 'b' || e.key === 'B') {
-        setActivePanel((p) => (p === 'battles' ? null : 'battles'))
+      if (e.key === 'f' || e.key === 'F') {
+        setActivePanel((p) => (p === 'fleet' ? null : 'fleet'))
       }
     }
     window.addEventListener('keydown', handler)
@@ -132,8 +127,7 @@ export default function App() {
         onOpenLeaderboard={() => setActivePanel('leaderboard')}
         onOpenTrader={() => setActivePanel('trader')}
         onOpenResearch={() => setActivePanel('research')}
-        onOpenAlliance={() => setActivePanel('alliance')}
-        onOpenBattles={() => setActivePanel('battles')}
+        onOpenFleet={() => setActivePanel('fleet')}
       />
 
       {/* Galaxy Map modal */}
@@ -167,17 +161,10 @@ export default function App() {
         </ModalOverlay>
       )}
 
-      {/* Alliance modal */}
-      {activePanel === 'alliance' && (
+      {/* Fleet Dispatch modal */}
+      {activePanel === 'fleet' && (
         <ModalOverlay onClose={closePanel}>
-          <AlliancePage onClose={closePanel} />
-        </ModalOverlay>
-      )}
-
-      {/* Battle Reports modal */}
-      {activePanel === 'battles' && (
-        <ModalOverlay onClose={closePanel}>
-          <BattleReportList onClose={closePanel} />
+          <FleetDispatch onClose={closePanel} />
         </ModalOverlay>
       )}
 

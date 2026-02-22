@@ -40,11 +40,10 @@ interface HUDProps {
   onOpenLeaderboard?: () => void
   onOpenTrader?: () => void
   onOpenResearch?: () => void
-  onOpenAlliance?: () => void
-  onOpenBattles?: () => void
+  onOpenFleet?: () => void
 }
 
-export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenAlliance, onOpenBattles }: HUDProps) {
+export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenFleet }: HUDProps) {
   const selectedGalaxy = GameStore((s) => s.selectedGalaxy)
   const selectedSystem = GameStore((s) => s.selectedSystem)
   const selectedPlanet = GameStore((s) => s.selectedPlanet)
@@ -237,14 +236,9 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
             Research (R)
           </button>
         )}
-        {onOpenAlliance && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenAlliance}>
-            Alliance (W)
-          </button>
-        )}
-        {onOpenBattles && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenBattles}>
-            Battles (B)
+        {onOpenFleet && (
+          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenFleet}>
+            Fleet (F)
           </button>
         )}
       </div>
