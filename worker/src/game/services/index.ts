@@ -88,3 +88,19 @@ export {
   ExpeditionService,
   expeditionService,
 } from './expeditionService';
+
+export {
+  ALL_NOTIFICATION_TYPES,
+  DEFAULT_PRIORITY,
+  createNotification,
+  getNotifications,
+  markRead as markNotificationRead,
+  markAllRead as markAllNotificationsRead,
+  deleteNotification,
+  deleteOldNotifications,
+  getUnreadCount as getNotificationUnreadCount,
+  getPreferences as getNotificationPreferences,
+  setPreferences as setNotificationPreferences,
+  getDefaultPreferences as getDefaultNotificationPreferences,
+} from './notificationService';
+export type { GetNotificationsOptions } from './notificationService';

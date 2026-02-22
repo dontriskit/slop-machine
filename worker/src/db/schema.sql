@@ -385,3 +385,30 @@ CREATE TABLE IF NOT EXISTS tournament_rewards (
 );
 CREATE INDEX IF NOT EXISTS idx_tournament_rewards_tournament ON tournament_rewards(tournament_id);
 CREATE INDEX IF NOT EXISTS idx_tournament_rewards_player ON tournament_rewards(player_id);
+
+-- ============================================================================
+-- NOTIFICATION SYSTEM
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL,
+  type TEXT NOT NULL,        -- NotificationType enum value
+  priority TEXT NOT NULL,    -- 'critical' | 'warning' | 'info'
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  data TEXT,                 -- optional JSON metadata
+  read INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_player ON notifications(player_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(player_id, read);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(player_id, type);
+CREATE INDEX IF NOT EXISTS idx_notifications_priority ON notifications(player_id, priority);
+
+CREATE TABLE IF NOT EXISTS notification_preferences (
+  player_id TEXT PRIMARY KEY,
+  enabled_types TEXT NOT NULL,       -- JSON: Record<NotificationType, boolean>
+  minimum_priority TEXT NOT NULL DEFAULT 'info',  -- 'critical' | 'warning' | 'info'
+  updated_at INTEGER NOT NULL
+);

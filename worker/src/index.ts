@@ -9,6 +9,7 @@ import { espionageService } from './game/services/espionageService';
 import { createAlliance, dissolveAlliance, applyToAlliance, acceptApplication, rejectApplication, kickMember, leaveAlliance, promoteToOfficer, demoteToMember, getAllianceMembers, getPlayerAlliance, getAllianceById, searchAlliances, getAllianceApplications } from './game/services/allianceService';
 import { getLeaderboard, getPlayerProfile } from './game/services/leaderboardService';
 import { sendMessage, getInbox, getOutbox, getMessage, deleteMessage, getUnreadCount, markAllRead, sendSystemMessage } from './game/services/messageService';
+import { createNotification, getNotifications, markRead as markNotifRead, markAllRead as markAllNotifsRead, deleteNotification, getUnreadCount as getNotifUnreadCount, getPreferences as getNotifPreferences, setPreferences as setNotifPreferences, getDefaultPreferences as getDefaultNotifPreferences } from './game/services/notificationService';
 import { getEmptyDefenses } from './game/defenses';
 import { getEmptyTechLevels } from './game/services/researchService';
 import { mintCompressedNFT, buildMetadata } from './solana/mint';
@@ -58,7 +59,7 @@ const app = new Hono<{ Bindings: Bindings }>();
 
 app.use('*', async (c, next) => {
   c.header('Access-Control-Allow-Origin', '*');
-  c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   c.header('Access-Control-Allow-Headers', 'Content-Type');
   if (c.req.method === 'OPTIONS') return c.text('', 204 as any);
   await next();
@@ -1667,6 +1668,152 @@ app.delete('/api/messages/:id', async (c) => {
       return c.json({ error: 'Message not found' }, 404);
     }
 
+    return c.json({ deleted: true });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// ============================================================================
+// NOTIFICATION ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/notifications/:playerId
+ * Get paginated notifications for a player.
+ * Query: ?type=attack_incoming&priority=critical&unread=true&page=1&limit=20
+ */
+app.get('/api/notifications/unread-count/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const count = await getNotifUnreadCount(playerId, DB);
+    return c.json({ unreadCount: count });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/notifications/preferences/:playerId
+ * Get notification preferences for a player.
+ */
+app.get('/api/notifications/preferences/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const prefs = await getNotifPreferences(playerId, DB);
+    return c.json(prefs ?? getDefaultNotifPreferences(playerId));
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * PUT /api/notifications/preferences/:playerId
+ * Update notification preferences for a player.
+ * Body: { enabledTypes?: Record<NotificationType, boolean>, minimumPriority?: string }
+ */
+app.put('/api/notifications/preferences/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const body = await c.req.json();
+    const prefs = await setNotifPreferences(playerId, body, DB);
+    return c.json(prefs);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/notifications/mark-read
+ * Mark specific notification(s) as read.
+ * Body: { notificationId: string, playerId: string }
+ */
+app.post('/api/notifications/mark-read', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json() as { notificationId: string; playerId: string };
+    if (!body.notificationId || !body.playerId) {
+      return c.json({ error: 'notificationId and playerId are required' }, 400);
+    }
+    const result = await markNotifRead(body.notificationId, body.playerId, DB);
+    return c.json({ updated: result });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/notifications/mark-all-read
+ * Mark all notifications as read for a player.
+ * Body: { playerId: string }
+ */
+app.post('/api/notifications/mark-all-read', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json() as { playerId: string };
+    if (!body.playerId) {
+      return c.json({ error: 'playerId is required' }, 400);
+    }
+    const count = await markAllNotifsRead(body.playerId, DB);
+    return c.json({ updated: count });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.get('/api/notifications/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const type = c.req.query('type') || undefined;
+    const priority = c.req.query('priority') || undefined;
+    const unreadParam = c.req.query('unread');
+    const page = parseInt(c.req.query('page') ?? '1', 10);
+    const limit = parseInt(c.req.query('limit') ?? '20', 10);
+
+    const unread = unreadParam === 'true' ? true : unreadParam === 'false' ? false : undefined;
+
+    const result = await getNotifications(playerId, DB, {
+      type: type as any,
+      priority: priority as any,
+      unread,
+      page,
+      limit,
+    });
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * DELETE /api/notifications/:id
+ * Delete a notification.
+ * Query: ?player_id=xxx
+ */
+app.delete('/api/notifications/:id', async (c) => {
+  const DB = c.env.DB;
+  const notificationId = c.req.param('id');
+  const playerId = c.req.query('player_id');
+
+  if (!playerId) {
+    return c.json({ error: 'player_id query param required' }, 400);
+  }
+
+  try {
+    const deleted = await deleteNotification(notificationId, playerId, DB);
+    if (!deleted) {
+      return c.json({ error: 'Notification not found' }, 404);
+    }
     return c.json({ deleted: true });
   } catch (error) {
     return c.json({ error: String(error) }, 500);

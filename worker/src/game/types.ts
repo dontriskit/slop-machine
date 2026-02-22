@@ -281,3 +281,53 @@ export interface ResearchQueueItem {
   timeStart: number;   // unix ms
   timeEnd: number;     // unix ms
 }
+
+// ============================================================================
+// NOTIFICATION SYSTEM
+// ============================================================================
+
+export type NotificationType =
+  | 'attack_incoming'
+  | 'battle_complete'
+  | 'espionage_detected'
+  | 'build_complete'
+  | 'research_complete'
+  | 'ship_built'
+  | 'fleet_arrived'
+  | 'fleet_returned'
+  | 'resources_collected'
+  | 'alliance_broadcast'
+  | 'achievement_unlocked'
+  | 'rank_changed'
+  | 'officer_expired';
+
+export type NotificationPriority = 'critical' | 'warning' | 'info';
+
+export interface Notification {
+  id: string;
+  playerId: string;
+  type: NotificationType;
+  priority: NotificationPriority;
+  title: string;
+  message: string;
+  data: Record<string, unknown> | null;  // arbitrary metadata (e.g. fleetId, battleReportId)
+  read: boolean;
+  createdAt: number;   // unix seconds
+}
+
+export interface PaginatedNotifications {
+  notifications: Notification[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface NotificationPreferences {
+  playerId: string;
+  /** JSON map of NotificationType -> boolean (enabled/disabled) */
+  enabledTypes: Record<NotificationType, boolean>;
+  /** Minimum priority level to show ('critical' | 'warning' | 'info') */
+  minimumPriority: NotificationPriority;
+  updatedAt: number;   // unix seconds
+}
