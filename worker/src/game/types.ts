@@ -57,6 +57,30 @@ export const BUILDING_NAME: Record<number, string> = Object.fromEntries(
   Object.entries(BUILDING_ID).map(([name, id]) => [id, name])
 );
 
+// ============================================================================
+// MOON BUILDINGS (Special buildings only available on moons)
+// ============================================================================
+
+export type MoonBuildingType = 'lunarBase' | 'sensorPhalanx' | 'jumpGate';
+
+export interface MoonBuildingLevels {
+  lunarBase: number;        // Provides +3 fields per level
+  sensorPhalanx: number;    // Scans fleets at range = level²
+  jumpGate: number;         // Instant transfer between moons
+}
+
+export const MOON_BUILDING_ID: Record<MoonBuildingType, number> = {
+  lunarBase: 41,
+  sensorPhalanx: 42,
+  jumpGate: 43,
+};
+
+export const MOON_BUILDING_NAME: Record<number, string> = {
+  41: 'lunarBase',
+  42: 'sensorPhalanx',
+  43: 'jumpGate',
+};
+
 // Ship type keys for database column naming
 export const SHIP_KEYS: (keyof Ships)[] = [
   'lightFighter',
