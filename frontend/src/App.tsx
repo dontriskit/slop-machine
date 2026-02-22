@@ -9,6 +9,7 @@ import PlayerProfile from './components/PlayerProfile'
 import ResourceTrader from './components/ResourceTrader'
 import ResearchTree from './components/ResearchTree'
 import AlliancePage from './components/AlliancePage'
+import BattleReportList from './components/BattleReportList'
 import { GameStore } from './store/gameStore'
 
 // ---------------------------------------------------------------------------
@@ -44,7 +45,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'alliance' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'alliance' | 'battles' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -68,6 +69,7 @@ export default function App() {
   //   T — Trader
   //   R — Research Tree
   //   W — Alliance
+  //   B — Battle Reports
   //   Escape — close any open panel
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -93,6 +95,9 @@ export default function App() {
       }
       if (e.key === 'w' || e.key === 'W') {
         setActivePanel((p) => (p === 'alliance' ? null : 'alliance'))
+      }
+      if (e.key === 'b' || e.key === 'B') {
+        setActivePanel((p) => (p === 'battles' ? null : 'battles'))
       }
     }
     window.addEventListener('keydown', handler)
@@ -128,6 +133,7 @@ export default function App() {
         onOpenTrader={() => setActivePanel('trader')}
         onOpenResearch={() => setActivePanel('research')}
         onOpenAlliance={() => setActivePanel('alliance')}
+        onOpenBattles={() => setActivePanel('battles')}
       />
 
       {/* Galaxy Map modal */}
@@ -165,6 +171,13 @@ export default function App() {
       {activePanel === 'alliance' && (
         <ModalOverlay onClose={closePanel}>
           <AlliancePage onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {/* Battle Reports modal */}
+      {activePanel === 'battles' && (
+        <ModalOverlay onClose={closePanel}>
+          <BattleReportList onClose={closePanel} />
         </ModalOverlay>
       )}
 
