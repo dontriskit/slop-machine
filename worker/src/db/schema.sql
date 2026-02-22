@@ -3,6 +3,7 @@
 CREATE TABLE IF NOT EXISTS players (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
+  alliance_tag TEXT,
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
@@ -140,6 +141,34 @@ CREATE TABLE IF NOT EXISTS battle_reports (
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
+CREATE TABLE IF NOT EXISTS moons (
+  id TEXT PRIMARY KEY,
+  planet_id TEXT NOT NULL REFERENCES planets(id),
+  name TEXT NOT NULL DEFAULT 'Moon',
+  fields INTEGER NOT NULL DEFAULT 1,
+  size INTEGER NOT NULL DEFAULT 0,  -- moon size in km
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  UNIQUE(planet_id)
+);
+
+CREATE TABLE IF NOT EXISTS debris_fields (
+  galaxy INTEGER NOT NULL,
+  system INTEGER NOT NULL,
+  position INTEGER NOT NULL,
+  metal INTEGER NOT NULL DEFAULT 0,
+  crystal INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  PRIMARY KEY (galaxy, system, position)
+);
+
+CREATE TABLE IF NOT EXISTS alliances (
+  id TEXT PRIMARY KEY,
+  tag TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  founder_id TEXT NOT NULL REFERENCES players(id),
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
 CREATE INDEX IF NOT EXISTS idx_planets_player ON planets(player_id);
 CREATE INDEX IF NOT EXISTS idx_planets_agent ON planets(agent_enabled);
 CREATE INDEX IF NOT EXISTS idx_planets_coord ON planets(galaxy, system, position);
@@ -156,3 +185,5 @@ CREATE INDEX IF NOT EXISTS idx_battle_reports_attacker ON battle_reports(attacke
 CREATE INDEX IF NOT EXISTS idx_battle_reports_defender ON battle_reports(defender_id);
 CREATE INDEX IF NOT EXISTS idx_battle_reports_planet ON battle_reports(defender_planet_id);
 CREATE INDEX IF NOT EXISTS idx_battle_reports_date ON battle_reports(created_at);
+CREATE INDEX IF NOT EXISTS idx_moons_planet ON moons(planet_id);
+CREATE INDEX IF NOT EXISTS idx_debris_fields_coord ON debris_fields(galaxy, system);
