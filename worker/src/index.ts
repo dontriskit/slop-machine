@@ -45,6 +45,7 @@ import { simulateBattlePreview, getBreakEvenFleet, compareFleetCompositions } fr
 =======
 import { getDarkMatter, addDarkMatter, spendDarkMatter, getDarkMatterHistory, instantFinish, merchantTrade } from './game/services/darkMatterService';
 >>>>>>> agent/wave3-7
+import { moderationService } from './game/services/moderationService';
 
     const result = await svc.colonize({ playerId, fromPlanetId, galaxy, system, position });
     const result = await svc.colonizePlanet({ playerId, fromPlanetId, galaxy, system, position });
@@ -6616,4 +6617,158 @@ app.post('/api/missions/reset', async (c) => {
  */
 app.get('/api/missions/definitions', (c) => {
   return c.json({ missions: DAILY_MISSIONS });
+});
+
+// ============================================================================
+// ADMIN MODERATION API
+// ============================================================================
+
+/**
+ * POST /api/admin/ban
+ * Ban a player temporarily or permanently.
+ * Body: { playerId: string, reason: string, durationDays?: number, bannedBy?: string }
+ */
+app.post('/api/admin/ban', async (c) => {
+  const DB = c.env.DB;
+
+  let body: { playerId?: string; reason?: string; durationDays?: number; bannedBy?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const { playerId, reason, durationDays, bannedBy } = body;
+  if (!playerId || !reason) {
+    return c.json({ error: 'playerId and reason required' }, 400);
+  }
+
+  try {
+    const ban = await moderationService.banPlayer(DB, playerId, reason, durationDays, bannedBy);
+    return c.json({
+      success: true,
+      ban,
+      message: durationDays
+        ? `Player ${playerId} banned for ${durationDays} days`
+        : `Player ${playerId} permanently banned`,
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/admin/unban
+ * Lift a ban on a player.
+ * Body: { playerId: string, unbannedBy?: string }
+ */
+app.post('/api/admin/unban', async (c) => {
+  const DB = c.env.DB;
+
+  let body: { playerId?: string; unbannedBy?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const { playerId, unbannedBy } = body;
+  if (!playerId) {
+    return c.json({ error: 'playerId required' }, 400);
+  }
+
+  try {
+    const ban = await moderationService.unbanPlayer(DB, playerId, unbannedBy);
+    if (!ban) {
+      return c.json({ error: `Player ${playerId} is not currently banned` }, 404);
+    }
+    return c.json({
+      success: true,
+      ban,
+      message: `Player ${playerId} unbanned`,
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/admin/bans
+ * Get paginated list of currently banned players.
+ * Query: ?limit=50&offset=0
+ */
+app.get('/api/admin/bans', async (c) => {
+  const DB = c.env.DB;
+  const limit = Math.min(parseInt(c.req.query('limit') || '50'), 500);
+  const offset = parseInt(c.req.query('offset') || '0');
+
+  try {
+    const result = await moderationService.getActiveBans(DB, limit, offset);
+    return c.json({
+      success: true,
+      bans: result.bans,
+      total: result.total,
+      limit,
+      offset,
+      hasMore: offset + limit < result.total,
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/player/:id/ban-status
+ * Check ban status for a player (public endpoint).
+ */
+app.get('/api/player/:id/ban-status', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('id');
+
+  if (!playerId) {
+    return c.json({ error: 'Player ID required' }, 400);
+  }
+
+  try {
+    const status = await moderationService.isPlayerBanned(DB, playerId);
+    return c.json({
+      playerId,
+      isBanned: status.isBanned,
+      ...(status.isBanned && { message: status.message }),
+      ...(status.ban && {
+        ban: {
+          reason: status.ban.reason,
+          bannedAt: status.ban.bannedAt,
+          expiresAt: status.ban.expiresAt,
+        },
+      }),
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/player/:id/ban-history
+ * Get complete ban history for a player (admin endpoint).
+ */
+app.get('/api/player/:id/ban-history', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('id');
+
+  if (!playerId) {
+    return c.json({ error: 'Player ID required' }, 400);
+  }
+
+  try {
+    const history = await moderationService.getBanHistory(DB, playerId);
+    return c.json({
+      playerId,
+      history,
+      totalBans: history.length,
+      activeBans: history.filter((b) => b.isActive).length,
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
 });

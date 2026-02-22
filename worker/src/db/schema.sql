@@ -454,13 +454,22 @@ CREATE INDEX IF NOT EXISTS idx_strategy_history_planet ON strategy_history(plane
 CREATE INDEX IF NOT EXISTS idx_strategy_history_date ON strategy_history(created_at);
 
 -- ============================================================================
--- UNIVERSE SETTINGS
+-- MODERATION & ADMIN
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS universe_settings (
-  id TEXT PRIMARY KEY DEFAULT 'singleton',  -- Single row table
-  settings TEXT NOT NULL,                   -- JSON: UniverseSettings
-  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+CREATE TABLE IF NOT EXISTS player_bans (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  reason TEXT NOT NULL,
+  banned_by TEXT NOT NULL,              -- Admin user ID
+  banned_at INTEGER NOT NULL,           -- Unix timestamp (seconds)
+  expires_at INTEGER,                   -- null = permanent, otherwise expiry timestamp
+  is_active INTEGER NOT NULL DEFAULT 1, -- 1 = active, 0 = lifted/expired
+  unbanned_by TEXT,                     -- Admin who lifted ban
+  unbanned_at INTEGER,                  -- When ban was lifted
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
-
-CREATE INDEX IF NOT EXISTS idx_universe_settings_singleton ON universe_settings(id);
+CREATE INDEX IF NOT EXISTS idx_player_bans_player ON player_bans(player_id);
+CREATE INDEX IF NOT EXISTS idx_player_bans_active ON player_bans(player_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_player_bans_expires ON player_bans(expires_at);
+CREATE INDEX IF NOT EXISTS idx_player_bans_date ON player_bans(banned_at);

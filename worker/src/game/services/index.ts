@@ -115,11 +115,12 @@ export {
   createPlanetManagementService,
 } from './planetManagementService';
 
-export type { UniverseSettings } from './universeSettingsService';
+export type {
+  PlayerBan,
+  BanStatus,
+  BanListEntry,
+} from './moderationService';
 export {
-  getUniverseSettings,
-  updateUniverseSettings,
-  resetUniverseSettings,
-  DEFAULT_UNIVERSE_SETTINGS,
-  universeSettingsService,
-} from './universeSettingsService';
+  ModerationService,
+  moderationService,
+} from './moderationService';
