@@ -115,11 +115,11 @@ export {
   createPlanetManagementService,
 } from './planetManagementService';
 
-export type { VacationInfo, VacationStatus } from './vacationService';
+export type { UniverseSettings } from './universeSettingsService';
 export {
-  enableVacationMode,
-  disableVacationMode,
-  isOnVacation,
-  getVacationInfo,
-  checkVacationStatus,
-} from './vacationService';
+  getUniverseSettings,
+  updateUniverseSettings,
+  resetUniverseSettings,
+  DEFAULT_UNIVERSE_SETTINGS,
+  universeSettingsService,
+} from './universeSettingsService';

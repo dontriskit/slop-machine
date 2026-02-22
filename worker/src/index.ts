@@ -6472,6 +6472,43 @@ app.get('/api/h2m/adoption-rate/:playerId', async (c) => {
 });
 
 
+app.get('/api/universe/settings', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const settings = await universeSettingsService.getUniverseSettings(DB);
+    return c.json({ settings });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.put('/api/universe/settings', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json();
+    // TODO: Add admin authorization check here
+    const updated = await universeSettingsService.updateUniverseSettings(DB, body);
+    return c.json({ settings: updated });
+  } catch (error) {
+    return c.json({ error: String(error) }, 400);
+  }
+});
+
+app.post('/api/universe/settings/reset', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    // TODO: Add admin authorization check here
+    const settings = await universeSettingsService.resetUniverseSettings(DB);
+    return c.json({ settings });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+
 export default {
   async fetch(request: Request, env: Bindings): Promise<Response> {
     return app.fetch(request, env);

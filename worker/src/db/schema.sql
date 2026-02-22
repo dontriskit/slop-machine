@@ -453,6 +453,14 @@ CREATE INDEX IF NOT EXISTS idx_strategy_history_player ON strategy_history(playe
 CREATE INDEX IF NOT EXISTS idx_strategy_history_planet ON strategy_history(planet_id);
 CREATE INDEX IF NOT EXISTS idx_strategy_history_date ON strategy_history(created_at);
 
--- Vacation mode columns for player protection
-ALTER TABLE players ADD COLUMN vacation_start INTEGER;  -- unix seconds when vacation started, null = not on vacation
-ALTER TABLE players ADD COLUMN vacation_min_end INTEGER;  -- unix seconds minimum when vacation can end
+-- ============================================================================
+-- UNIVERSE SETTINGS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS universe_settings (
+  id TEXT PRIMARY KEY DEFAULT 'singleton',  -- Single row table
+  settings TEXT NOT NULL,                   -- JSON: UniverseSettings
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE INDEX IF NOT EXISTS idx_universe_settings_singleton ON universe_settings(id);
