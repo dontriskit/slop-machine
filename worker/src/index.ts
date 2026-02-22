@@ -5,6 +5,9 @@ import { generateAsset, GenerateAssetRequest } from './agents/assetGenerator';
 import { Coordinate, Strategy, PlanetState } from './game/types';
 import { GalaxyService } from './game/services/galaxyService';
 import { fleetService } from './game/services/fleetService';
+import { espionageService } from './game/services/espionageService';
+import { getEmptyDefenses } from './game/defenses';
+import { getEmptyTechLevels } from './game/services/researchService';
 import { mintCompressedNFT, buildMetadata } from './solana/mint';
 import type { MintRequest, NFTAsset, AssetType } from './solana/types';
 import {
@@ -1030,6 +1033,361 @@ app.post('/api/nft/mint', async (c) => {
     };
 
     return c.json({ mintId, metadata }, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// ============================================================================
+// ACHIEVEMENT ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/achievements
+ * List all available achievements (static, no auth required).
+ */
+app.get('/api/achievements', (c) => {
+  return c.json(ACHIEVEMENTS);
+});
+
+/**
+ * GET /api/player/:id/achievements
+ * List achievements unlocked by the player.
+ */
+app.get('/api/player/:id/achievements', async (c) => {
+  const playerId = c.req.param('id');
+  const DB = c.env.DB;
+
+  try {
+    const achievements = await getPlayerAchievements(playerId, DB);
+    return c.json(achievements);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+/**
+ * POST /api/player/:id/check-achievements
+ * Trigger achievement evaluation for a player.
+ * Loads current stats, evaluates all achievements, unlocks newly earned ones.
+ * Returns list of newly unlocked achievement IDs.
+ */
+app.post('/api/player/:id/check-achievements', async (c) => {
+  const playerId = c.req.param('id');
+  const DB = c.env.DB;
+
+  try {
+    const stats = await getAchievementPlayerStats(playerId, DB);
+    const newlyUnlocked = await checkAchievements(playerId, stats, DB);
+    return c.json({ newlyUnlocked, checkedAt: Math.floor(Date.now() / 1000) });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+// ============================================================================
+// STATS ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/player/:id/stats
+ * Get full e-sport statistics for a player.
+ */
+app.get('/api/player/:id/stats', async (c) => {
+  const playerId = c.req.param('id');
+  const DB = c.env.DB;
+
+  try {
+    const stats = await getPlayerStats(playerId, DB);
+    return c.json(stats);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+/**
+ * GET /api/stats/top
+ * Leaderboard query.
+ * Query params:
+ *  - stat  : battles_won | ships_destroyed | resources_raided_metal | ...
+ *  - limit : max rows (default 10, max 100)
+ *
+ * Example: GET /api/stats/top?stat=battles_won&limit=10
+ */
+app.get('/api/stats/top', async (c) => {
+  const DB = c.env.DB;
+  const stat = c.req.query('stat') as LeaderboardStat | undefined;
+  const limitParam = c.req.query('limit');
+  const limit = limitParam ? parseInt(limitParam, 10) : 10;
+
+  const VALID_STATS: LeaderboardStat[] = [
+    'battles_won',
+    'ships_destroyed',
+    'resources_raided_metal',
+    'fleets_dispatched',
+    'planets_colonized',
+    'research_completed',
+    'buildings_built',
+    'trades_completed',
+    'agent_decisions',
+  ];
+
+  if (!stat || !VALID_STATS.includes(stat)) {
+    return c.json(
+      { error: `stat query param required. Valid values: ${VALID_STATS.join(', ')}` },
+      400 as any
+    );
+  }
+
+  if (isNaN(limit) || limit < 1) {
+    return c.json({ error: 'limit must be a positive integer' }, 400 as any);
+  }
+
+  try {
+    const leaderboard = await getTopPlayers(stat, limit, DB);
+    return c.json({ stat, leaderboard });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+// ============================================================================
+// ESPIONAGE ENDPOINTS
+// ============================================================================
+
+
+/**
+ * POST /api/espionage/send
+ * Send espionage probes to a target planet.
+ * Body: { fromPlanetId, targetGalaxy, targetSystem, targetPosition, probeCount, playerId? }
+ *
+ * Process:
+ * 1. Validate probe availability on source planet
+ * 2. Locate target planet and gather defender info
+ * 3. Generate espionage report with info tiers based on tech difference
+ * 4. Process counter-espionage (probe destruction chance)
+ * 5. Persist report to D1, update planet state
+ */
+app.post('/api/espionage/send', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json<{
+      fromPlanetId: string;
+      targetGalaxy: number;
+      targetSystem: number;
+      targetPosition: number;
+      probeCount: number;
+      playerId?: string;
+    }>();
+
+    const { fromPlanetId, targetGalaxy, targetSystem, targetPosition, probeCount } = body;
+
+    // Validate required fields
+    if (!fromPlanetId || !targetGalaxy || !targetSystem || !targetPosition || !probeCount) {
+      return c.json(
+        { error: 'fromPlanetId, targetGalaxy, targetSystem, targetPosition, and probeCount are required' },
+        400,
+      );
+    }
+
+    // 1. Get attacker planet state
+    const attackerStub = getPlanetStub(PLANET_DO, fromPlanetId);
+    const attackerStateRes = await attackerStub.fetch(new Request('https://planet/state'));
+    if (!attackerStateRes.ok) {
+      return c.json({ error: 'Could not retrieve source planet state' }, 404);
+    }
+    const attackerPlanet = (await attackerStateRes.json()) as PlanetState;
+    const attackerPlayerId = body.playerId ?? attackerPlanet.playerId;
+
+    // 2. Validate mission
+    const validationError = espionageService.validateMission(probeCount, attackerPlanet.ships);
+    if (validationError) {
+      return c.json({ error: validationError }, 400);
+    }
+
+    // 3. Locate target planet
+    const targetPlanetRow = await DB.prepare(
+      'SELECT id, player_id, name FROM planets WHERE galaxy = ? AND system = ? AND position = ?',
+    )
+      .bind(targetGalaxy, targetSystem, targetPosition)
+      .first();
+
+    if (!targetPlanetRow) {
+      return c.json({ error: 'No planet found at target coordinates' }, 404);
+    }
+
+    const targetPlanetId = targetPlanetRow.id as string;
+    const defenderPlayerId = targetPlanetRow.player_id as string;
+    const defenderName = targetPlanetRow.name as string;
+
+    // Cannot spy on yourself
+    if (defenderPlayerId === attackerPlayerId) {
+      return c.json({ error: 'Cannot spy on your own planet' }, 400);
+    }
+
+    // 4. Get target planet state
+    const defenderStub = getPlanetStub(PLANET_DO, targetPlanetId);
+    const defenderStateRes = await defenderStub.fetch(new Request('https://planet/state'));
+    if (!defenderStateRes.ok) {
+      return c.json({ error: 'Could not retrieve target planet state' }, 500);
+    }
+    const targetPlanet = (await defenderStateRes.json()) as PlanetState;
+
+    // 5. Get attacker and defender tech levels (espionageTech)
+    // For now, use default tech levels — in production these would come from player state
+    const attackerTech = getEmptyTechLevels();
+    const defenderTech = getEmptyTechLevels();
+
+    // Try to load tech from D1 if available
+    // (Uses a best-effort approach; missing data defaults to 0)
+    const attackerTechRow = await DB.prepare(
+      'SELECT espionage_tech FROM players WHERE id = ?',
+    ).bind(attackerPlayerId).first();
+    if (attackerTechRow && typeof attackerTechRow.espionage_tech === 'number') {
+      attackerTech.espionageTech = attackerTechRow.espionage_tech;
+    }
+    const defenderTechRow = await DB.prepare(
+      'SELECT espionage_tech FROM players WHERE id = ?',
+    ).bind(defenderPlayerId).first();
+    if (defenderTechRow && typeof defenderTechRow.espionage_tech === 'number') {
+      defenderTech.espionageTech = defenderTechRow.espionage_tech;
+    }
+
+    // 6. Get target defenses (default to empty if not available)
+    const targetDefenses = getEmptyDefenses();
+
+    // 7. Generate espionage report
+    const report = espionageService.generateReport({
+      attackerId: attackerPlayerId,
+      attackerName: attackerPlayerId,
+      attackerSpyTech: attackerTech.espionageTech,
+      attackerCoordinate: attackerPlanet.coordinate,
+      probeCount,
+      defenderId: defenderPlayerId,
+      defenderName,
+      defenderSpyTech: defenderTech.espionageTech,
+      targetPlanet,
+      targetDefenses,
+      defenderTech,
+    });
+
+    // 8. Apply probe losses to attacker planet
+    if (report.probesLost > 0) {
+      attackerPlanet.ships = espionageService.applyProbeLoss(
+        attackerPlanet.ships,
+        report.probesLost,
+      );
+
+      // Persist updated ships back to DO
+      await attackerStub.fetch(
+        new Request('https://planet/setState', {
+          method: 'POST',
+          body: JSON.stringify(attackerPlanet),
+        }),
+      );
+    }
+
+    // 9. Persist report to D1
+    const dbRow = espionageService.serializeForDb(report);
+    await DB.prepare(
+      `INSERT INTO espionage_reports
+         (id, attacker_id, defender_id, target_galaxy, target_system, target_position,
+          target_player_name, resources_json, fleet_json, defenses_json, buildings_json,
+          research_json, counter_chance, probes_lost, probes_sent, info_level, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(
+        dbRow.id,
+        dbRow.attacker_id,
+        dbRow.defender_id,
+        dbRow.target_galaxy,
+        dbRow.target_system,
+        dbRow.target_position,
+        dbRow.target_player_name,
+        dbRow.resources_json,
+        dbRow.fleet_json,
+        dbRow.defenses_json,
+        dbRow.buildings_json,
+        dbRow.research_json,
+        dbRow.counter_chance,
+        dbRow.probes_lost,
+        dbRow.probes_sent,
+        dbRow.info_level,
+        dbRow.created_at,
+      )
+      .run();
+
+    return c.json({ report }, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/espionage/reports
+ * List espionage reports for a player.
+ * Query: ?player_id=xxx&limit=50
+ */
+app.get('/api/espionage/reports', async (c) => {
+  const playerId = c.req.query('player_id');
+  const DB = c.env.DB;
+
+  if (!playerId) {
+    return c.json({ error: 'player_id query param required' }, 400);
+  }
+
+  const limit = Math.min(parseInt(c.req.query('limit') ?? '50', 10) || 50, 100);
+
+  try {
+    const reports = await DB.prepare(
+      `SELECT id, attacker_id, defender_id, target_galaxy, target_system, target_position,
+              target_player_name, resources_json, fleet_json, defenses_json, buildings_json,
+              research_json, counter_chance, probes_lost, probes_sent, info_level, created_at
+       FROM espionage_reports
+       WHERE attacker_id = ?
+       ORDER BY created_at DESC
+       LIMIT ?`,
+    )
+      .bind(playerId, limit)
+      .all();
+
+    const results = (reports.results || []).map((row: Record<string, unknown>) =>
+      espionageService.deserializeFromDb(row),
+    );
+
+    return c.json(results);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/espionage/reports/:id
+ * Get a single espionage report by ID.
+ */
+app.get('/api/espionage/reports/:id', async (c) => {
+  const reportId = c.req.param('id');
+  const DB = c.env.DB;
+
+  try {
+    const row = await DB.prepare(
+      `SELECT id, attacker_id, defender_id, target_galaxy, target_system, target_position,
+              target_player_name, resources_json, fleet_json, defenses_json, buildings_json,
+              research_json, counter_chance, probes_lost, probes_sent, info_level, created_at
+       FROM espionage_reports
+       WHERE id = ?`,
+    )
+      .bind(reportId)
+      .first();
+
+    if (!row) {
+      return c.json({ error: 'Espionage report not found' }, 404);
+    }
+
+    const report = espionageService.deserializeFromDb(row as Record<string, unknown>);
+    return c.json(report);
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
