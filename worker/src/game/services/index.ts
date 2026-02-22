@@ -105,35 +105,33 @@ export {
 } from './notificationService';
 export type { GetNotificationsOptions } from './notificationService';
 
-<<<<<<< HEAD
 export type {
-  HallOfFameCategory,
-  HallOfFameRecord,
-  HallOfFameEntry,
-  CheckAndUpdateEvent,
-} from './hallOfFameService';
+  EventType,
+  ModifierType,
+  GameEvent,
+  EventModifiers,
+  CreateEventParams,
+} from './eventService';
 export {
-  HALL_OF_FAME_CATEGORIES,
-  CATEGORY_META,
-  CATEGORY_LOWER_IS_BETTER,
-  submitRecord as submitHallOfFameRecord,
-  getHallOfFame,
-  getHallOfFameCategory,
-  getRecordHistory,
-  checkAndUpdateRecords,
-  getPlayerRecords as getPlayerHallOfFameRecords,
-  HallOfFameService,
-  hallOfFameService,
-} from './hallOfFameService';
-=======
-export {
-  getDarkMatter,
-  addDarkMatter,
-  spendDarkMatter,
-  getDarkMatterHistory,
-  instantFinish,
-  merchantTrade,
-  DarkMatterService,
-  darkMatterService,
-} from './darkMatterService';
->>>>>>> agent/wave3-7
+  EVENT_TYPE_DEFAULTS,
+  VALID_EVENT_TYPES,
+  NEUTRAL_MODIFIERS,
+  getActiveEvents,
+  getUpcomingEvents,
+  getEventHistory,
+  getEventById,
+  createEvent,
+  deleteEvent,
+  getActiveModifiers,
+  computeModifiers,
+  applyProductionModifier,
+  applyBuildTimeModifier,
+  applyXpModifier,
+  applyAttackModifier,
+  applyDebrisModifier,
+  applyFleetSpeedModifier,
+  isEventTypeActive,
+  scheduleWeekendEvent,
+  EventService,
+  eventService,
+} from './eventService';

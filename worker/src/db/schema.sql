@@ -414,58 +414,23 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 );
 
 -- ============================================================================
-<<<<<<< HEAD
--- HALL OF FAME
+-- WEEKLY EVENTS SYSTEM
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS hall_of_fame (
+CREATE TABLE IF NOT EXISTS game_events (
   id TEXT PRIMARY KEY,
-  category TEXT NOT NULL,          -- HallOfFameCategory value
-  player_id TEXT NOT NULL,
-  player_name TEXT NOT NULL,       -- denormalised for fast reads even after player deletion
-  value REAL NOT NULL,             -- numeric record value (ships, resources, seconds, etc.)
-  metadata TEXT NOT NULL DEFAULT '{}', -- JSON extra context
-  achieved_at INTEGER NOT NULL,    -- unix seconds
-  is_active INTEGER NOT NULL DEFAULT 1  -- 1 = current record, 0 = historical
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  type TEXT NOT NULL,                -- EventType: double_production | double_xp | reduced_build_time | combat_weekend | harvest_bonus | fleet_speed
+  modifier_type TEXT NOT NULL,       -- ModifierType: production_multiplier | xp_multiplier | build_time_multiplier | attack_multiplier | debris_multiplier | fleet_speed_multiplier
+  modifier_value REAL NOT NULL,      -- Multiplier value (e.g. 2.0 = double, 0.5 = half time)
+  start_time INTEGER NOT NULL,       -- Unix seconds
+  end_time INTEGER NOT NULL,         -- Unix seconds
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  created_by TEXT NOT NULL DEFAULT 'system'
 );
-CREATE INDEX IF NOT EXISTS idx_hof_category_active ON hall_of_fame(category, is_active);
-CREATE INDEX IF NOT EXISTS idx_hof_player ON hall_of_fame(player_id);
-CREATE INDEX IF NOT EXISTS idx_hof_achieved ON hall_of_fame(category, achieved_at DESC);
-=======
--- DARK MATTER & OFFICERS
--- ============================================================================
 
-CREATE TABLE IF NOT EXISTS dark_matter (
-  player_id TEXT PRIMARY KEY REFERENCES players(id),
-  balance INTEGER NOT NULL DEFAULT 0,
-  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
-);
-CREATE INDEX IF NOT EXISTS idx_dark_matter_balance ON dark_matter(balance);
-
-CREATE TABLE IF NOT EXISTS officers (
-  id TEXT PRIMARY KEY,
-  player_id TEXT NOT NULL REFERENCES players(id),
-  officer_type TEXT NOT NULL,  -- 'commander' | 'admiral' | 'engineer' | 'geologist' | 'technocrat'
-  activated_at INTEGER NOT NULL,
-  expires_at INTEGER NOT NULL,
-  created_at INTEGER NOT NULL DEFAULT (unixepoch())
-);
-CREATE INDEX IF NOT EXISTS idx_officers_player ON officers(player_id);
-CREATE INDEX IF NOT EXISTS idx_officers_expires ON officers(player_id, expires_at);
-CREATE INDEX IF NOT EXISTS idx_officers_type ON officers(player_id, officer_type);
-
-CREATE TABLE IF NOT EXISTS dark_matter_transactions (
-  id TEXT PRIMARY KEY,
-  player_id TEXT NOT NULL REFERENCES players(id),
-  amount INTEGER NOT NULL,
-  source TEXT,  -- 'expedition' | 'achievement' | 'purchase' | 'reward'
-  purpose TEXT,  -- 'officer' | 'instant_finish' | 'merchant' | 'cosmetic'
-  reference TEXT,  -- expedition ID, achievement ID, etc
-  balance_before INTEGER NOT NULL,
-  balance_after INTEGER NOT NULL,
-  created_at INTEGER NOT NULL DEFAULT (unixepoch())
-);
-CREATE INDEX IF NOT EXISTS idx_dark_matter_txn_player ON dark_matter_transactions(player_id);
-CREATE INDEX IF NOT EXISTS idx_dark_matter_txn_created ON dark_matter_transactions(player_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_dark_matter_txn_source ON dark_matter_transactions(player_id, source);
->>>>>>> agent/wave3-7
+CREATE INDEX IF NOT EXISTS idx_game_events_active ON game_events(start_time, end_time);
+CREATE INDEX IF NOT EXISTS idx_game_events_type ON game_events(type);
+CREATE INDEX IF NOT EXISTS idx_game_events_upcoming ON game_events(start_time);
+CREATE INDEX IF NOT EXISTS idx_game_events_history ON game_events(end_time DESC);
