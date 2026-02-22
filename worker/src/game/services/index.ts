@@ -90,16 +90,22 @@ export {
 } from './expeditionService';
 
 export type {
-  ColonizationRequest,
-  ColonizationResult,
-  AbandonResult,
-  PlayerPlanet,
-  PlanetProperties,
-} from './colonizationService';
+  DefenseBuildOrder,
+  DefenseQueue,
+  RebuildResult,
+  MissileAttackResult,
+  DefenseInfo,
+} from './defenseService';
 export {
-  MAX_PLANETS,
-  generatePlanetProperties,
-  validateCoordinate,
-  ColonizationService,
-  createColonizationService,
-} from './colonizationService';
+  buildDefense,
+  cancelDefenseBuild,
+  createEmptyDefenseQueue,
+  processDefenseQueue,
+  getDefenseBuildQueue,
+  getNextDefenseCompletionTime,
+  rebuildDefensesAfterBattle,
+  launchMissileAttack,
+  getAllDefenseInfo,
+  DefenseService,
+  defenseService,
+} from './defenseService';
