@@ -1011,3 +1011,134 @@ async function advanceBracket(
     await awardAchievement(winnerId, 'tournament_champion', db);
   }
 }
+
+// ============================================================================
+// SEASON REWARDS DISTRIBUTION
+// ============================================================================
+
+export interface SeasonRewardDistribution {
+  playerId: string;
+  playerName: string;
+  placement: number;
+  metalReward: number;
+  crystalReward: number;
+  deuteriumReward: number;
+  totalRewardValue: number;
+  achievementsAwarded: string[];
+}
+
+/**
+ * Distribute season rewards based on final standings
+ * - Top 3 get scaled resource rewards (metal/crystal/deuterium)
+ * - Top 10 get "Season Top 10" achievement
+ * - Winner gets "Season Champion" achievement
+ */
+export async function distributeSeasonRewards(
+  seasonId: string,
+  db: D1Database
+): Promise<SeasonRewardDistribution[]> {
+  // Get final season leaderboard
+  const leaderboard = await getSeasonLeaderboard(seasonId, 100, db);
+
+  if (leaderboard.length === 0) {
+    return [];
+  }
+
+  const distributions: SeasonRewardDistribution[] = [];
+
+  // Reward scale: 1st gets 100%, 2nd gets 60%, 3rd gets 30%
+  const rewardMultipliers = [1.0, 0.6, 0.3];
+  const baseMetalReward = 50000;
+  const baseCrystalReward = 30000;
+  const baseDeuteriumReward = 10000;
+
+  for (const entry of leaderboard) {
+    const placement = entry.rank;
+    const achievementsAwarded: string[] = [];
+
+    // Determine resource rewards (top 3 only)
+    let metalReward = 0;
+    let crystalReward = 0;
+    let deuteriumReward = 0;
+
+    if (placement <= 3) {
+      const multiplier = rewardMultipliers[placement - 1];
+      metalReward = Math.floor(baseMetalReward * multiplier);
+      crystalReward = Math.floor(baseCrystalReward * multiplier);
+      deuteriumReward = Math.floor(baseDeuteriumReward * multiplier);
+
+      // Award resources to player's first planet
+      const planet = await db
+        .prepare('SELECT id FROM planets WHERE player_id = ? LIMIT 1')
+        .bind(entry.playerId)
+        .first<{ id: string }>();
+
+      if (planet) {
+        await db
+          .prepare(
+            `UPDATE planets SET metal = metal + ?, crystal = crystal + ?, deuterium = deuterium + ?
+             WHERE id = ?`
+          )
+          .bind(metalReward, crystalReward, deuteriumReward, planet.id)
+          .run();
+      }
+    }
+
+    // Award achievements
+    if (placement === 1) {
+      achievementsAwarded.push('season_champion');
+      await awardAchievement(entry.playerId, 'season_champion', db);
+    }
+
+    if (placement <= 10) {
+      achievementsAwarded.push('season_top_10');
+      await awardAchievement(entry.playerId, 'season_top_10', db);
+    }
+
+    const totalRewardValue = metalReward + crystalReward + deuteriumReward;
+
+    distributions.push({
+      playerId: entry.playerId,
+      playerName: entry.playerName,
+      placement,
+      metalReward,
+      crystalReward,
+      deuteriumReward,
+      totalRewardValue,
+      achievementsAwarded,
+    });
+  }
+
+  return distributions;
+}
+
+/**
+ * Get season leaderboard with enhanced ranking and tournament points
+ * Returns players ranked by points earned in all tournaments during the season
+ */
+export async function getSeasonLeaderboardWithPoints(
+  seasonId: string,
+  limit: number = 100,
+  db?: D1Database
+): Promise<SeasonLeaderboardEntry[]> {
+  if (!db) throw new Error('D1Database required');
+
+  // First, get the leaderboard from existing function
+  const baseLeaderboard = await getSeasonLeaderboard(seasonId, limit, db);
+
+  // Enhance with tournament points from match wins
+  for (const entry of baseLeaderboard) {
+    const winCount = await db
+      .prepare(
+        `SELECT COUNT(*) AS count FROM matches m
+         JOIN tournaments t ON m.tournament_id = t.id
+         WHERE t.season_id = ? AND m.winner_id = ? AND m.status = ?`
+      )
+      .bind(seasonId, entry.playerId, 'completed')
+      .first<{ count: number }>();
+
+    entry.tournaments_won = winCount?.count ?? 0;
+  }
+
+  return baseLeaderboard;
+}
