@@ -5935,6 +5935,181 @@ app.get('/api/jumpgate/logs/:playerId', async (c) => {
 });
 
 
+app.post('/api/acs/create', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json() as {
+      playerId: string;
+      planetId: string;
+      ships: Record<string, number>;
+      targetGalaxy: number;
+      targetSystem: number;
+      targetPosition: number;
+      travelTime: number;
+    };
+
+    if (!body.playerId || !body.planetId || !body.ships || !body.targetGalaxy || !body.targetSystem || !body.targetPosition) {
+      return c.json({ error: 'playerId, planetId, ships, targetGalaxy, targetSystem, and targetPosition are required' }, 400);
+    }
+
+    if (typeof body.travelTime !== 'number' || body.travelTime <= 0) {
+      return c.json({ error: 'travelTime must be a positive number (seconds)' }, 400);
+    }
+
+    const result = await createACSAttack(
+      body.playerId,
+      body.planetId,
+      body.ships as any,
+      body.targetGalaxy,
+      body.targetSystem,
+      body.targetPosition,
+      body.travelTime,
+      DB,
+    );
+    return c.json(result);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found') || msg.includes('must be in')) {
+      return c.json({ error: msg }, 400);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+app.post('/api/acs/join/:acsId', async (c) => {
+  const DB = c.env.DB;
+  const acsId = c.req.param('acsId');
+
+  try {
+    const body = await c.req.json() as {
+      playerId: string;
+      planetId: string;
+      ships: Record<string, number>;
+      travelTime: number;
+    };
+
+    if (!body.playerId || !body.planetId || !body.ships) {
+      return c.json({ error: 'playerId, planetId, and ships are required' }, 400);
+    }
+
+    if (typeof body.travelTime !== 'number' || body.travelTime <= 0) {
+      return c.json({ error: 'travelTime must be a positive number (seconds)' }, 400);
+    }
+
+    const participant = await joinACSAttack(
+      acsId,
+      body.playerId,
+      body.planetId,
+      body.ships as any,
+      body.travelTime,
+      DB,
+    );
+    return c.json(participant);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found') || msg.includes('not in') || msg.includes('full') || msg.includes('already') || msg.includes('must be')) {
+      return c.json({ error: msg }, 400);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+app.get('/api/acs/status/:acsId', async (c) => {
+  const DB = c.env.DB;
+  const acsId = c.req.param('acsId');
+
+  try {
+    const status = await getACSStatus(acsId, DB);
+    return c.json(status);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found')) {
+      return c.json({ error: msg }, 404);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+app.post('/api/acs/launch/:acsId', async (c) => {
+  const DB = c.env.DB;
+  const acsId = c.req.param('acsId');
+
+  try {
+    const body = await c.req.json() as { playerId: string };
+
+    if (!body.playerId) {
+      return c.json({ error: 'playerId is required' }, 400);
+    }
+
+    const result = await launchACSAttack(acsId, body.playerId, DB);
+    return c.json(result);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found') || msg.includes('Only the initiator') || msg.includes('not in gathering')) {
+      return c.json({ error: msg }, 400);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+app.post('/api/acs/cancel/:acsId', async (c) => {
+  const DB = c.env.DB;
+  const acsId = c.req.param('acsId');
+
+  try {
+    const body = await c.req.json() as { playerId: string };
+
+    if (!body.playerId) {
+      return c.json({ error: 'playerId is required' }, 400);
+    }
+
+    await cancelACSAttack(acsId, body.playerId, DB);
+    return c.json({ canceled: true });
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found') || msg.includes('Only the initiator') || msg.includes('only be canceled')) {
+      return c.json({ error: msg }, 400);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+app.post('/api/acs/withdraw/:acsId', async (c) => {
+  const DB = c.env.DB;
+  const acsId = c.req.param('acsId');
+
+  try {
+    const body = await c.req.json() as { playerId: string };
+
+    if (!body.playerId) {
+      return c.json({ error: 'playerId is required' }, 400);
+    }
+
+    await withdrawFromACS(acsId, body.playerId, DB);
+    return c.json({ withdrawn: true });
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found') || msg.includes('cannot withdraw') || msg.includes('Initiator') || msg.includes('not a participant')) {
+      return c.json({ error: msg }, 400);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+app.get('/api/acs/player/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const attacks = await getPlayerACSAttacks(playerId, DB);
+    return c.json(attacks);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+
 export default {
   async fetch(request: Request, env: Bindings): Promise<Response> {
     return app.fetch(request, env);

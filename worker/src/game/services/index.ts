@@ -105,21 +105,25 @@ export {
 } from './notificationService';
 export type { GetNotificationsOptions } from './notificationService';
 
-// Jump Gate Teleportation
+// ACS (Alliance Combat System)
 export type {
-  JumpGateStatus,
-  TeleportRequest,
-  TeleportResult,
-  JumpGateLog,
-} from './jumpGateService';
+  ACSStatus,
+  ACSParticipantStatus,
+  ACSAttack,
+  ACSParticipant,
+  ACSStatusResponse,
+  ACSLootShare,
+} from './acsService';
 export {
-  jumpGateService,
-  JUMP_GATE_COOLDOWN_SECONDS,
-  hasShipsToTransfer,
-  validateFleetAvailability,
-  isJumpGateReady,
-  getCooldownRemaining,
-  getJumpGateStatus,
-  teleportFleet,
-  getJumpGateLogs,
-} from './jumpGateService';
+  createACSAttack,
+  joinACSAttack,
+  getACSStatus,
+  launchACSAttack,
+  cancelACSAttack,
+  withdrawFromACS,
+  getPlayerACSAttacks,
+  completeACSAttack,
+  calculateFleetValue as calculateACSFleetValue,
+  combineFleets,
+  calculateLootShares,
+} from './acsService';
