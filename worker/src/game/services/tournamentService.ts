@@ -22,7 +22,7 @@
 
 import { D1Database } from '@cloudflare/workers-types';
 import { simulateBattle, Combatant, BattleResult } from './battleService';
-import { Ships } from '../types';
+
 
 // ============================================================================
 // TYPES
@@ -472,26 +472,11 @@ export async function resolveMatch(
   }
 
   // Simulate battle
-  // FIXED: Call simulateBattle with correct parameter order (attacker ships, defender ships, defenses)
-  // Extract the Ships objects from Combatant wrappers
-  const battleResult = simulateBattle(
-    attacker.ships,
-    defender.ships,
-    defender.defenses
-  );
+  const battleResult = simulateBattle(attacker.ships, defender.ships);
 
-  // Determine winner with draw resolution via tiebreaker
-  let winnerId: string;
-  if (battleResult.winner === 'attacker') {
-    winnerId = attackerId;
-  } else if (battleResult.winner === 'defender') {
-    winnerId = defenderId;
-  } else {
-    // Draw: resolve with tiebreaker (compare remaining fleet power)
-    const attackerPower = calculateFleetPower(battleResult.attackerSurvivors);
-    const defenderPower = calculateFleetPower(battleResult.defenderSurvivors);
-    winnerId = attackerPower > defenderPower ? attackerId : defenderId;
-  }
+  // Determine winner
+  const winnerId = battleResult.winner === 'attacker' ? attackerId : defenderId;
+
   const now = Math.floor(Date.now() / 1000);
 
   // Update match record
@@ -904,7 +889,21 @@ async function buildCombatant(playerId: string, db: D1Database): Promise<Combata
        FROM fleets WHERE player_id = ? LIMIT 1`
     )
     .bind(playerId)
-    .first();
+    .first<{
+      light_fighter: number;
+      heavy_fighter: number;
+      cruiser: number;
+      battleship: number;
+      battlecruiser: number;
+      bomber: number;
+      destroyer: number;
+      deathstar: number;
+      small_cargo: number;
+      large_cargo: number;
+      colony_ship: number;
+      recycler: number;
+      espionage_probe: number;
+    }>();
 
   if (!fleet) {
     return {
@@ -988,35 +987,6 @@ async function awardAchievement(
     .run();
 }
 
-
-/**
- * Calculate fleet power for tiebreaker resolution in draws
- * Simple formula: sum of ship counts weighted by combat effectiveness
- */
-function calculateFleetPower(ships: Ships): number {
-  const weights: Record<keyof Ships, number> = {
-    lightFighter: 50,
-    heavyFighter: 150,
-    cruiser: 400,
-    battleship: 1000,
-    battlecruiser: 700,
-    bomber: 1000,
-    destroyer: 2000,
-    deathstar: 200000,
-    smallCargo: 5,
-    largeCargo: 5,
-    colonyShip: 50,
-    recycler: 1,
-    espionageProbe: 0,
-  };
-
-  let power = 0;
-  for (const key of Object.keys(ships) as (keyof Ships)[]) {
-    power += ships[key] * weights[key];
-  }
-  return power;
-}
-
 /**
  * Advance winner to next round (update bracket)
  */
@@ -1054,135 +1024,4 @@ async function advanceBracket(
     // Award championship achievement
     await awardAchievement(winnerId, 'tournament_champion', db);
   }
-}
-
-// ============================================================================
-// SEASON REWARDS DISTRIBUTION
-// ============================================================================
-
-export interface SeasonRewardDistribution {
-  playerId: string;
-  playerName: string;
-  placement: number;
-  metalReward: number;
-  crystalReward: number;
-  deuteriumReward: number;
-  totalRewardValue: number;
-  achievementsAwarded: string[];
-}
-
-/**
- * Distribute season rewards based on final standings
- * - Top 3 get scaled resource rewards (metal/crystal/deuterium)
- * - Top 10 get "Season Top 10" achievement
- * - Winner gets "Season Champion" achievement
- */
-export async function distributeSeasonRewards(
-  seasonId: string,
-  db: D1Database
-): Promise<SeasonRewardDistribution[]> {
-  // Get final season leaderboard
-  const leaderboard = await getSeasonLeaderboard(seasonId, 100, db);
-
-  if (leaderboard.length === 0) {
-    return [];
-  }
-
-  const distributions: SeasonRewardDistribution[] = [];
-
-  // Reward scale: 1st gets 100%, 2nd gets 60%, 3rd gets 30%
-  const rewardMultipliers = [1.0, 0.6, 0.3];
-  const baseMetalReward = 50000;
-  const baseCrystalReward = 30000;
-  const baseDeuteriumReward = 10000;
-
-  for (const entry of leaderboard) {
-    const placement = entry.rank;
-    const achievementsAwarded: string[] = [];
-
-    // Determine resource rewards (top 3 only)
-    let metalReward = 0;
-    let crystalReward = 0;
-    let deuteriumReward = 0;
-
-    if (placement <= 3) {
-      const multiplier = rewardMultipliers[placement - 1];
-      metalReward = Math.floor(baseMetalReward * multiplier);
-      crystalReward = Math.floor(baseCrystalReward * multiplier);
-      deuteriumReward = Math.floor(baseDeuteriumReward * multiplier);
-
-      // Award resources to player's first planet
-      const planet = await db
-        .prepare('SELECT id FROM planets WHERE player_id = ? LIMIT 1')
-        .bind(entry.playerId)
-        .first<{ id: string }>();
-
-      if (planet) {
-        await db
-          .prepare(
-            `UPDATE planets SET metal = metal + ?, crystal = crystal + ?, deuterium = deuterium + ?
-             WHERE id = ?`
-          )
-          .bind(metalReward, crystalReward, deuteriumReward, planet.id)
-          .run();
-      }
-    }
-
-    // Award achievements
-    if (placement === 1) {
-      achievementsAwarded.push('season_champion');
-      await awardAchievement(entry.playerId, 'season_champion', db);
-    }
-
-    if (placement <= 10) {
-      achievementsAwarded.push('season_top_10');
-      await awardAchievement(entry.playerId, 'season_top_10', db);
-    }
-
-    const totalRewardValue = metalReward + crystalReward + deuteriumReward;
-
-    distributions.push({
-      playerId: entry.playerId,
-      playerName: entry.playerName,
-      placement,
-      metalReward,
-      crystalReward,
-      deuteriumReward,
-      totalRewardValue,
-      achievementsAwarded,
-    });
-  }
-
-  return distributions;
-}
-
-/**
- * Get season leaderboard with enhanced ranking and tournament points
- * Returns players ranked by points earned in all tournaments during the season
- */
-export async function getSeasonLeaderboardWithPoints(
-  seasonId: string,
-  limit: number = 100,
-  db?: D1Database
-): Promise<SeasonLeaderboardEntry[]> {
-  if (!db) throw new Error('D1Database required');
-
-  // First, get the leaderboard from existing function
-  const baseLeaderboard = await getSeasonLeaderboard(seasonId, limit, db);
-
-  // Enhance with tournament points from match wins
-  for (const entry of baseLeaderboard) {
-    const winCount = await db
-      .prepare(
-        `SELECT COUNT(*) AS count FROM matches m
-         JOIN tournaments t ON m.tournament_id = t.id
-         WHERE t.season_id = ? AND m.winner_id = ? AND m.status = ?`
-      )
-      .bind(seasonId, entry.playerId, 'completed')
-      .first<{ count: number }>();
-
-    entry.tournaments_won = winCount?.count ?? 0;
-  }
-
-  return baseLeaderboard;
 }

@@ -35,20 +35,26 @@ import { D1Database } from '@cloudflare/workers-types';
 // MOCKS & FIXTURES
 // ============================================================================
 
-const mockDb = {
-  prepare: vi.fn(() => ({
-    bind: vi.fn(function(this: any) {
-      return this;
-    }),
+function createMockStatement() {
+  const stmt: any = {
+    bind: vi.fn((..._args: any[]) => stmt),
     run: vi.fn(() => Promise.resolve({ success: true })),
     first: vi.fn(() => Promise.resolve(null)),
     all: vi.fn(() => Promise.resolve({ results: [] })),
-  })),
-} as unknown as D1Database;
+  };
+  return stmt;
+}
+
+let mockDb: D1Database;
 
 const resetMocks = () => {
-  vi.clearAllMocks();
+  mockDb = {
+    prepare: vi.fn(() => createMockStatement()),
+  } as unknown as D1Database;
 };
+
+// Initialize mockDb
+resetMocks();
 
 // ============================================================================
 // TESTS

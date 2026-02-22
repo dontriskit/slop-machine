@@ -288,7 +288,7 @@ export function validateMoonBuildingSpace(
  * Get all moon building costs and requirements for a moon at given levels
  */
 export function getMoonBuildingSummary(
-  buildings: MoonBuildingLevels,
+  buildings: MoonBuildings,
   baseMoonFields: number,
   roboticsLevel: number = 0,
   naniteLevel: number = 0

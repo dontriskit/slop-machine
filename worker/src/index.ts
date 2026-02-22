@@ -37,6 +37,7 @@ import {
 import type { OfficerType } from './game/types';
 import { ColonizationService } from './game/services/colonizationService';
 import { defenseService, buildDefense, cancelDefenseBuild, createEmptyDefenseQueue, processDefenseQueue, getDefenseBuildQueue, rebuildDefensesAfterBattle, launchMissileAttack } from './game/services/defenseService';
+
     const result = await svc.colonize({ playerId, fromPlanetId, galaxy, system, position });
     const result = await svc.colonizePlanet({ playerId, fromPlanetId, galaxy, system, position });
   return c.json(Object.values(OFFICER_DEFINITIONS));
@@ -2919,6 +2920,173 @@ app.post('/api/defense/missile-attack', async (c) => {
       missilesLaunched: missileCount,
       result,
     });
+
+
+// TOURNAMENT ENDPOINTS
+app.post('/api/tournament/create', async (c) => {
+  try {
+    const { DB } = c.env;
+    const body = await c.req.json<{
+      name: string;
+      type: string;
+      maxPlayers: number;
+      seasonId?: string;
+    }>();
+
+    if (!body.name || !body.type || !body.maxPlayers) {
+      return c.json({ error: 'name, type, and maxPlayers are required' }, 400);
+    }
+
+    const tournament = await createTournament(
+      body.name,
+      body.type as any,
+      body.maxPlayers,
+      body.seasonId || null,
+      DB
+    );
+
+    return c.json({ tournament });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.get('/api/tournament/:id', async (c) => {
+  try {
+    const { DB } = c.env;
+    const tournamentId = c.req.param('id');
+
+    const tournament = await getTournament(tournamentId, DB);
+    if (!tournament) {
+      return c.json({ error: 'Tournament not found' }, 404);
+    }
+
+    return c.json({ tournament });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.post('/api/tournament/:id/join', async (c) => {
+  try {
+    const { DB } = c.env;
+    const tournamentId = c.req.param('id');
+    const body = await c.req.json<{ playerId: string }>();
+
+    if (!body.playerId) {
+      return c.json({ error: 'playerId is required' }, 400);
+    }
+
+    await joinTournament(tournamentId, body.playerId, DB);
+
+    return c.json({ joined: true, tournamentId });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.post('/api/tournament/:id/start', async (c) => {
+  try {
+    const { DB } = c.env;
+    const tournamentId = c.req.param('id');
+
+    const bracket = await generateBracket(tournamentId, DB);
+
+    return c.json({ bracket });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.get('/api/tournament/:id/bracket', async (c) => {
+  try {
+    const { DB } = c.env;
+    const tournamentId = c.req.param('id');
+
+    const bracket = await getBracket(tournamentId, DB);
+    if (!bracket) {
+      return c.json({ error: 'Bracket not found' }, 404);
+    }
+
+    const matches = await getTournamentMatches(tournamentId, undefined, DB);
+
+    return c.json({ bracket, matches });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.post('/api/tournament/:id/resolve-match', async (c) => {
+  try {
+    const { DB } = c.env;
+    const body = await c.req.json<{ matchId: string; defenderId: string }>();
+
+    if (!body.matchId || !body.defenderId) {
+      return c.json({ error: 'matchId and defenderId are required' }, 400);
+    }
+
+    const match = await resolveMatch(body.matchId, body.defenderId, DB);
+
+    return c.json({ match });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.get('/api/seasons', async (c) => {
+  try {
+    const { DB } = c.env;
+
+    const activeSeason = await getActiveSeason(DB);
+
+    return c.json({ activeSeason });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.post('/api/seasons/create', async (c) => {
+  try {
+    const { DB } = c.env;
+    const body = await c.req.json<{
+      seasonNumber: number;
+      startDate: number;
+      endDate: number;
+    }>();
+
+    if (!body.seasonNumber || !body.startDate || !body.endDate) {
+      return c.json({ error: 'seasonNumber, startDate, and endDate are required' }, 400);
+    }
+
+    const season = await createSeason(body.seasonNumber, body.startDate, body.endDate, DB);
+
+    return c.json({ season });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+app.get('/api/leaderboard/tournament', async (c) => {
+  try {
+    const { DB } = c.env;
+    const seasonId = c.req.query('seasonId');
+    const tournamentId = c.req.query('tournamentId');
+    const limit = parseInt(c.req.query('limit') || '100');
+
+    if (tournamentId) {
+      const standings = await getTournamentStandings(tournamentId, DB);
+      return c.json({ leaderboard: standings });
+    }
+
+    if (seasonId) {
+      const leaderboard = await getSeasonLeaderboard(seasonId, limit, DB);
+      return c.json({ leaderboard });
+    }
+
+    // Default: get active season leaderboard
+    const activeSeason = await getActiveSeason(DB);
+    if (!activeSeason) {
+      return c.json({ leaderboard: [] });
+    }
+
+    const leaderboard = await getSeasonLeaderboard(activeSeason.id, limit, DB);
+    return c.json({ leaderboard });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
 
 export default {
   async fetch(request: Request, env: Bindings): Promise<Response> {
