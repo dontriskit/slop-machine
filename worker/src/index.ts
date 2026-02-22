@@ -24,6 +24,14 @@ import {
   getTopPlayers,
 } from './game/services/statsService';
 import type { LeaderboardStat } from './game/services/statsService';
+import {
+  getTutorialProgress,
+  completeTutorialStep,
+  claimReward as claimTutorialReward,
+  skipTutorial,
+  getNextStep,
+  TUTORIAL_STEPS,
+} from './game/services/tutorialService';
 
 /**
  * Cosmic Protocol Worker
@@ -1672,6 +1680,112 @@ app.delete('/api/messages/:id', async (c) => {
     return c.json({ error: String(error) }, 500);
   }
 });
+
+// ============================================================================
+// TUTORIAL ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/tutorial/:playerId
+ * Returns the full tutorial progress for a player, including all step definitions.
+ */
+app.get('/api/tutorial/:playerId', async (c) => {
+  const playerId = c.req.param('playerId');
+  const DB = c.env.DB;
+
+  try {
+    const progress = await getTutorialProgress(playerId, DB);
+    const nextStep = progress.skipped || !progress.currentStepId
+      ? null
+      : TUTORIAL_STEPS.find((s) => s.id === progress.currentStepId) ?? null;
+
+    return c.json({
+      progress,
+      allSteps: TUTORIAL_STEPS,
+      nextStep,
+      completionPercent: Math.round(
+        (progress.completedSteps.length / TUTORIAL_STEPS.length) * 100
+      ),
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/tutorial/:playerId/complete-step
+ * Mark a tutorial step as completed.
+ * Body: { stepId: string }
+ */
+app.post('/api/tutorial/:playerId/complete-step', async (c) => {
+  const playerId = c.req.param('playerId');
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json() as { stepId?: string };
+    const stepId = body.stepId;
+
+    if (!stepId) {
+      return c.json({ error: 'stepId is required' }, 400);
+    }
+
+    const result = await completeTutorialStep(playerId, stepId, DB);
+
+    if (!result.completed && result.error) {
+      return c.json({ error: result.error }, 400);
+    }
+
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/tutorial/:playerId/skip
+ * Skip the tutorial entirely. Experienced players can opt out.
+ */
+app.post('/api/tutorial/:playerId/skip', async (c) => {
+  const playerId = c.req.param('playerId');
+  const DB = c.env.DB;
+
+  try {
+    const result = await skipTutorial(playerId, DB);
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/tutorial/:playerId/claim-reward
+ * Claim the resource reward for a completed tutorial step.
+ * Body: { stepId: string }
+ */
+app.post('/api/tutorial/:playerId/claim-reward', async (c) => {
+  const playerId = c.req.param('playerId');
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json() as { stepId?: string };
+    const stepId = body.stepId;
+
+    if (!stepId) {
+      return c.json({ error: 'stepId is required' }, 400);
+    }
+
+    const result = await claimTutorialReward(playerId, stepId, DB);
+
+    if (!result.claimed && result.error) {
+      return c.json({ error: result.error }, 400);
+    }
+
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
 
 // ============================================================================
 // CRON TRIGGER
