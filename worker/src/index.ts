@@ -1,11 +1,23 @@
 import { Hono } from 'hono';
 import { PlanetDO } from './durable-objects/PlanetDO';
 import { runBuildOrderAgent, runAgentForAllPlanets } from './agents/buildOrderAgent';
+import { generateAsset, GenerateAssetRequest } from './agents/assetGenerator';
 import { Coordinate, Strategy, PlanetState } from './game/types';
 import { GalaxyService } from './game/services/galaxyService';
 import { fleetService } from './game/services/fleetService';
 import { mintCompressedNFT, buildMetadata } from './solana/mint';
 import type { MintRequest, NFTAsset, AssetType } from './solana/types';
+import {
+  ACHIEVEMENTS,
+  checkAchievements,
+  getPlayerAchievements,
+  getPlayerStats as getAchievementPlayerStats,
+} from './game/services/achievementService';
+import {
+  getPlayerStats,
+  getTopPlayers,
+} from './game/services/statsService';
+import type { LeaderboardStat } from './game/services/statsService';
 
 /**
  * Cosmic Protocol Worker
@@ -906,6 +918,120 @@ app.get('/api/nft/:id', async (c) => {
     return c.json(asset);
   } catch (error) {
     return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+// ============================================================================
+// ASSET GENERATION ENDPOINTS
+// ============================================================================
+
+/**
+ * POST /api/assets/generate
+ * Generate an AI-powered game asset image and metadata.
+ * Body: { assetType, style?, rarity? }
+ * Returns: { imageUrl, imageBase64, name, description, attributes }
+ */
+app.post('/api/assets/generate', async (c) => {
+  const AI = c.env.AI;
+  const R2 = c.env.R2;
+
+  if (!R2) {
+    return c.json({ error: 'R2 bucket not configured' }, 503);
+  }
+
+  try {
+    const body = await c.req.json<GenerateAssetRequest>();
+
+    const validAssetTypes = ['ship_skin', 'planet_theme', 'booster', 'rare_ship'];
+    if (!body.assetType || !validAssetTypes.includes(body.assetType)) {
+      return c.json(
+        { error: `assetType must be one of: ${validAssetTypes.join(', ')}` },
+        400
+      );
+    }
+
+    const validStyles = ['cyberpunk', 'steampunk', 'alien', 'organic', 'crystal', 'futuristic'];
+    if (body.style && !validStyles.includes(body.style)) {
+      return c.json(
+        { error: `style must be one of: ${validStyles.join(', ')}` },
+        400
+      );
+    }
+
+    const validRarities = ['common', 'uncommon', 'rare', 'legendary'];
+    if (body.rarity && !validRarities.includes(body.rarity)) {
+      return c.json(
+        { error: `rarity must be one of: ${validRarities.join(', ')}` },
+        400
+      );
+    }
+
+    const asset = await generateAsset(
+      {
+        assetType: body.assetType,
+        style: body.style,
+        rarity: body.rarity,
+      },
+      { AI, R2 }
+    );
+
+    return c.json(asset, 201);
+  } catch (error) {
+    console.error('[/api/assets/generate] Error:', error);
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/nft/mint
+ * Stub endpoint for NFT minting — actual minting happens client-side via Solana.
+ * This records the minting intent and returns metadata for the Metaplex transaction.
+ * Body: { walletAddress, assetImageUrl, assetName, assetDescription, attributes }
+ */
+app.post('/api/nft/mint', async (c) => {
+  try {
+    const body = await c.req.json<{
+      walletAddress: string;
+      assetImageUrl: string;
+      assetName: string;
+      assetDescription: string;
+      attributes: Array<{ trait_type: string; value: string | number }>;
+    }>();
+
+    if (!body.walletAddress || !body.assetImageUrl || !body.assetName) {
+      return c.json(
+        { error: 'walletAddress, assetImageUrl, and assetName are required' },
+        400
+      );
+    }
+
+    // Build NFT metadata following Metaplex standard
+    const mintId = `nft-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const metadata = {
+      mintId,
+      name: body.assetName,
+      description: body.assetDescription,
+      image: body.assetImageUrl,
+      attributes: body.attributes,
+      properties: {
+        files: [{ uri: body.assetImageUrl, type: 'image/png' }],
+        category: 'image',
+        creators: [
+          {
+            address: body.walletAddress,
+            share: 100,
+          },
+        ],
+      },
+      collection: {
+        name: 'Cosmic Protocol',
+        family: 'CosmicProtocol',
+      },
+    };
+
+    return c.json({ mintId, metadata }, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
   }
 });
 
