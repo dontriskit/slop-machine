@@ -58,6 +58,16 @@ import { createNotification, getNotifications, markRead as markNotifRead, markAl
   TUTORIAL_STEPS,
 } from './game/services/tutorialService';
 
+import {
+  getHallOfFame,
+  getHallOfFameCategory,
+  getRecordHistory,
+  checkAndUpdateRecords,
+  getPlayerHallOfFameRecords,
+  HALL_OF_FAME_CATEGORIES,
+} from './game/services/hallOfFameService';
+import type { HallOfFameCategory, CheckAndUpdateEvent } from './game/services/hallOfFameService';
+
 /**
  * Cosmic Protocol Worker
  *
@@ -3193,6 +3203,82 @@ app.delete('/api/notifications/:id', async (c) => {
   }
 });
 
+
+// ============================================================================
+// HALL OF FAME ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/hall-of-fame
+ * Returns all Hall of Fame categories with current record holders.
+ */
+app.get('/api/hall-of-fame', async (c) => {
+  const { DB } = c.env;
+  try {
+    const entries = await getHallOfFame(DB);
+    return c.json({ hallOfFame: entries });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/hall-of-fame/:category
+ * Returns a single Hall of Fame category with current record and history.
+ */
+app.get('/api/hall-of-fame/:category', async (c) => {
+  const { DB } = c.env;
+  const category = c.req.param('category') as HallOfFameCategory;
+  const limit = parseInt(c.req.query('limit') || '10');
+
+  if (!HALL_OF_FAME_CATEGORIES.includes(category)) {
+    return c.json({ error: `Invalid category. Valid: ${HALL_OF_FAME_CATEGORIES.join(', ')}` }, 400);
+  }
+
+  try {
+    const [entry, history] = await Promise.all([
+      getHallOfFameCategory(DB, category),
+      getRecordHistory(DB, category, limit),
+    ]);
+    return c.json({ entry, history });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/hall-of-fame/check
+ * Trigger a record check for a player after an in-game event.
+ * Body: { playerId, event: CheckAndUpdateEvent }
+ */
+app.post('/api/hall-of-fame/check', async (c) => {
+  const { DB } = c.env;
+  try {
+    const body = await c.req.json<{ playerId: string; event: CheckAndUpdateEvent }>();
+    if (!body.playerId || !body.event) {
+      return c.json({ error: 'playerId and event are required' }, 400);
+    }
+    const newRecords = await checkAndUpdateRecords(DB, body.playerId, body.event);
+    return c.json({ newRecords, count: newRecords.length });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/hall-of-fame/player/:playerId
+ * Returns all active records held by a specific player.
+ */
+app.get('/api/hall-of-fame/player/:playerId', async (c) => {
+  const { DB } = c.env;
+  const playerId = c.req.param('playerId');
+  try {
+    const records = await getPlayerHallOfFameRecords(DB, playerId);
+    return c.json({ records });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
 export default {
   async fetch(request: Request, env: Bindings): Promise<Response> {
     return app.fetch(request, env);

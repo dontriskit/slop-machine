@@ -104,3 +104,23 @@ export {
   getDefaultPreferences as getDefaultNotificationPreferences,
 } from './notificationService';
 export type { GetNotificationsOptions } from './notificationService';
+
+export type {
+  HallOfFameCategory,
+  HallOfFameRecord,
+  HallOfFameEntry,
+  CheckAndUpdateEvent,
+} from './hallOfFameService';
+export {
+  HALL_OF_FAME_CATEGORIES,
+  CATEGORY_META,
+  CATEGORY_LOWER_IS_BETTER,
+  submitRecord as submitHallOfFameRecord,
+  getHallOfFame,
+  getHallOfFameCategory,
+  getRecordHistory,
+  checkAndUpdateRecords,
+  getPlayerRecords as getPlayerHallOfFameRecords,
+  HallOfFameService,
+  hallOfFameService,
+} from './hallOfFameService';

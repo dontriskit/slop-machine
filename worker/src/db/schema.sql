@@ -412,3 +412,21 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
   minimum_priority TEXT NOT NULL DEFAULT 'info',  -- 'critical' | 'warning' | 'info'
   updated_at INTEGER NOT NULL
 );
+
+-- ============================================================================
+-- HALL OF FAME
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS hall_of_fame (
+  id TEXT PRIMARY KEY,
+  category TEXT NOT NULL,          -- HallOfFameCategory value
+  player_id TEXT NOT NULL,
+  player_name TEXT NOT NULL,       -- denormalised for fast reads even after player deletion
+  value REAL NOT NULL,             -- numeric record value (ships, resources, seconds, etc.)
+  metadata TEXT NOT NULL DEFAULT '{}', -- JSON extra context
+  achieved_at INTEGER NOT NULL,    -- unix seconds
+  is_active INTEGER NOT NULL DEFAULT 1  -- 1 = current record, 0 = historical
+);
+CREATE INDEX IF NOT EXISTS idx_hof_category_active ON hall_of_fame(category, is_active);
+CREATE INDEX IF NOT EXISTS idx_hof_player ON hall_of_fame(player_id);
+CREATE INDEX IF NOT EXISTS idx_hof_achieved ON hall_of_fame(category, achieved_at DESC);
