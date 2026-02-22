@@ -1,5 +1,6 @@
 import type { PlanetState, StrategyStep, AgentDecision } from '../game';
-import { BUILDING_NAME, BUILDING_ID, BUILDING_FACTORS, BUILDING_COSTS } from '../game/formulas';
+import { BUILDING_NAME, BUILDING_ID } from '../game/types';
+import { BUILDING_FACTORS, BUILDING_COSTS } from '../game/formulas';
 
 interface CloudflareEnv {
   AI: Ai;
@@ -304,4 +305,4 @@ async function runSingleAgentWithExecution(
 }
 
 // Legacy export for compatibility
-export { AgentDecision };
+export type { AgentDecision };
