@@ -7,6 +7,7 @@ import GalaxyMap from './components/GalaxyMap'
 import Leaderboard from './components/Leaderboard'
 import PlayerProfile from './components/PlayerProfile'
 import ResourceTrader from './components/ResourceTrader'
+import ResearchTree from './components/ResearchTree'
 import { GameStore } from './store/gameStore'
 
 // ---------------------------------------------------------------------------
@@ -42,7 +43,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -64,6 +65,7 @@ export default function App() {
   //   G — Galaxy Map
   //   L — Leaderboard
   //   T — Trader
+  //   R — Research Tree
   //   Escape — close any open panel
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -83,6 +85,9 @@ export default function App() {
       }
       if (e.key === 't' || e.key === 'T') {
         setActivePanel((p) => (p === 'trader' ? null : 'trader'))
+      }
+      if (e.key === 'r' || e.key === 'R') {
+        setActivePanel((p) => (p === 'research' ? null : 'research'))
       }
     }
     window.addEventListener('keydown', handler)
@@ -116,6 +121,7 @@ export default function App() {
         onOpenGalaxyMap={() => setActivePanel('galaxy-map')}
         onOpenLeaderboard={() => setActivePanel('leaderboard')}
         onOpenTrader={() => setActivePanel('trader')}
+        onOpenResearch={() => setActivePanel('research')}
       />
 
       {/* Galaxy Map modal */}
@@ -139,6 +145,13 @@ export default function App() {
       {activePanel === 'trader' && (
         <ModalOverlay onClose={closePanel}>
           <ResourceTrader onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {/* Research Tree modal */}
+      {activePanel === 'research' && (
+        <ModalOverlay onClose={closePanel}>
+          <ResearchTree onClose={closePanel} />
         </ModalOverlay>
       )}
 
