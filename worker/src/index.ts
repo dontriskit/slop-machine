@@ -346,6 +346,186 @@ app.post('/api/planet/:id/agent/disable', async (c) => {
 });
 
 // ============================================================================
+// FLEET ENDPOINTS
+// ============================================================================
+
+/**
+ * POST /api/fleet/send
+ * Launch a fleet mission
+ * Body: { fromPlanetId, toCoord, ships, missionType, resources?, holdTime? }
+ */
+app.post('/api/fleet/send', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json();
+    const { fromPlanetId, toCoord, ships, missionType, resources, holdTime } = body;
+
+    // TODO: Implement fleet launch logic
+    // 1. Validate source planet exists and belongs to player
+    // 2. Validate fleet exists at source
+    // 3. Deduct ships from source planet
+    // 4. Create fleet mission in DB
+    // 5. Return mission details
+
+    return c.json(
+      {
+        error: 'Fleet send not yet implemented',
+      },
+      501
+    );
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/fleet/missions
+ * Get player's fleet missions
+ */
+app.get('/api/fleet/missions', async (c) => {
+  const playerId = c.req.query('player_id');
+  const DB = c.env.DB;
+
+  if (!playerId) {
+    return c.json({ error: 'player_id query param required' }, 400);
+  }
+
+  try {
+    const missions = await DB.prepare(
+      `SELECT id, mission_type, mission_status, time_departure, time_arrival,
+              planet_id_from, galaxy_to, system_to, position_to
+       FROM fleet_missions
+       WHERE player_id = ?
+       ORDER BY time_arrival DESC
+       LIMIT 50`
+    )
+      .bind(playerId)
+      .all();
+
+    return c.json(missions.results || []);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/fleet/missions/:id
+ * Get fleet mission details
+ */
+app.get('/api/fleet/missions/:id', async (c) => {
+  const missionId = c.req.param('id');
+  const DB = c.env.DB;
+
+  try {
+    const mission = await DB.prepare(
+      `SELECT * FROM fleet_missions WHERE id = ?`
+    )
+      .bind(missionId)
+      .first();
+
+    if (!mission) {
+      return c.json({ error: 'Mission not found' }, 404);
+    }
+
+    return c.json(mission);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/fleet/missions/:id/recall
+ * Recall a fleet mission (return immediately)
+ */
+app.post('/api/fleet/missions/:id/recall', async (c) => {
+  const missionId = c.req.param('id');
+  const DB = c.env.DB;
+
+  try {
+    // TODO: Implement fleet recall logic
+    // 1. Get mission
+    // 2. Check if in transit
+    // 3. Create return mission
+    // 4. Update original mission status to canceled
+    // 5. Return new mission
+
+    return c.json(
+      {
+        error: 'Fleet recall not yet implemented',
+      },
+      501
+    );
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/battle-reports
+ * Get player's battle reports
+ */
+app.get('/api/battle-reports', async (c) => {
+  const playerId = c.req.query('player_id');
+  const DB = c.env.DB;
+
+  if (!playerId) {
+    return c.json({ error: 'player_id query param required' }, 400);
+  }
+
+  try {
+    const reports = await DB.prepare(
+      `SELECT id, attacker_id, defender_id, winner, rounds_fought,
+              attacker_loss_metal, attacker_loss_crystal, attacker_loss_deuterium,
+              defender_loss_metal, defender_loss_crystal, defender_loss_deuterium,
+              loot_metal, loot_crystal, loot_deuterium, created_at
+       FROM battle_reports
+       WHERE attacker_id = ? OR defender_id = ?
+       ORDER BY created_at DESC
+       LIMIT 50`
+    )
+      .bind(playerId, playerId)
+      .all();
+
+    return c.json(reports.results || []);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/battle-reports/:id
+ * Get full battle report with detailed data
+ */
+app.get('/api/battle-reports/:id', async (c) => {
+  const reportId = c.req.param('id');
+  const DB = c.env.DB;
+
+  try {
+    const report = await DB.prepare(
+      `SELECT * FROM battle_reports WHERE id = ?`
+    )
+      .bind(reportId)
+      .first();
+
+    if (!report) {
+      return c.json({ error: 'Battle report not found' }, 404);
+    }
+
+    // Parse battle data JSON if present
+    const result = { ...report };
+    if (report.battle_data) {
+      result.battle_data = JSON.parse(report.battle_data as string);
+    }
+
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// ============================================================================
 // CRON TRIGGER
 // ============================================================================
 
