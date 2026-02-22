@@ -231,3 +231,21 @@ CREATE TABLE IF NOT EXISTS nft_assets (
 );
 
 CREATE INDEX IF NOT EXISTS idx_nft_player ON nft_assets(player_id);
+
+-- Messages
+CREATE TABLE IF NOT EXISTS messages (
+  id TEXT PRIMARY KEY,
+  from_player_id TEXT,
+  from_player_name TEXT NOT NULL DEFAULT 'System',
+  to_player_id TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  body TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'player',
+  read INTEGER NOT NULL DEFAULT 0,
+  deleted_by_sender INTEGER NOT NULL DEFAULT 0,
+  deleted_by_recipient INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_messages_to ON messages(to_player_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_from ON messages(from_player_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_unread ON messages(to_player_id, read, deleted_by_recipient);

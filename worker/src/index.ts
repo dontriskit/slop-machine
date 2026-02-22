@@ -6,6 +6,7 @@ import { Coordinate, Strategy, PlanetState } from './game/types';
 import { GalaxyService } from './game/services/galaxyService';
 import { fleetService } from './game/services/fleetService';
 import { espionageService } from './game/services/espionageService';
+import { sendMessage, getInbox, getOutbox, getMessage, deleteMessage, getUnreadCount, markAllRead, sendSystemMessage } from './game/services/messageService';
 import { getEmptyDefenses } from './game/defenses';
 import { getEmptyTechLevels } from './game/services/researchService';
 import { mintCompressedNFT, buildMetadata } from './solana/mint';
@@ -1388,6 +1389,192 @@ app.get('/api/espionage/reports/:id', async (c) => {
 
     const report = espionageService.deserializeFromDb(row as Record<string, unknown>);
     return c.json(report);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// ============================================================================
+
+/**
+ * POST /api/messages/send
+ * Send a message to another player.
+ * Body: { fromPlayerId, toPlayerId, subject, body }
+ */
+app.post('/api/messages/send', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<{
+      fromPlayerId: string;
+      toPlayerId: string;
+      subject: string;
+      body: string;
+    }>();
+
+    if (!body.fromPlayerId || !body.toPlayerId || !body.subject || !body.body) {
+      return c.json({ error: 'fromPlayerId, toPlayerId, subject, and body are required' }, 400);
+    }
+
+    const message = await sendMessage(
+      body.fromPlayerId,
+      body.toPlayerId,
+      body.subject,
+      body.body,
+      'player',
+      DB,
+    );
+
+    return c.json(message, 201);
+  } catch (error) {
+    const msg = String(error);
+    // Return 400 for validation errors, 500 for unexpected errors
+    if (msg.includes('not found') || msg.includes('Cannot send') || msg.includes('empty') || msg.includes('exceeds')) {
+      return c.json({ error: msg }, 400);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * GET /api/messages/inbox
+ * Get paginated inbox for a player.
+ * Query: ?player_id=xxx&page=1&limit=20
+ */
+app.get('/api/messages/inbox', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.query('player_id');
+
+  if (!playerId) {
+    return c.json({ error: 'player_id query param required' }, 400);
+  }
+
+  try {
+    const page = parseInt(c.req.query('page') ?? '1', 10);
+    const limit = parseInt(c.req.query('limit') ?? '20', 10);
+
+    const result = await getInbox(playerId, page, limit, DB);
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/messages/outbox
+ * Get paginated sent messages for a player.
+ * Query: ?player_id=xxx&page=1&limit=20
+ */
+app.get('/api/messages/outbox', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.query('player_id');
+
+  if (!playerId) {
+    return c.json({ error: 'player_id query param required' }, 400);
+  }
+
+  try {
+    const page = parseInt(c.req.query('page') ?? '1', 10);
+    const limit = parseInt(c.req.query('limit') ?? '20', 10);
+
+    const result = await getOutbox(playerId, page, limit, DB);
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/messages/unread-count
+ * Get unread message count for a player.
+ * Query: ?player_id=xxx
+ */
+app.get('/api/messages/unread-count', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.query('player_id');
+
+  if (!playerId) {
+    return c.json({ error: 'player_id query param required' }, 400);
+  }
+
+  try {
+    const count = await getUnreadCount(playerId, DB);
+    return c.json({ unreadCount: count });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/messages/mark-all-read
+ * Mark all messages in a player's inbox as read.
+ * Query: ?player_id=xxx
+ */
+app.post('/api/messages/mark-all-read', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.query('player_id');
+
+  if (!playerId) {
+    return c.json({ error: 'player_id query param required' }, 400);
+  }
+
+  try {
+    const updated = await markAllRead(playerId, DB);
+    return c.json({ updated });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/messages/:id
+ * Get a single message and mark it as read (if recipient).
+ * Query: ?player_id=xxx
+ */
+app.get('/api/messages/:id', async (c) => {
+  const DB = c.env.DB;
+  const messageId = c.req.param('id');
+  const playerId = c.req.query('player_id');
+
+  if (!playerId) {
+    return c.json({ error: 'player_id query param required' }, 400);
+  }
+
+  try {
+    const message = await getMessage(messageId, playerId, DB);
+
+    if (!message) {
+      return c.json({ error: 'Message not found' }, 404);
+    }
+
+    return c.json(message);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * DELETE /api/messages/:id
+ * Soft-delete a message for the requesting player.
+ * Query: ?player_id=xxx
+ */
+app.delete('/api/messages/:id', async (c) => {
+  const DB = c.env.DB;
+  const messageId = c.req.param('id');
+  const playerId = c.req.query('player_id');
+
+  if (!playerId) {
+    return c.json({ error: 'player_id query param required' }, 400);
+  }
+
+  try {
+    const deleted = await deleteMessage(messageId, playerId, DB);
+
+    if (!deleted) {
+      return c.json({ error: 'Message not found' }, 404);
+    }
+
+    return c.json({ deleted: true });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
