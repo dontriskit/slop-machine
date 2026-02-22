@@ -4,23 +4,31 @@ import { Suspense, useState, useEffect, useCallback } from 'react'
 import Galaxy from './components/Galaxy'
 import HUD from './components/HUD'
 import GalaxyMap from './components/GalaxyMap'
+import WalletConnect from './components/WalletConnect'
+import AssetMinter from './components/AssetMinter'
+import NFTGallery from './components/NFTGallery'
 import { GameStore } from './store/gameStore'
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
   const [showGalaxyMap, setShowGalaxyMap] = useState(false)
+  const [showAssetStudio, setShowAssetStudio] = useState(false)
 
   const openMap = useCallback(() => setShowGalaxyMap(true), [])
   const closeMap = useCallback(() => setShowGalaxyMap(false), [])
+  const toggleAssetStudio = useCallback(() => setShowAssetStudio((v) => !v), [])
 
-  // Global keyboard shortcut: G toggles galaxy map
+  // Global keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Ignore when typing in inputs
       const tag = (e.target as HTMLElement).tagName.toLowerCase()
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return
       if (e.key === 'g' || e.key === 'G') setShowGalaxyMap((v) => !v)
-      if (e.key === 'Escape') setShowGalaxyMap(false)
+      if (e.key === 'a' || e.key === 'A') setShowAssetStudio((v) => !v)
+      if (e.key === 'Escape') {
+        setShowGalaxyMap(false)
+        setShowAssetStudio(false)
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -51,7 +59,45 @@ export default function App() {
       {/* HUD Overlay */}
       <HUD onOpenGalaxyMap={openMap} />
 
-      {/* Galaxy Map modal overlay */}
+      {/* Wallet connect — top-center */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 20,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 200,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <WalletConnect />
+        <button
+          onClick={toggleAssetStudio}
+          style={{
+            fontFamily: "'Courier New', monospace",
+            fontSize: 11,
+            padding: '6px 12px',
+            border: '1px solid #ffaa00',
+            background: showAssetStudio
+              ? 'rgba(255, 170, 0, 0.3)'
+              : 'rgba(255, 170, 0, 0.1)',
+            color: '#ffaa00',
+            cursor: 'pointer',
+            borderRadius: 3,
+            transition: 'all 0.2s',
+            textShadow: '0 0 8px rgba(255, 170, 0, 0.6)',
+            boxShadow: showAssetStudio
+              ? '0 0 12px rgba(255, 170, 0, 0.4)'
+              : 'none',
+          }}
+        >
+          Asset Studio (A)
+        </button>
+      </div>
+
+      {/* Galaxy Map modal */}
       {showGalaxyMap && (
         <div
           style={{
@@ -65,9 +111,35 @@ export default function App() {
           }}
           onClick={closeMap}
         >
-          {/* Stop clicks inside the map from closing it */}
           <div onClick={(e) => e.stopPropagation()}>
             <GalaxyMap onClose={closeMap} />
+          </div>
+        </div>
+      )}
+
+      {/* Asset Studio modal */}
+      {showAssetStudio && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.75)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'center',
+            paddingTop: 80,
+            gap: 20,
+            zIndex: 500,
+            overflowY: 'auto',
+          }}
+          onClick={toggleAssetStudio}
+        >
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <AssetMinter />
+            <NFTGallery />
           </div>
         </div>
       )}
