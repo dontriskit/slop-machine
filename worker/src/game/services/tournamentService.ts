@@ -22,7 +22,7 @@
 
 import { D1Database } from '@cloudflare/workers-types';
 import { simulateBattle, Combatant, BattleResult } from './battleService';
-import { Ships } from '../types';
+
 
 // ============================================================================
 // TYPES
@@ -472,7 +472,7 @@ export async function resolveMatch(
   }
 
   // Simulate battle
-  const battleResult = simulateBattle(defender, attacker);
+  const battleResult = simulateBattle(attacker.ships, defender.ships);
 
   // Determine winner
   const winnerId = battleResult.winner === 'attacker' ? attackerId : defenderId;
@@ -889,7 +889,21 @@ async function buildCombatant(playerId: string, db: D1Database): Promise<Combata
        FROM fleets WHERE player_id = ? LIMIT 1`
     )
     .bind(playerId)
-    .first();
+    .first<{
+      light_fighter: number;
+      heavy_fighter: number;
+      cruiser: number;
+      battleship: number;
+      battlecruiser: number;
+      bomber: number;
+      destroyer: number;
+      deathstar: number;
+      small_cargo: number;
+      large_cargo: number;
+      colony_ship: number;
+      recycler: number;
+      espionage_probe: number;
+    }>();
 
   if (!fleet) {
     return {
