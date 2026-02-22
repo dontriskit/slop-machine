@@ -472,11 +472,26 @@ export async function resolveMatch(
   }
 
   // Simulate battle
-  const battleResult = simulateBattle(defender, attacker);
+  // FIXED: Call simulateBattle with correct parameter order (attacker ships, defender ships, defenses)
+  // Extract the Ships objects from Combatant wrappers
+  const battleResult = simulateBattle(
+    attacker.ships,
+    defender.ships,
+    defender.defenses
+  );
 
-  // Determine winner
-  const winnerId = battleResult.winner === 'attacker' ? attackerId : defenderId;
-
+  // Determine winner with draw resolution via tiebreaker
+  let winnerId: string;
+  if (battleResult.winner === 'attacker') {
+    winnerId = attackerId;
+  } else if (battleResult.winner === 'defender') {
+    winnerId = defenderId;
+  } else {
+    // Draw: resolve with tiebreaker (compare remaining fleet power)
+    const attackerPower = calculateFleetPower(battleResult.attackerSurvivors);
+    const defenderPower = calculateFleetPower(battleResult.defenderSurvivors);
+    winnerId = attackerPower > defenderPower ? attackerId : defenderId;
+  }
   const now = Math.floor(Date.now() / 1000);
 
   // Update match record
@@ -971,6 +986,35 @@ async function awardAchievement(
     )
     .bind(achievementId, playerId, now)
     .run();
+}
+
+
+/**
+ * Calculate fleet power for tiebreaker resolution in draws
+ * Simple formula: sum of ship counts weighted by combat effectiveness
+ */
+function calculateFleetPower(ships: Ships): number {
+  const weights: Record<keyof Ships, number> = {
+    lightFighter: 50,
+    heavyFighter: 150,
+    cruiser: 400,
+    battleship: 1000,
+    battlecruiser: 700,
+    bomber: 1000,
+    destroyer: 2000,
+    deathstar: 200000,
+    smallCargo: 5,
+    largeCargo: 5,
+    colonyShip: 50,
+    recycler: 1,
+    espionageProbe: 0,
+  };
+
+  let power = 0;
+  for (const key of Object.keys(ships) as (keyof Ships)[]) {
+    power += ships[key] * weights[key];
+  }
+  return power;
 }
 
 /**
