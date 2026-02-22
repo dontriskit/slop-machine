@@ -17,6 +17,8 @@ export type {
   StrategyStep,
   Strategy,
   AgentDecision,
+  TechLevels,
+  ResearchQueueItem,
 } from './types';
 
 export { BUILDING_ID, BUILDING_NAME, SHIP_KEYS } from './types';

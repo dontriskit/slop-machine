@@ -208,3 +208,32 @@ export interface AgentDecision {
   buildingId?: number;
   reason: string;
 }
+
+// ============================================================================
+// RESEARCH & TECHNOLOGY
+// ============================================================================
+
+export interface TechLevels {
+  energyTech: number;        // 113
+  laserTech: number;         // 120
+  ionTech: number;           // 121
+  hyperspaceTech: number;    // 114
+  plasmaTech: number;        // 122
+  combustionDrive: number;   // 115
+  impulseDrive: number;      // 117
+  hyperspaceDrive: number;   // 118
+  espionageTech: number;     // 106
+  computerTech: number;      // 108
+  astrophysics: number;      // 124
+  weaponTech: number;        // 109
+  shieldingTech: number;     // 110
+  armorTech: number;         // 111
+  gravitonTech: number;      // 199
+}
+
+export interface ResearchQueueItem {
+  techId: number;
+  level: number;       // The level being researched (current + 1)
+  timeStart: number;   // unix ms
+  timeEnd: number;     // unix ms
+}

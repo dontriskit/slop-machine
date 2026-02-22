@@ -9,3 +9,19 @@ export type { BattleRound, BattleReport, Combatant } from './battleService';
 export { BattleService, battleService } from './battleService';
 export type { MissionPreparation, MissionArrival } from './missionService';
 export { MissionService, missionService } from './missionService';
+export type { TechDefinition, TechPrerequisite, TechEffect, TechEffectDetail } from './researchService';
+export {
+  TECH_DEFINITIONS,
+  TECH_ID_TO_KEY,
+  TECH_KEY_TO_ID,
+  getEmptyTechLevels,
+  getResearchCost,
+  getResearchTime,
+  canResearch,
+  getTechEffect,
+  startResearch,
+  completeResearch,
+  cancelResearch,
+  ResearchService,
+  researchService,
+} from './researchService';
