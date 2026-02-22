@@ -7,7 +7,7 @@ import GalaxyMap from './components/GalaxyMap'
 import Leaderboard from './components/Leaderboard'
 import PlayerProfile from './components/PlayerProfile'
 import ResourceTrader from './components/ResourceTrader'
-import MessagesInbox from './components/MessagesInbox'
+import ResearchTree from './components/ResearchTree'
 import { GameStore } from './store/gameStore'
 
 // ---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'messages' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -64,8 +64,8 @@ export default function App() {
   // Global keyboard shortcuts:
   //   G — Galaxy Map
   //   L — Leaderboard
-  //   M — Messages Inbox
   //   T — Trader
+  //   R — Research Tree
   //   Escape — close any open panel
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -83,11 +83,11 @@ export default function App() {
       if (e.key === 'l' || e.key === 'L') {
         setActivePanel((p) => (p === 'leaderboard' ? null : 'leaderboard'))
       }
-      if (e.key === 'm' || e.key === 'M') {
-        setActivePanel((p) => (p === 'messages' ? null : 'messages'))
-      }
       if (e.key === 't' || e.key === 'T') {
         setActivePanel((p) => (p === 'trader' ? null : 'trader'))
+      }
+      if (e.key === 'r' || e.key === 'R') {
+        setActivePanel((p) => (p === 'research' ? null : 'research'))
       }
     }
     window.addEventListener('keydown', handler)
@@ -121,7 +121,7 @@ export default function App() {
         onOpenGalaxyMap={() => setActivePanel('galaxy-map')}
         onOpenLeaderboard={() => setActivePanel('leaderboard')}
         onOpenTrader={() => setActivePanel('trader')}
-        onOpenMessages={() => setActivePanel('messages')}
+        onOpenResearch={() => setActivePanel('research')}
       />
 
       {/* Galaxy Map modal */}
@@ -148,10 +148,10 @@ export default function App() {
         </ModalOverlay>
       )}
 
-      {/* Messages Inbox modal */}
-      {activePanel === 'messages' && (
+      {/* Research Tree modal */}
+      {activePanel === 'research' && (
         <ModalOverlay onClose={closePanel}>
-          <MessagesInbox onClose={closePanel} />
+          <ResearchTree onClose={closePanel} />
         </ModalOverlay>
       )}
 
