@@ -104,3 +104,26 @@ export {
   getDefaultPreferences as getDefaultNotificationPreferences,
 } from './notificationService';
 export type { GetNotificationsOptions } from './notificationService';
+
+// ACS (Alliance Combat System)
+export type {
+  ACSStatus,
+  ACSParticipantStatus,
+  ACSAttack,
+  ACSParticipant,
+  ACSStatusResponse,
+  ACSLootShare,
+} from './acsService';
+export {
+  createACSAttack,
+  joinACSAttack,
+  getACSStatus,
+  launchACSAttack,
+  cancelACSAttack,
+  withdrawFromACS,
+  getPlayerACSAttacks,
+  completeACSAttack,
+  calculateFleetValue as calculateACSFleetValue,
+  combineFleets,
+  calculateLootShares,
+} from './acsService';

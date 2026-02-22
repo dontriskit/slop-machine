@@ -8,6 +8,7 @@ import { fleetService } from './game/services/fleetService';
 import { expeditionService, calculateFleetValue } from './game/services/expeditionService';
 import { espionageService } from './game/services/espionageService';
 import { createAlliance, dissolveAlliance, applyToAlliance, acceptApplication, rejectApplication, kickMember, leaveAlliance, promoteToOfficer, demoteToMember, getAllianceMembers, getPlayerAlliance, getAllianceById, searchAlliances, getAllianceApplications } from './game/services/allianceService';
+import { createACSAttack, joinACSAttack, getACSStatus, launchACSAttack, cancelACSAttack, withdrawFromACS, getPlayerACSAttacks } from './game/services/acsService';
 import { getLeaderboard, getPlayerProfile } from './game/services/leaderboardService';
 import { sendMessage, getInbox, getOutbox, getMessage, deleteMessage, getUnreadCount, markAllRead, sendSystemMessage } from './game/services/messageService';
 import { getEmptyDefenses } from './game/defenses';
@@ -3188,6 +3189,218 @@ app.delete('/api/notifications/:id', async (c) => {
       return c.json({ error: 'Notification not found' }, 404);
     }
     return c.json({ deleted: true });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+
+// ============================================================================
+// ACS (ALLIANCE COMBAT SYSTEM) ENDPOINTS
+// ============================================================================
+
+/**
+ * POST /api/acs/create
+ * Create an ACS attack group. Initiator automatically joins.
+ * Body: { playerId, planetId, ships, targetGalaxy, targetSystem, targetPosition, travelTime }
+ */
+app.post('/api/acs/create', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json() as {
+      playerId: string;
+      planetId: string;
+      ships: Record<string, number>;
+      targetGalaxy: number;
+      targetSystem: number;
+      targetPosition: number;
+      travelTime: number;
+    };
+
+    if (!body.playerId || !body.planetId || !body.ships || !body.targetGalaxy || !body.targetSystem || !body.targetPosition) {
+      return c.json({ error: 'playerId, planetId, ships, targetGalaxy, targetSystem, and targetPosition are required' }, 400);
+    }
+
+    if (typeof body.travelTime !== 'number' || body.travelTime <= 0) {
+      return c.json({ error: 'travelTime must be a positive number (seconds)' }, 400);
+    }
+
+    const result = await createACSAttack(
+      body.playerId,
+      body.planetId,
+      body.ships as any,
+      body.targetGalaxy,
+      body.targetSystem,
+      body.targetPosition,
+      body.travelTime,
+      DB,
+    );
+    return c.json(result);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found') || msg.includes('must be in')) {
+      return c.json({ error: msg }, 400);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * POST /api/acs/join/:acsId
+ * Join an existing ACS attack.
+ * Body: { playerId, planetId, ships, travelTime }
+ */
+app.post('/api/acs/join/:acsId', async (c) => {
+  const DB = c.env.DB;
+  const acsId = c.req.param('acsId');
+
+  try {
+    const body = await c.req.json() as {
+      playerId: string;
+      planetId: string;
+      ships: Record<string, number>;
+      travelTime: number;
+    };
+
+    if (!body.playerId || !body.planetId || !body.ships) {
+      return c.json({ error: 'playerId, planetId, and ships are required' }, 400);
+    }
+
+    if (typeof body.travelTime !== 'number' || body.travelTime <= 0) {
+      return c.json({ error: 'travelTime must be a positive number (seconds)' }, 400);
+    }
+
+    const participant = await joinACSAttack(
+      acsId,
+      body.playerId,
+      body.planetId,
+      body.ships as any,
+      body.travelTime,
+      DB,
+    );
+    return c.json(participant);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found') || msg.includes('not in') || msg.includes('full') || msg.includes('already') || msg.includes('must be')) {
+      return c.json({ error: msg }, 400);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * GET /api/acs/status/:acsId
+ * Get ACS attack status with all participants.
+ */
+app.get('/api/acs/status/:acsId', async (c) => {
+  const DB = c.env.DB;
+  const acsId = c.req.param('acsId');
+
+  try {
+    const status = await getACSStatus(acsId, DB);
+    return c.json(status);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found')) {
+      return c.json({ error: msg }, 404);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * POST /api/acs/launch/:acsId
+ * Launch the coordinated ACS attack. Only initiator can launch.
+ * Body: { playerId }
+ */
+app.post('/api/acs/launch/:acsId', async (c) => {
+  const DB = c.env.DB;
+  const acsId = c.req.param('acsId');
+
+  try {
+    const body = await c.req.json() as { playerId: string };
+
+    if (!body.playerId) {
+      return c.json({ error: 'playerId is required' }, 400);
+    }
+
+    const result = await launchACSAttack(acsId, body.playerId, DB);
+    return c.json(result);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found') || msg.includes('Only the initiator') || msg.includes('not in gathering')) {
+      return c.json({ error: msg }, 400);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * POST /api/acs/cancel/:acsId
+ * Cancel an ACS attack. Only initiator can cancel before launch.
+ * Body: { playerId }
+ */
+app.post('/api/acs/cancel/:acsId', async (c) => {
+  const DB = c.env.DB;
+  const acsId = c.req.param('acsId');
+
+  try {
+    const body = await c.req.json() as { playerId: string };
+
+    if (!body.playerId) {
+      return c.json({ error: 'playerId is required' }, 400);
+    }
+
+    await cancelACSAttack(acsId, body.playerId, DB);
+    return c.json({ canceled: true });
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found') || msg.includes('Only the initiator') || msg.includes('only be canceled')) {
+      return c.json({ error: msg }, 400);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * POST /api/acs/withdraw/:acsId
+ * Withdraw from an ACS attack (non-initiator only, during gathering phase).
+ * Body: { playerId }
+ */
+app.post('/api/acs/withdraw/:acsId', async (c) => {
+  const DB = c.env.DB;
+  const acsId = c.req.param('acsId');
+
+  try {
+    const body = await c.req.json() as { playerId: string };
+
+    if (!body.playerId) {
+      return c.json({ error: 'playerId is required' }, 400);
+    }
+
+    await withdrawFromACS(acsId, body.playerId, DB);
+    return c.json({ withdrawn: true });
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('not found') || msg.includes('cannot withdraw') || msg.includes('Initiator') || msg.includes('not a participant')) {
+      return c.json({ error: msg }, 400);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+/**
+ * GET /api/acs/player/:playerId
+ * Get all active ACS attacks for a player.
+ */
+app.get('/api/acs/player/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const attacks = await getPlayerACSAttacks(playerId, DB);
+    return c.json(attacks);
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }

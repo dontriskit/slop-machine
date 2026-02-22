@@ -412,3 +412,40 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
   minimum_priority TEXT NOT NULL DEFAULT 'info',  -- 'critical' | 'warning' | 'info'
   updated_at INTEGER NOT NULL
 );
+
+-- ============================================================================
+-- ACS (ALLIANCE COMBAT SYSTEM)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS acs_attacks (
+  id TEXT PRIMARY KEY,
+  initiator_id TEXT NOT NULL REFERENCES players(id),
+  alliance_id TEXT NOT NULL REFERENCES alliances(id),
+  target_galaxy INTEGER NOT NULL,
+  target_system INTEGER NOT NULL,
+  target_position INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'gathering',  -- 'gathering' | 'launched' | 'arrived' | 'completed' | 'canceled'
+  max_participants INTEGER NOT NULL DEFAULT 5,
+  launch_time INTEGER,       -- unix seconds, set when launched
+  arrival_time INTEGER,      -- unix seconds, computed on launch
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_acs_attacks_initiator ON acs_attacks(initiator_id);
+CREATE INDEX IF NOT EXISTS idx_acs_attacks_alliance ON acs_attacks(alliance_id);
+CREATE INDEX IF NOT EXISTS idx_acs_attacks_status ON acs_attacks(status);
+CREATE INDEX IF NOT EXISTS idx_acs_attacks_target ON acs_attacks(target_galaxy, target_system, target_position);
+
+CREATE TABLE IF NOT EXISTS acs_participants (
+  acs_id TEXT NOT NULL REFERENCES acs_attacks(id),
+  player_id TEXT NOT NULL REFERENCES players(id),
+  player_name TEXT NOT NULL,
+  planet_id TEXT NOT NULL REFERENCES planets(id),
+  ships_json TEXT NOT NULL,   -- JSON Ships object
+  status TEXT NOT NULL DEFAULT 'joined',  -- 'joined' | 'ready' | 'launched' | 'withdrawn'
+  fleet_value INTEGER NOT NULL DEFAULT 0,
+  travel_time INTEGER NOT NULL DEFAULT 0,  -- seconds to reach target
+  joined_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  PRIMARY KEY (acs_id, player_id)
+);
+CREATE INDEX IF NOT EXISTS idx_acs_participants_player ON acs_participants(player_id);
+CREATE INDEX IF NOT EXISTS idx_acs_participants_acs ON acs_participants(acs_id);
