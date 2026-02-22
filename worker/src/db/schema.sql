@@ -187,3 +187,24 @@ CREATE INDEX IF NOT EXISTS idx_battle_reports_planet ON battle_reports(defender_
 CREATE INDEX IF NOT EXISTS idx_battle_reports_date ON battle_reports(created_at);
 CREATE INDEX IF NOT EXISTS idx_moons_planet ON moons(planet_id);
 CREATE INDEX IF NOT EXISTS idx_debris_fields_coord ON debris_fields(galaxy, system);
+
+-- ============================================================================
+-- MARKETPLACE: Trade Offers
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS trade_offers (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  planet_id TEXT NOT NULL REFERENCES planets(id),
+  offer_resource TEXT NOT NULL,   -- 'metal' | 'crystal' | 'deuterium'
+  offer_amount INTEGER NOT NULL,
+  want_resource TEXT NOT NULL,    -- 'metal' | 'crystal' | 'deuterium'
+  want_amount INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',  -- 'open' | 'accepted' | 'cancelled'
+  accepted_by TEXT REFERENCES players(id),
+  created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_trades_status ON trade_offers(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_trades_player ON trade_offers(player_id);
+CREATE INDEX IF NOT EXISTS idx_trades_planet ON trade_offers(planet_id);

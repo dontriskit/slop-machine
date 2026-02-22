@@ -257,5 +257,139 @@ export function createStrategy(
   })
 }
 
+// ---------------------------------------------------------------------------
+// Leaderboard types + endpoints
+// ---------------------------------------------------------------------------
+
+export type LeaderboardType = 'points' | 'fleet' | 'research' | 'economy'
+export type TradeResource = 'metal' | 'crystal' | 'deuterium'
+
+export interface LeaderboardEntry {
+  rank: number
+  playerId: string
+  playerName: string
+  allianceTag: string | null
+  score: number
+  economyScore: number
+  researchScore: number
+  fleetScore: number
+  planetCount: number
+}
+
+export interface LeaderboardPage {
+  type: LeaderboardType
+  page: number
+  limit: number
+  total: number
+  entries: LeaderboardEntry[]
+}
+
+export function getLeaderboard(
+  type: LeaderboardType = 'points',
+  page = 1,
+  limit = 20
+): Promise<LeaderboardPage> {
+  return request<LeaderboardPage>(
+    `/api/leaderboard?type=${type}&page=${page}&limit=${limit}`
+  )
+}
+
+export interface PlayerProfileData {
+  playerId: string
+  playerName: string
+  allianceTag: string | null
+  planetCount: number
+  joinedAt: number
+  economyScore: number
+  researchScore: number
+  fleetScore: number
+  totalScore: number
+  recentActivity: Array<{
+    buildingId: number
+    level: number
+    source: string
+    reason: string | null
+    createdAt: number
+  }>
+}
+
+export function getPlayerProfile(playerId: string): Promise<PlayerProfileData> {
+  return request<PlayerProfileData>(
+    `/api/player/${encodeURIComponent(playerId)}/profile`
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Trade types + endpoints
+// ---------------------------------------------------------------------------
+
+export interface TradeOffer {
+  id: string
+  playerId: string
+  playerName: string
+  allianceTag: string | null
+  planetId: string
+  offerResource: TradeResource
+  offerAmount: number
+  wantResource: TradeResource
+  wantAmount: number
+  status: 'open' | 'accepted' | 'cancelled'
+  createdAt: number
+}
+
+export interface TradesListResponse {
+  page: number
+  limit: number
+  trades: TradeOffer[]
+}
+
+export function getTrades(
+  filter?: TradeResource,
+  page = 1,
+  limit = 20
+): Promise<TradesListResponse> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+  if (filter) params.set('resource', filter)
+  return request<TradesListResponse>(`/api/trades?${params}`)
+}
+
+export function createTrade(body: {
+  playerId: string
+  planetId: string
+  offerResource: TradeResource
+  offerAmount: number
+  wantResource: TradeResource
+  wantAmount: number
+}): Promise<TradeOffer & { id: string }> {
+  return request<TradeOffer & { id: string }>('/api/trades', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
+export function acceptTrade(
+  tradeId: string,
+  playerId: string,
+  planetId: string
+): Promise<{ success: boolean; tradeId: string }> {
+  return request<{ success: boolean; tradeId: string }>(
+    `/api/trades/${encodeURIComponent(tradeId)}/accept`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ playerId, planetId }),
+    }
+  )
+}
+
+export function cancelTrade(
+  tradeId: string,
+  playerId: string
+): Promise<{ success: boolean; tradeId: string }> {
+  return request<{ success: boolean; tradeId: string }>(
+    `/api/trades/${encodeURIComponent(tradeId)}?playerId=${encodeURIComponent(playerId)}`,
+    { method: 'DELETE' }
+  )
+}
+
 // Re-export the error class so consumers can check for API errors
 export { ApiClientError }

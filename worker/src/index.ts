@@ -4,6 +4,7 @@ import { runBuildOrderAgent, runAgentForAllPlanets } from './agents/buildOrderAg
 import { Coordinate, Strategy, PlanetState } from './game/types';
 import { GalaxyService } from './game/services/galaxyService';
 import { fleetService } from './game/services/fleetService';
+import { getLeaderboard, getPlayerProfile, type LeaderboardType } from './game/services/leaderboardService';
 
 /**
  * Cosmic Protocol Worker
@@ -736,6 +737,273 @@ app.post('/api/galaxy/colonize', async (c) => {
     return c.json(result, 201);
   } catch (error) {
     return c.json({ error: String(error) }, 500);
+  }
+});
+
+// ============================================================================
+// LEADERBOARD ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/leaderboard
+ * ?type=points|fleet|research|economy&page=1&limit=20
+ */
+app.get('/api/leaderboard', async (c) => {
+  const DB = c.env.DB;
+  const type = (c.req.query('type') ?? 'points') as LeaderboardType;
+  const page = parseInt(c.req.query('page') ?? '1', 10);
+  const limit = parseInt(c.req.query('limit') ?? '20', 10);
+
+  const validTypes: LeaderboardType[] = ['points', 'fleet', 'research', 'economy'];
+  if (!validTypes.includes(type)) {
+    return c.json({ error: 'type must be one of: points, fleet, research, economy' }, 400 as any);
+  }
+
+  try {
+    const result = await getLeaderboard(type, page, limit, DB);
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+/**
+ * GET /api/player/:id/profile
+ * Player stats + score breakdown + recent activity
+ */
+app.get('/api/player/:id/profile', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('id');
+
+  try {
+    const profile = await getPlayerProfile(playerId, DB);
+    if (!profile) {
+      return c.json({ error: 'Player not found' }, 404);
+    }
+    return c.json(profile);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+// ============================================================================
+// TRADE ENDPOINTS
+// ============================================================================
+
+/**
+ * POST /api/trades
+ * Create a trade offer.
+ * Body: { playerId, planetId, offerResource, offerAmount, wantResource, wantAmount }
+ */
+app.post('/api/trades', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json<{
+      playerId: string;
+      planetId: string;
+      offerResource: string;
+      offerAmount: number;
+      wantResource: string;
+      wantAmount: number;
+    }>();
+
+    const { playerId, planetId, offerResource, offerAmount, wantResource, wantAmount } = body;
+
+    const validResources = ['metal', 'crystal', 'deuterium'];
+    if (!validResources.includes(offerResource) || !validResources.includes(wantResource)) {
+      return c.json({ error: 'offerResource and wantResource must be metal, crystal, or deuterium' }, 400 as any);
+    }
+    if (offerResource === wantResource) {
+      return c.json({ error: 'offerResource and wantResource must be different' }, 400 as any);
+    }
+    if (!playerId || !planetId) {
+      return c.json({ error: 'playerId and planetId are required' }, 400 as any);
+    }
+    if (offerAmount <= 0 || wantAmount <= 0) {
+      return c.json({ error: 'offerAmount and wantAmount must be positive' }, 400 as any);
+    }
+
+    const id = `trade-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const createdAt = Math.floor(Date.now() / 1000);
+
+    await DB.prepare(
+      `INSERT INTO trade_offers
+         (id, player_id, planet_id, offer_resource, offer_amount, want_resource, want_amount, status, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?)`
+    )
+      .bind(id, playerId, planetId, offerResource, offerAmount, wantResource, wantAmount, createdAt)
+      .run();
+
+    return c.json({
+      id,
+      playerId,
+      planetId,
+      offerResource,
+      offerAmount,
+      wantResource,
+      wantAmount,
+      status: 'open',
+      createdAt,
+    }, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+/**
+ * GET /api/trades
+ * List open trade offers.
+ * ?resource=metal|crystal|deuterium (optional filter on want_resource)
+ * ?page=1&limit=20
+ */
+app.get('/api/trades', async (c) => {
+  const DB = c.env.DB;
+  const resource = c.req.query('resource');
+  const page = parseInt(c.req.query('page') ?? '1', 10);
+  const limit = Math.min(100, parseInt(c.req.query('limit') ?? '20', 10));
+  const offset = (Math.max(1, page) - 1) * limit;
+
+  try {
+    let query: string;
+    let binds: (string | number)[];
+
+    if (resource) {
+      query = `
+        SELECT t.id, t.player_id, p.name AS player_name, p.alliance_tag,
+               t.planet_id, t.offer_resource, t.offer_amount,
+               t.want_resource, t.want_amount, t.status, t.created_at
+        FROM trade_offers t
+        JOIN players p ON p.id = t.player_id
+        WHERE t.status = 'open' AND t.want_resource = ?
+        ORDER BY t.created_at DESC
+        LIMIT ? OFFSET ?`;
+      binds = [resource, limit, offset];
+    } else {
+      query = `
+        SELECT t.id, t.player_id, p.name AS player_name, p.alliance_tag,
+               t.planet_id, t.offer_resource, t.offer_amount,
+               t.want_resource, t.want_amount, t.status, t.created_at
+        FROM trade_offers t
+        JOIN players p ON p.id = t.player_id
+        WHERE t.status = 'open'
+        ORDER BY t.created_at DESC
+        LIMIT ? OFFSET ?`;
+      binds = [limit, offset];
+    }
+
+    const stmt = DB.prepare(query).bind(...binds);
+    const result = await stmt.all();
+    return c.json({ page, limit, trades: result.results ?? [] });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+/**
+ * POST /api/trades/:id/accept
+ * Accept a trade offer.
+ * Body: { playerId, planetId }  — the accepting player's info
+ */
+app.post('/api/trades/:id/accept', async (c) => {
+  const DB = c.env.DB;
+  const tradeId = c.req.param('id');
+
+  try {
+    const body = await c.req.json<{ playerId: string; planetId: string }>();
+    const { playerId } = body;
+
+    if (!playerId) {
+      return c.json({ error: 'playerId is required' }, 400 as any);
+    }
+
+    // Fetch the trade
+    const trade = await DB.prepare(
+      `SELECT * FROM trade_offers WHERE id = ? AND status = 'open'`
+    )
+      .bind(tradeId)
+      .first<{
+        id: string;
+        player_id: string;
+        offer_resource: string;
+        offer_amount: number;
+        want_resource: string;
+        want_amount: number;
+      }>();
+
+    if (!trade) {
+      return c.json({ error: 'Trade not found or no longer open' }, 404);
+    }
+
+    if (trade.player_id === playerId) {
+      return c.json({ error: 'Cannot accept your own trade offer' }, 400 as any);
+    }
+
+    // Mark accepted
+    await DB.prepare(
+      `UPDATE trade_offers SET status = 'accepted', accepted_by = ? WHERE id = ?`
+    )
+      .bind(playerId, tradeId)
+      .run();
+
+    return c.json({
+      success: true,
+      tradeId,
+      acceptedBy: playerId,
+      trade: {
+        offerResource: trade.offer_resource,
+        offerAmount: trade.offer_amount,
+        wantResource: trade.want_resource,
+        wantAmount: trade.want_amount,
+      },
+    });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
+  }
+});
+
+/**
+ * DELETE /api/trades/:id
+ * Cancel own trade offer.
+ * ?playerId=xxx  — must match the offer's player_id
+ */
+app.delete('/api/trades/:id', async (c) => {
+  const DB = c.env.DB;
+  const tradeId = c.req.param('id');
+  const playerId = c.req.query('playerId');
+
+  if (!playerId) {
+    return c.json({ error: 'playerId query param required' }, 400 as any);
+  }
+
+  try {
+    const trade = await DB.prepare(
+      `SELECT id, player_id, status FROM trade_offers WHERE id = ?`
+    )
+      .bind(tradeId)
+      .first<{ id: string; player_id: string; status: string }>();
+
+    if (!trade) {
+      return c.json({ error: 'Trade not found' }, 404);
+    }
+
+    if (trade.player_id !== playerId) {
+      return c.json({ error: 'You can only cancel your own trades' }, 403 as any);
+    }
+
+    if (trade.status !== 'open') {
+      return c.json({ error: `Trade is already ${trade.status}` }, 400 as any);
+    }
+
+    await DB.prepare(
+      `UPDATE trade_offers SET status = 'cancelled' WHERE id = ?`
+    )
+      .bind(tradeId)
+      .run();
+
+    return c.json({ success: true, tradeId });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500 as any);
   }
 });
 

@@ -4,23 +4,86 @@ import { Suspense, useState, useEffect, useCallback } from 'react'
 import Galaxy from './components/Galaxy'
 import HUD from './components/HUD'
 import GalaxyMap from './components/GalaxyMap'
+import Leaderboard from './components/Leaderboard'
+import PlayerProfile from './components/PlayerProfile'
+import ResourceTrader from './components/ResourceTrader'
 import { GameStore } from './store/gameStore'
+
+// ---------------------------------------------------------------------------
+// Modal overlay wrapper — closes on backdrop click
+// ---------------------------------------------------------------------------
+
+function ModalOverlay({
+  onClose,
+  children,
+}: {
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.78)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 500,
+      }}
+      onClick={onClose}
+    >
+      <div onClick={(e) => e.stopPropagation()}>{children}</div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// App
+// ---------------------------------------------------------------------------
+
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
-  const [showGalaxyMap, setShowGalaxyMap] = useState(false)
 
-  const openMap = useCallback(() => setShowGalaxyMap(true), [])
-  const closeMap = useCallback(() => setShowGalaxyMap(false), [])
+  const [activePanel, setActivePanel]       = useState<Panel>(null)
+  const [profilePlayerId, setProfilePlayerId] = useState<string | null>(null)
 
-  // Global keyboard shortcut: G toggles galaxy map
+  const closePanel = useCallback(() => {
+    setActivePanel(null)
+    setProfilePlayerId(null)
+  }, [])
+
+  const openProfile = useCallback((playerId: string) => {
+    setProfilePlayerId(playerId)
+    setActivePanel('profile')
+  }, [])
+
+  // Global keyboard shortcuts:
+  //   G — Galaxy Map
+  //   L — Leaderboard
+  //   T — Trader
+  //   Escape — close any open panel
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Ignore when typing in inputs
       const tag = (e.target as HTMLElement).tagName.toLowerCase()
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return
-      if (e.key === 'g' || e.key === 'G') setShowGalaxyMap((v) => !v)
-      if (e.key === 'Escape') setShowGalaxyMap(false)
+
+      if (e.key === 'Escape') {
+        setActivePanel(null)
+        setProfilePlayerId(null)
+        return
+      }
+      if (e.key === 'g' || e.key === 'G') {
+        setActivePanel((p) => (p === 'galaxy-map' ? null : 'galaxy-map'))
+      }
+      if (e.key === 'l' || e.key === 'L') {
+        setActivePanel((p) => (p === 'leaderboard' ? null : 'leaderboard'))
+      }
+      if (e.key === 't' || e.key === 'T') {
+        setActivePanel((p) => (p === 'trader' ? null : 'trader'))
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -48,28 +111,42 @@ export default function App() {
         </Suspense>
       </Canvas>
 
-      {/* HUD Overlay */}
-      <HUD onOpenGalaxyMap={openMap} />
+      {/* HUD Overlay — passes callbacks for opening panels */}
+      <HUD
+        onOpenGalaxyMap={() => setActivePanel('galaxy-map')}
+        onOpenLeaderboard={() => setActivePanel('leaderboard')}
+        onOpenTrader={() => setActivePanel('trader')}
+      />
 
-      {/* Galaxy Map modal overlay */}
-      {showGalaxyMap && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.75)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 500,
-          }}
-          onClick={closeMap}
-        >
-          {/* Stop clicks inside the map from closing it */}
-          <div onClick={(e) => e.stopPropagation()}>
-            <GalaxyMap onClose={closeMap} />
-          </div>
-        </div>
+      {/* Galaxy Map modal */}
+      {activePanel === 'galaxy-map' && (
+        <ModalOverlay onClose={closePanel}>
+          <GalaxyMap onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {/* Leaderboard modal */}
+      {activePanel === 'leaderboard' && (
+        <ModalOverlay onClose={closePanel}>
+          <Leaderboard
+            onClose={closePanel}
+            onSelectPlayer={(playerId) => openProfile(playerId)}
+          />
+        </ModalOverlay>
+      )}
+
+      {/* Resource Trader modal */}
+      {activePanel === 'trader' && (
+        <ModalOverlay onClose={closePanel}>
+          <ResourceTrader onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {/* Player Profile modal — opened from Leaderboard or elsewhere */}
+      {activePanel === 'profile' && profilePlayerId && (
+        <ModalOverlay onClose={closePanel}>
+          <PlayerProfile playerId={profilePlayerId} onClose={closePanel} />
+        </ModalOverlay>
       )}
     </div>
   )
