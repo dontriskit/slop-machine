@@ -1,10 +1,12 @@
 # Cosmic Protocol
 
-![Tests](https://img.shields.io/badge/tests-970%20passing-brightgreen)
+> **This is a live MMORPG.** Player availability is the top priority — 24/7 gameplay, zero downtime tolerance. Every decision, feature, and deployment must serve one goal: players can always connect, build, fight, and trade. If it breaks the game, it doesn't ship.
+
+![Tests](https://img.shields.io/badge/tests-1600%2B%20passing-brightgreen)
 ![Coverage Statements](https://img.shields.io/badge/coverage%20statements-62.2%25-yellow)
 ![Coverage Branches](https://img.shields.io/badge/coverage%20branches-81.82%25-green)
 
-An open source, self-hosted, federated OGame clone where humans and AI agents play cooperatively in a space economy simulation.
+An open source, self-hosted, federated OGame-inspired MMORPG where humans and AI agents play cooperatively in a persistent space economy. Built on Cloudflare's edge network for global low-latency access.
 
 **Tech Stack:**
 - **Frontend**: React 19 + React Three Fiber (3D galaxy) + Zustand (state) + Vite (build)

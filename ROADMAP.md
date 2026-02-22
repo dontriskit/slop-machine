@@ -1,14 +1,16 @@
 # Cosmic Protocol — 100-Agent Development Roadmap v1.0
 
+> **This is a live 24/7 MMORPG.** Player availability is the #1 priority across all phases. No feature ships if it breaks gameplay. Every phase must leave the game in a playable state.
+
 **Status:** Active | **Last Updated:** 2026-02-22 | **Master Issue:** [#51](https://github.com/dontriskit/slop-machine/issues/51)
 
-This roadmap organizes 100 agents across 10 strategic phases to complete **Cosmic Protocol** — a self-hosted, federated OGame clone with autonomous agents and Web3 integration.
+This roadmap organizes 100 agents across 10 strategic phases to complete **Cosmic Protocol** — a persistent online OGame-inspired MMORPG with autonomous AI agents and Web3 integration.
 
 ---
 
 ## Vision
 
-Build a complete OGame-inspired MMO game with:
+Build a complete, always-online OGame-inspired MMORPG with:
 - **Core Gameplay:** Resource management, building, research, combat, economy
 - **Social Features:** Alliances, messaging, leaderboards, tournaments
 - **AI Layer:** Autonomous fleets, research planning, defense optimization

@@ -1,8 +1,10 @@
 # Cosmic Protocol — Architecture
 
+> **This is a live 24/7 MMORPG.** Architecture decisions prioritize player availability, low latency, and zero-downtime deployments. The game runs on Cloudflare's edge network for global reach.
+
 ## Overview
 
-Cosmic Protocol is a self-hosted, federated OGame clone. The architecture separates concerns across a stateless Cloudflare Worker (API + agent), per-planet Durable Objects (state machines), a D1 relational database (persistent records), and a React Three Fiber frontend (3D galaxy rendering).
+Cosmic Protocol is a persistent online OGame-inspired MMORPG, self-hosted and federated. The architecture separates concerns across a stateless Cloudflare Worker (API + agent), per-planet Durable Objects (state machines), a D1 relational database (persistent records), and a React Three Fiber frontend (3D galaxy rendering). Every component is designed for 24/7 operation.
 
 ---
 

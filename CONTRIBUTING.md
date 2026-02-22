@@ -1,5 +1,7 @@
 # Contributing to Cosmic Protocol
 
+> **This is a live 24/7 MMORPG.** Every contribution must keep the game playable for real players. Never merge code that breaks gameplay. Test with `npx vitest run` and `cd worker && npx tsc --noEmit` before submitting.
+
 Welcome to the Cosmic Protocol project! This document outlines the guidelines for contributing to this project.
 
 ## Branch Naming Convention
