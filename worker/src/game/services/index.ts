@@ -9,3 +9,19 @@ export type { BattleRound, BattleReport, Combatant } from './battleService';
 export { BattleService, battleService } from './battleService';
 export type { MissionPreparation, MissionArrival } from './missionService';
 export { MissionService, missionService } from './missionService';
+export type {
+  DebrisField,
+  SlotPlanet,
+  SystemSlot,
+  SystemView,
+  GalaxySummaryEntry,
+  ColonizeRequest,
+  ColonizeResult,
+} from './galaxyService';
+export {
+  GalaxyService,
+  getTemperatureForPosition,
+  getFieldsForPosition,
+  getTemperatureRange,
+  getFieldsRange,
+} from './galaxyService';
