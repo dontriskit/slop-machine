@@ -6110,6 +6110,174 @@ app.get('/api/acs/player/:playerId', async (c) => {
 });
 
 
+app.get('/api/h2m/metrics/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const metrics = await getH2MMetrics(DB, playerId);
+    return c.json(metrics);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.get('/api/h2m/overrides/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+  const limit = parseInt(c.req.query('limit') || '50');
+  const offset = parseInt(c.req.query('offset') || '0');
+
+  try {
+    const result = await DB.prepare(
+      `SELECT * FROM override_analysis
+       WHERE player_id = ?
+       ORDER BY created_at DESC
+       LIMIT ? OFFSET ?`
+    )
+      .bind(playerId, limit, offset)
+      .all();
+
+    const overrides = (result.results || []).map((r: any) => ({
+      id: r.id,
+      planetId: r.planet_id,
+      playerId: r.player_id,
+      agentBuildId: r.agent_build_id,
+      agentBuildingId: r.agent_building_id,
+      agentLevel: r.agent_level,
+      agentReason: r.agent_reason,
+      manualBuildId: r.manual_build_id,
+      manualBuildingId: r.manual_building_id,
+      manualLevel: r.manual_level,
+      timeDelta: r.time_delta,
+      classification: r.classification,
+      detectedAt: r.created_at,
+    }));
+
+    const countResult = await DB.prepare(
+      `SELECT COUNT(*) as cnt FROM override_analysis WHERE player_id = ?`
+    ).bind(playerId).first();
+
+    return c.json({
+      overrides,
+      total: (countResult?.cnt as number) || 0,
+      limit,
+      offset,
+    });
+
+app.get('/api/h2m/strategy/:planetId', async (c) => {
+  const DB = c.env.DB;
+  const planetId = c.req.param('planetId');
+
+  try {
+    const planet = await DB.prepare(
+      'SELECT strategy_id FROM planets WHERE id = ?'
+    ).bind(planetId).first();
+
+    if (!planet || !planet.strategy_id) {
+      return c.json({ strategy: null, message: 'No strategy assigned' });
+    }
+
+    const strategy = await DB.prepare(
+      'SELECT * FROM build_strategies WHERE id = ?'
+    ).bind(planet.strategy_id).first();
+
+    if (!strategy) {
+      return c.json({ strategy: null, message: 'Strategy not found' });
+    }
+
+    // Get strategy history for this planet
+    const history = await DB.prepare(
+      `SELECT * FROM strategy_history
+       WHERE planet_id = ?
+       ORDER BY created_at DESC
+       LIMIT 10`
+    ).bind(planetId).all();
+
+    return c.json({
+      strategy: {
+        id: strategy.id,
+        playerId: strategy.player_id,
+        name: strategy.name,
+        steps: JSON.parse((strategy.steps as string) || '[]'),
+      },
+      history: (history.results || []).map((h: any) => ({
+        id: h.id,
+        source: h.source,
+        overrideCount: h.override_count,
+        adoptionRate: h.adoption_rate,
+        changesSummary: h.changes_summary,
+        createdAt: h.created_at,
+      })),
+    });
+
+app.post('/api/h2m/learn/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    // Get player's agent-enabled planets
+    const planetsResult = await DB.prepare(
+      'SELECT id FROM planets WHERE player_id = ? AND agent_enabled = 1'
+    ).bind(playerId).all();
+    const planetIds = ((planetsResult.results || []) as any[]).map((p: any) => p.id);
+
+    if (planetIds.length === 0) {
+      return c.json({ error: 'No agent-enabled planets for this player' }, 400);
+    }
+
+    // Detect overrides for each planet (last 30 days)
+    const since = Math.floor(Date.now() / 1000) - 30 * 24 * 3600;
+    let totalOverrides = 0;
+
+    for (const planetId of planetIds) {
+      const overrides = await detectOverrides(DB, planetId, since);
+      const stored = await storeOverrides(DB, overrides);
+      totalOverrides += stored;
+    }
+
+    // Generate improved strategy
+    const newStrategy = await generateImprovedStrategy(DB, playerId);
+    let strategiesApplied = 0;
+
+    for (const planetId of planetIds) {
+      const result = await applyLearnedStrategy(DB, planetId, newStrategy);
+      if (result.applied) strategiesApplied++;
+    }
+
+    return c.json({
+      playerId,
+      overridesDetected: totalOverrides,
+      strategiesApplied,
+      newStrategy,
+    });
+
+app.get('/api/h2m/report/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  try {
+    const report = await generateH2MReport(DB, playerId);
+    return c.json(report);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.get('/api/h2m/adoption-rate/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+  const windowDays = parseInt(c.req.query('days') || '7');
+
+  try {
+    const rate = await getAdoptionRate(DB, playerId, windowDays);
+    return c.json(rate);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+
 export default {
   async fetch(request: Request, env: Bindings): Promise<Response> {
     return app.fetch(request, env);

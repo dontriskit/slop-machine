@@ -333,57 +333,92 @@ export interface NotificationPreferences {
 }
 
 // ============================================================================
-// OFFICERS & DARK MATTER
+// H2M (HUMAN-TO-MACHINE) PROTOCOL
 // ============================================================================
 
-export type OfficerType = 'commander' | 'admiral' | 'engineer' | 'geologist' | 'technocrat';
+export type OverrideClassification =
+  | 'strategy_shift'
+  | 'resource_priority'
+  | 'defense_emergency'
+  | 'tech_rush'
+  | 'fleet_focus'
+  | 'correction';
 
-export interface OfficerBonuses {
-  buildQueueSlots?: number;
-  fleetSlots?: number;
-  defenseRepairFactor?: number;  // multiplier: 0.5 means 50% faster
-  energyProductionBonus?: number;  // additive: 0.10 means +10%
-  mineProductionBonus?: number;
-  espionageLevelBonus?: number;
-  researchSpeedBonus?: number;  // additive: 0.25 means +25% speed
-  fleetShortcuts?: boolean;
-  fleetRecall?: boolean;
-}
-
-export interface OfficerDefinition {
-  type: OfficerType;
-  name: string;
-  description: string;
-  cost: number;  // dark matter cost
-  durationDays: number;
-  bonuses: OfficerBonuses;
-}
-
-export interface ActiveOfficer {
+export interface Override {
   id: string;
+  planetId: string;
   playerId: string;
-  officerType: OfficerType;
-  activatedAt: number;  // unix seconds
-  expiresAt: number;    // unix seconds
+  /** The agent build that was overridden */
+  agentBuildId: string;
+  agentBuildingId: number;
+  agentLevel: number;
+  agentReason: string | null;
+  /** The manual build that replaced it */
+  manualBuildId: string;
+  manualBuildingId: number;
+  manualLevel: number;
+  /** Time gap in seconds between agent and manual builds */
+  timeDelta: number;
+  classification: OverrideClassification;
+  detectedAt: number; // unix seconds
 }
 
-export interface DarkMatterBalance {
+export interface PlayerStrategyProfile {
   playerId: string;
-  balance: number;
-  updatedAt: number;  // unix seconds
+  totalDecisions: number;
+  totalOverrides: number;
+  overrideRate: number;
+  /** Distribution of override classifications */
+  classificationBreakdown: Record<OverrideClassification, number>;
+  /** Top buildings the player prefers over agent suggestions */
+  preferredBuildings: Array<{ buildingId: number; count: number }>;
+  /** Top buildings the agent suggested that were overridden */
+  rejectedBuildings: Array<{ buildingId: number; count: number }>;
+  /** Trend: is the override rate going down over time? */
+  overrideTrend: 'improving' | 'stable' | 'worsening';
+  updatedAt: number;
 }
 
-export type DarkMatterSource = 'expedition' | 'achievement' | 'purchase' | 'reward';
-export type DarkMatterPurpose = 'officer' | 'instant_finish' | 'merchant' | 'cosmetic';
-
-export interface DarkMatterTransaction {
-  id: string;
+export interface H2MMetrics {
   playerId: string;
-  amount: number;
-  source?: DarkMatterSource;  // for income
-  purpose?: DarkMatterPurpose;  // for spending
-  reference?: string;  // expedition ID, achievement ID, etc.
-  balanceBefore: number;
-  balanceAfter: number;
-  createdAt: number;  // unix seconds
+  totalAgentDecisions: number;
+  totalManualDecisions: number;
+  totalOverrides: number;
+  overrideRate: number;
+  adoptionRate: number;
+  /** How many strategies have been learned */
+  strategiesGenerated: number;
+  /** Current adoption trend */
+  adoptionTrend: 'improving' | 'stable' | 'declining';
+  /** Last time the learning cycle ran */
+  lastLearningCycle: number | null;
+  /** Per-planet breakdown */
+  planetBreakdown: Array<{
+    planetId: string;
+    agentDecisions: number;
+    overrides: number;
+    overrideRate: number;
+  }>;
+}
+
+export interface H2MReport {
+  playerId: string;
+  generatedAt: number;
+  metrics: H2MMetrics;
+  profile: PlayerStrategyProfile;
+  /** Top override reasons with examples */
+  topOverrideReasons: Array<{
+    classification: OverrideClassification;
+    count: number;
+    percentage: number;
+    example: Override | null;
+  }>;
+  /** Strategy recommendations based on learning */
+  recommendations: string[];
+  /** Adoption rate over time windows */
+  adoptionHistory: Array<{
+    windowStart: number;
+    windowEnd: number;
+    adoptionRate: number;
+  }>;
 }

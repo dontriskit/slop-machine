@@ -414,38 +414,41 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 );
 
 -- ============================================================================
--- ACS (ALLIANCE COMBAT SYSTEM)
+-- H2M (HUMAN-TO-MACHINE) LEARNING PROTOCOL
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS acs_attacks (
+CREATE TABLE IF NOT EXISTS override_analysis (
   id TEXT PRIMARY KEY,
-  initiator_id TEXT NOT NULL REFERENCES players(id),
-  alliance_id TEXT NOT NULL REFERENCES alliances(id),
-  target_galaxy INTEGER NOT NULL,
-  target_system INTEGER NOT NULL,
-  target_position INTEGER NOT NULL,
-  status TEXT NOT NULL DEFAULT 'gathering',  -- 'gathering' | 'launched' | 'arrived' | 'completed' | 'canceled'
-  max_participants INTEGER NOT NULL DEFAULT 5,
-  launch_time INTEGER,       -- unix seconds, set when launched
-  arrival_time INTEGER,      -- unix seconds, computed on launch
+  planet_id TEXT NOT NULL,
+  player_id TEXT NOT NULL,
+  agent_build_id TEXT NOT NULL,
+  agent_building_id INTEGER NOT NULL,
+  agent_level INTEGER NOT NULL,
+  agent_reason TEXT,
+  manual_build_id TEXT NOT NULL,
+  manual_building_id INTEGER NOT NULL,
+  manual_level INTEGER NOT NULL,
+  time_delta INTEGER NOT NULL,          -- seconds between agent and manual build
+  classification TEXT NOT NULL,          -- OverrideClassification enum
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
-CREATE INDEX IF NOT EXISTS idx_acs_attacks_initiator ON acs_attacks(initiator_id);
-CREATE INDEX IF NOT EXISTS idx_acs_attacks_alliance ON acs_attacks(alliance_id);
-CREATE INDEX IF NOT EXISTS idx_acs_attacks_status ON acs_attacks(status);
-CREATE INDEX IF NOT EXISTS idx_acs_attacks_target ON acs_attacks(target_galaxy, target_system, target_position);
+CREATE INDEX IF NOT EXISTS idx_override_planet ON override_analysis(planet_id);
+CREATE INDEX IF NOT EXISTS idx_override_player ON override_analysis(player_id);
+CREATE INDEX IF NOT EXISTS idx_override_classification ON override_analysis(classification);
+CREATE INDEX IF NOT EXISTS idx_override_date ON override_analysis(created_at);
 
-CREATE TABLE IF NOT EXISTS acs_participants (
-  acs_id TEXT NOT NULL REFERENCES acs_attacks(id),
-  player_id TEXT NOT NULL REFERENCES players(id),
-  player_name TEXT NOT NULL,
-  planet_id TEXT NOT NULL REFERENCES planets(id),
-  ships_json TEXT NOT NULL,   -- JSON Ships object
-  status TEXT NOT NULL DEFAULT 'joined',  -- 'joined' | 'ready' | 'launched' | 'withdrawn'
-  fleet_value INTEGER NOT NULL DEFAULT 0,
-  travel_time INTEGER NOT NULL DEFAULT 0,  -- seconds to reach target
-  joined_at INTEGER NOT NULL DEFAULT (unixepoch()),
-  PRIMARY KEY (acs_id, player_id)
+CREATE TABLE IF NOT EXISTS strategy_history (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL,
+  planet_id TEXT,                        -- null = player-wide strategy
+  strategy_json TEXT NOT NULL,           -- JSON serialized strategy steps
+  source TEXT NOT NULL DEFAULT 'learned', -- 'initial' | 'learned' | 'manual'
+  override_count INTEGER NOT NULL DEFAULT 0,
+  adoption_rate REAL NOT NULL DEFAULT 0,
+  parent_strategy_id TEXT,               -- previous strategy this was derived from
+  changes_summary TEXT,                  -- human-readable diff
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
-CREATE INDEX IF NOT EXISTS idx_acs_participants_player ON acs_participants(player_id);
-CREATE INDEX IF NOT EXISTS idx_acs_participants_acs ON acs_participants(acs_id);
+CREATE INDEX IF NOT EXISTS idx_strategy_history_player ON strategy_history(player_id);
+CREATE INDEX IF NOT EXISTS idx_strategy_history_planet ON strategy_history(planet_id);
+CREATE INDEX IF NOT EXISTS idx_strategy_history_date ON strategy_history(created_at);
