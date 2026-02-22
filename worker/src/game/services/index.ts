@@ -114,3 +114,13 @@ export {
   PlanetManagementService,
   createPlanetManagementService,
 } from './planetManagementService';
+
+export type {
+  PlayerBan,
+  BanStatus,
+  BanListEntry,
+} from './moderationService';
+export {
+  ModerationService,
+  moderationService,
+} from './moderationService';
