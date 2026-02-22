@@ -37,27 +37,10 @@ import {
 import type { OfficerType } from './game/types';
 import { ColonizationService } from './game/services/colonizationService';
 import { PlanetManagementService } from './game/services/planetManagementService';
-import { defenseService, buildDefense, cancelDefenseBuild, createEmptyDefenseQueue, processDefenseQueue, getDefenseBuildQueue, rebuildDefensesAfterBattle, launchMissileAttack } from './game/services/defenseService';
 import { createNotification, getNotifications, markRead as markNotifRead, markAllRead as markAllNotifsRead, deleteNotification, getUnreadCount as getNotifUnreadCount, getPreferences as getNotifPreferences, setPreferences as setNotifPreferences, getDefaultPreferences as getDefaultNotifPreferences } from './game/services/notificationService';
-<<<<<<< HEAD
-import { enableVacationMode, disableVacationMode, isOnVacation, getVacationInfo, checkVacationStatus } from './game/services/vacationService';
 import { simulateBattlePreview, getBreakEvenFleet, compareFleetCompositions } from './game/services/battleSimulatorService';
-=======
 import { getDarkMatter, addDarkMatter, spendDarkMatter, getDarkMatterHistory, instantFinish, merchantTrade } from './game/services/darkMatterService';
->>>>>>> agent/wave3-7
-import { moderationService } from './game/services/moderationService';
-
-    const result = await svc.colonize({ playerId, fromPlanetId, galaxy, system, position });
-    const result = await svc.colonizePlanet({ playerId, fromPlanetId, galaxy, system, position });
-  return c.json(Object.values(OFFICER_DEFINITIONS));
-    if (!OFFICER_TYPES.includes(officerType as OfficerType)) {
-        { error: `Invalid officerType. Valid: ${OFFICER_TYPES.join(', ')}` },
-    const officer = await activateOfficer(playerId, officerType as OfficerType, DB);
-    const officers = await getActiveOfficers(playerId, DB);
-    if (!OFFICER_TYPES.includes(officerType as OfficerType)) {
-        { error: `Invalid officerType. Valid: ${OFFICER_TYPES.join(', ')}` },
-    const deactivated = await deactivateOfficer(playerId, officerType as OfficerType, DB);
-    const bonuses = await getOfficerBonuses(playerId, DB);
+import {
   getTutorialProgress,
   completeTutorialStep,
   claimReward as claimTutorialReward,
@@ -72,6 +55,9 @@ import {
   claimMissionReward,
   resetDailyMissions,
 } from './game/services/dailyMissionService';
+
+import { mvpRoutes, processFleetMissions } from './routes/mvp';
+import { checkBuildingPrerequisites, BUILDING_ID_TO_KEY } from './game/prerequisites';
 
 /**
  * Cosmic Protocol Worker
@@ -111,6 +97,13 @@ app.use('*', async (c, next) => {
   if (c.req.method === 'OPTIONS') return c.text('', 204 as any);
   await next();
 });
+
+
+// ============================================================================
+// MVP ROUTES (Player registration, login, prerequisite validation)
+// ============================================================================
+
+app.route('/', mvpRoutes);
 
 // ============================================================================
 // HELPER: get Durable Object stub from planet ID
@@ -228,8 +221,25 @@ app.post('/api/planet/:id/queue', async (c) => {
   const DB = c.env.DB;
 
   try {
-    const body = await c.req.json();
+    const body = await c.req.json() as { buildingId?: number; targetLevel?: number };
     const stub = getPlanetStub(PLANET_DO, planetId);
+
+    // Prerequisite validation (Task 4)
+    if (body.buildingId !== undefined) {
+      const buildKey = BUILDING_ID_TO_KEY[body.buildingId];
+      if (buildKey) {
+        const stateRes = await stub.fetch(new Request('https://planet/state'));
+        if (stateRes.ok) {
+          const pState = await stateRes.json() as any;
+          const techLvls = pState.techLevels || {};
+          const prereqResult = checkBuildingPrerequisites(buildKey, pState.buildings, techLvls);
+          if (!prereqResult.met) {
+            return c.json({ error: 'Prerequisites not met', missing: prereqResult.missing }, 400);
+          }
+        }
+      }
+    }
+
     const response = await stub.fetch(new Request('https://planet/queue/add', { method: 'POST', body: JSON.stringify(body) }));
 
     if (!response.ok) {
@@ -1248,98 +1258,6 @@ app.get('/api/player/:id/stats', async (c) => {
 });
 
 /**
- * POST /api/player/:id/vacation/enable
- * Enable vacation mode for a player.
- * 
- * Requirements:
- *  - No active fleet missions
- *  - No active research
- *  - No active builds
- * 
- * Minimum vacation period: 2 days
- */
-app.post('/api/player/:id/vacation/enable', async (c) => {
-  const playerId = c.req.param('id');
-  const DB = c.env.DB;
-
-  if (!playerId) {
-    return c.json({ error: 'playerId required' }, 400);
-  }
-
-  try {
-    const result = await enableVacationMode(DB, playerId);
-    if (!result.success) {
-      return c.json({ error: result.reason || 'Failed to enable vacation mode' }, 400);
-    }
-    return c.json({ success: true, message: 'Vacation mode enabled. Minimum 2 days required.' });
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-/**
- * POST /api/player/:id/vacation/disable
- * Disable vacation mode for a player.
- * 
- * Requirements:
- *  - Must be on vacation
- *  - Minimum 2 days must have passed
- */
-app.post('/api/player/:id/vacation/disable', async (c) => {
-  const playerId = c.req.param('id');
-  const DB = c.env.DB;
-
-  if (!playerId) {
-    return c.json({ error: 'playerId required' }, 400);
-  }
-
-  try {
-    const result = await disableVacationMode(DB, playerId);
-    if (!result.success) {
-      return c.json({ error: result.reason || 'Failed to disable vacation mode' }, 400);
-    }
-    return c.json({ success: true, message: 'Vacation mode disabled.' });
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-/**
- * GET /api/player/:id/vacation
- * Get vacation status and information for a player.
- * 
- * Returns:
- *  - isOnVacation: boolean
- *  - vacationStart: unix seconds or null
- *  - vacationMinEnd: unix seconds or null
- *  - daysRemaining: number or null
- *  - canEnable: boolean
- *  - canDisable: boolean
- */
-app.get('/api/player/:id/vacation', async (c) => {
-  const playerId = c.req.param('id');
-  const DB = c.env.DB;
-
-  if (!playerId) {
-    return c.json({ error: 'playerId required' }, 400);
-  }
-
-  try {
-    const [vacationInfo, vacationStatus] = await Promise.all([
-      getVacationInfo(DB, playerId),
-      checkVacationStatus(DB, playerId),
-    ]);
-
-    return c.json({
-      ...vacationInfo,
-      ...vacationStatus,
-    });
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-/**
  * GET /api/stats/top
  * Leaderboard query.
  * Query params:
@@ -2237,6 +2155,19 @@ async function handleScheduled(event: ScheduledEvent, env: Bindings): Promise<vo
 
     console.log(`[Cron] Agent run: ${results.succeeded}/${results.total} planets succeeded`);
 
+    // Process fleet missions (arrivals + returns)
+    try {
+      const missionResult = await processFleetMissions(DB, PLANET_DO);
+      if (missionResult.arrivals > 0 || missionResult.returns > 0) {
+        console.log(`[Cron] Fleet missions: ${missionResult.arrivals} arrivals, ${missionResult.returns} returns`);
+      }
+      if (missionResult.errors.length > 0) {
+        console.error(`[Cron] Fleet mission errors:`, missionResult.errors);
+      }
+    } catch (fleetErr) {
+      console.error('[Cron] Fleet mission processing error:', fleetErr);
+    }
+
     // Reset daily missions at midnight UTC
     try {
       const dmReset = await resetDailyMissions(DB);
@@ -3036,6 +2967,10 @@ app.post('/api/defense/missile-attack', async (c) => {
       missilesLaunched: missileCount,
       result,
     });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
 
 
 // TOURNAMENT ENDPOINTS
@@ -3288,6 +3223,12 @@ app.get('/api/notifications/:playerId', async (c) => {
       page,
       limit,
     });
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
 app.delete('/api/notifications/:id', async (c) => {
   const DB = c.env.DB;
   const notificationId = c.req.param('id');
@@ -3410,7 +3351,6 @@ app.post('/api/fleet/recall', async (c) => {
 
 
 // ============================================================================
-<<<<<<< HEAD
 // BATTLE SIMULATOR ENDPOINTS
 // ============================================================================
 
@@ -3498,51 +3438,6 @@ app.post('/api/battle/compare', async (c) => {
   }
 });
 
-    // Persist fleet mission to D1
-    const m = result.mission;
-    await DB.prepare(
-      `INSERT INTO fleet_missions
-         (id, player_id, mission_type, mission_status, time_departure, time_arrival,
-          planet_id_from, galaxy_to, system_to, position_to, ships_json, resources_json, fuel_consumed)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-      .bind(
-        m.id,
-        m.playerId,
-        m.missionType,
-        m.missionStatus,
-        m.timeDeparture,
-        m.timeArrival,
-        m.planetIdFrom,
-        m.targetCoordinate.galaxy,
-        m.targetCoordinate.system,
-        m.targetCoordinate.position,
-        JSON.stringify(m.ships),
-        JSON.stringify(m.resources),
-        m.fuelConsumed,
-      )
-      .run();
-
-    return c.json({ mission: m }, 201);
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-    // 4. Create fleet mission in DB
-    // 5. Return mission details
-
-    return c.json(
-      {
-        error: 'Fleet send not yet implemented — use POST /api/fleet/dispatch instead',
-      },
-      501
-    );
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
 app.get('/api/fleet/missions', async (c) => {
   const playerId = c.req.query('player_id');
   const DB = c.env.DB;
@@ -3613,198 +3508,6 @@ app.post('/api/fleet/missions/:id/recall', async (c) => {
   }
 });
 
-    // 2. Validate mission
-    const validationError = espionageService.validateMission(probeCount, attackerPlanet.ships);
-    if (validationError) {
-      return c.json({ error: validationError }, 400);
-    }
-
-    // 3. Locate target planet
-    const targetPlanetRow = await DB.prepare(
-      'SELECT id, player_id, name FROM planets WHERE galaxy = ? AND system = ? AND position = ?',
-    )
-      .bind(targetGalaxy, targetSystem, targetPosition)
-      .first();
-
-    if (!targetPlanetRow) {
-      return c.json({ error: 'No planet found at target coordinates' }, 404);
-    }
-
-    const targetPlanetId = targetPlanetRow.id as string;
-    const defenderPlayerId = targetPlanetRow.player_id as string;
-    const defenderName = targetPlanetRow.name as string;
-
-    // Cannot spy on yourself
-    if (defenderPlayerId === attackerPlayerId) {
-      return c.json({ error: 'Cannot spy on your own planet' }, 400);
-    }
-
-    // 4. Get target planet state
-    const defenderStub = getPlanetStub(PLANET_DO, targetPlanetId);
-    const defenderStateRes = await defenderStub.fetch(new Request('https://planet/state'));
-    if (!defenderStateRes.ok) {
-      return c.json({ error: 'Could not retrieve target planet state' }, 500);
-    }
-    const targetPlanet = (await defenderStateRes.json()) as PlanetState;
-
-    // 5. Get attacker and defender tech levels (espionageTech)
-    // For now, use default tech levels — in production these would come from player state
-    const attackerTech = getEmptyTechLevels();
-    const defenderTech = getEmptyTechLevels();
-
-    // Try to load tech from D1 if available
-    // (Uses a best-effort approach; missing data defaults to 0)
-    const attackerTechRow = await DB.prepare(
-      'SELECT espionage_tech FROM players WHERE id = ?',
-    ).bind(attackerPlayerId).first();
-    if (attackerTechRow && typeof attackerTechRow.espionage_tech === 'number') {
-      attackerTech.espionageTech = attackerTechRow.espionage_tech;
-    }
-    const defenderTechRow = await DB.prepare(
-      'SELECT espionage_tech FROM players WHERE id = ?',
-    ).bind(defenderPlayerId).first();
-    if (defenderTechRow && typeof defenderTechRow.espionage_tech === 'number') {
-      defenderTech.espionageTech = defenderTechRow.espionage_tech;
-    }
-
-    // 6. Get target defenses (default to empty if not available)
-    const targetDefenses = getEmptyDefenses();
-
-    // 7. Generate espionage report
-    const report = espionageService.generateReport({
-      attackerId: attackerPlayerId,
-      attackerName: attackerPlayerId,
-      attackerSpyTech: attackerTech.espionageTech,
-      attackerCoordinate: attackerPlanet.coordinate,
-      probeCount,
-      defenderId: defenderPlayerId,
-      defenderName,
-      defenderSpyTech: defenderTech.espionageTech,
-      targetPlanet,
-      targetDefenses,
-      defenderTech,
-    });
-
-    // Dispatch fleet as expedition mission
-    const result = fleetService.dispatchFleet(
-      {
-        missionId: `exp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        playerId: body.playerId ?? planetState.playerId,
-        fromPlanetId,
-        toPlanetId: null,
-        from: planetState.coordinate,
-        to: toCoord,
-        ships: ships as any,
-        resources: { metal: 0, crystal: 0, deuterium: 0 },
-        missionType: 'expedition',
-        speedPercent: speedPercent ?? 100,
-      },
-      planetState,
-    );
-
-    if (!result.mission) {
-      return c.json({ error: result.reason ?? 'Expedition dispatch failed' }, 400);
-    }
-
-    // Persist updated planet state (ships deducted, fuel consumed)
-    await planetStub.fetch(
-      new Request('https://planet/setState', {
-        method: 'POST',
-        body: JSON.stringify(planetState),
-      })
-
-    // Persist expedition mission to D1
-    const m = result.mission;
-    await DB.prepare(
-      `INSERT INTO fleet_missions
-         (id, player_id, mission_type, mission_status, time_departure, time_arrival,
-          planet_id_from, galaxy_to, system_to, position_to, ships_json, resources_json, fuel_consumed)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-      .bind(
-        m.id,
-        m.playerId,
-        m.missionType,
-        m.missionStatus,
-        m.timeDeparture,
-        m.timeArrival,
-        m.planetIdFrom,
-        m.targetCoordinate.galaxy,
-        m.targetCoordinate.system,
-        m.targetCoordinate.position,
-        JSON.stringify(m.ships),
-        JSON.stringify(m.resources),
-        m.fuelConsumed,
-      )
-      .run();
-
-    return c.json({
-      mission: m,
-      expeditionTarget: toCoord,
-      fleetValue: fleetValuePreview,
-    }, 201);
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-app.get('/api/expedition/result/:missionId', async (c) => {
-  const missionId = c.req.param('missionId');
-  const DB = c.env.DB;
-
-  try {
-    const mission = await DB.prepare(
-      `SELECT id, player_id, mission_type, mission_status,
-              time_departure, time_arrival,
-              planet_id_from, galaxy_to, system_to, position_to,
-              ships_json, resources_json, fuel_consumed
-       FROM fleet_missions
-       WHERE id = ? AND mission_type = 'expedition'`
-    )
-      .bind(missionId)
-      .first();
-
-    if (!mission) {
-      return c.json({ error: 'Expedition mission not found' }, 404);
-    }
-
-    // Parse JSON fields
-    const ships = mission.ships_json ? JSON.parse(mission.ships_json as string) : {};
-    const resources = mission.resources_json ? JSON.parse(mission.resources_json as string) : {};
-
-    // Compute fleet value for client display
-    const fleetValue = calculateFleetValue(ships);
-
-    return c.json({
-      missionId: mission.id,
-      playerId: mission.player_id,
-      missionType: mission.mission_type,
-      missionStatus: mission.mission_status,
-      timeDeparture: mission.time_departure,
-      timeArrival: mission.time_arrival,
-      planetIdFrom: mission.planet_id_from,
-      targetCoordinate: {
-        galaxy: mission.galaxy_to,
-        system: mission.system_to,
-        position: mission.position_to,
-      },
-      ships,
-      resources,
-      fleetValue,
-      fuelConsumed: mission.fuel_consumed,
-    });
-
-    // Reset daily missions at midnight UTC
-    try {
-      const dmReset = await resetDailyMissions(DB);
-      console.log(`[Cron] Daily missions reset for ${dmReset.reset} active players`);
-    } catch (dmErr) {
-      console.error("[Cron] Daily mission reset error:", dmErr);
-    }
-  } catch (error) {
-    console.error('Cron handler error:', error);
-  }
-}
 
 // ============================================================================
 // DEFENSE ENDPOINTS
@@ -4228,7 +3931,11 @@ app.post('/api/espionage/send', async (c) => {
       .run();
 
     return c.json({ report }, 201);
-=======
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
 // DARK MATTER API
 // ============================================================================
 
@@ -4249,14 +3956,12 @@ app.get('/api/dm/:playerId', async (c) => {
       balance,
       history,
     });
->>>>>>> agent/wave3-7
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
 });
 
 /**
-<<<<<<< HEAD
  * GET /api/espionage/reports
  * List espionage reports for a player.
  * Query: ?player_id=xxx&limit=50
@@ -4324,55 +4029,7 @@ app.get('/api/espionage/reports/:id', async (c) => {
   }
 });
 
-// ============================================================================
-
-/**
- * POST /api/messages/send
- * Send a message to another player.
- * Body: { fromPlayerId, toPlayerId, subject, body }
- */
-app.post('/api/messages/send', async (c) => {
-=======
- * POST /api/dm/instant-finish
- * Spend dark matter to instantly complete a queue item
- * Body: { playerId, planetId, queueType, queueIndex }
- */
-app.post('/api/dm/instant-finish', async (c) => {
->>>>>>> agent/wave3-7
-  const DB = c.env.DB;
-
-  try {
-    const body = await c.req.json<{
-<<<<<<< HEAD
-      fromPlayerId: string;
-      toPlayerId: string;
-      subject: string;
-      body: string;
-    }>();
-
-    if (!body.fromPlayerId || !body.toPlayerId || !body.subject || !body.body) {
-      return c.json({ error: 'fromPlayerId, toPlayerId, subject, and body are required' }, 400);
-    }
-
-    const message = await sendMessage(
-      body.fromPlayerId,
-      body.toPlayerId,
-      body.subject,
-      body.body,
-      'player',
-      DB,
-    );
-
-    return c.json(message, 201);
-  } catch (error) {
-    const msg = String(error);
-    // Return 400 for validation errors, 500 for unexpected errors
-    if (msg.includes('not found') || msg.includes('Cannot send') || msg.includes('empty') || msg.includes('exceeds')) {
-      return c.json({ error: msg }, 400);
-    }
-    return c.json({ error: msg }, 500);
-  }
-});
+// (Duplicate messages/send + dm/instant-finish removed — see earlier declarations)
 
 /**
  * GET /api/messages/inbox
@@ -4941,6 +4598,19 @@ async function handleScheduled(event: ScheduledEvent, env: Bindings): Promise<vo
     );
 
     console.log(`[Cron] Agent run: ${results.succeeded}/${results.total} planets succeeded`);
+
+    // Process fleet missions (arrivals + returns)
+    try {
+      const missionResult = await processFleetMissions(DB, PLANET_DO);
+      if (missionResult.arrivals > 0 || missionResult.returns > 0) {
+        console.log(`[Cron] Fleet missions: ${missionResult.arrivals} arrivals, ${missionResult.returns} returns`);
+      }
+      if (missionResult.errors.length > 0) {
+        console.error(`[Cron] Fleet mission errors:`, missionResult.errors);
+      }
+    } catch (fleetErr) {
+      console.error('[Cron] Fleet mission processing error:', fleetErr);
+    }
   } catch (error) {
     console.error('Cron handler error:', error);
   }
@@ -5716,6 +5386,12 @@ app.get('/api/notifications/:playerId', async (c) => {
       page,
       limit,
     });
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
 app.delete('/api/notifications/:id', async (c) => {
   const DB = c.env.DB;
   const notificationId = c.req.param('id');
@@ -5731,25 +5407,6 @@ app.delete('/api/notifications/:id', async (c) => {
       return c.json({ error: 'Notification not found' }, 404);
     }
     return c.json({ deleted: true });
-=======
-      playerId: string;
-      planetId: string;
-      queueType: 'building' | 'research';
-      queueIndex: number;
-    }>();
-
-    const { playerId, planetId, queueType, queueIndex } = body;
-
-    if (!playerId || !planetId || !queueType || queueIndex === undefined) {
-      return c.json({ error: 'Missing required fields' }, 400);
-    }
-
-    const balance = await instantFinish(DB, playerId, planetId, queueType, queueIndex);
-
-    return c.json({
-      success: true,
-      balance,
-    });
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
@@ -5791,13 +5448,11 @@ app.post('/api/dm/merchant', async (c) => {
       success: true,
       trade: result,
     });
->>>>>>> agent/wave3-7
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
 });
 
-<<<<<<< HEAD
 
 // ============================================================================
 // PLAYER PUBLIC PROFILE ROUTES
@@ -5916,8 +5571,6 @@ app.get('/api/hall-of-fame/player/:playerId', async (c) => {
 });
 
 
-=======
->>>>>>> agent/wave3-7
 app.post('/api/dm/instant-finish', async (c) => {
   const DB = c.env.DB;
 
@@ -5941,6 +5594,10 @@ app.post('/api/dm/instant-finish', async (c) => {
       success: true,
       balance,
     });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
 
 
 app.get('/api/events/active', async (c) => {
@@ -6473,52 +6130,7 @@ app.get('/api/h2m/adoption-rate/:playerId', async (c) => {
 });
 
 
-app.get('/api/universe/settings', async (c) => {
-  const DB = c.env.DB;
 
-  try {
-    const settings = await universeSettingsService.getUniverseSettings(DB);
-    return c.json({ settings });
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-app.put('/api/universe/settings', async (c) => {
-  const DB = c.env.DB;
-
-  try {
-    const body = await c.req.json();
-    // TODO: Add admin authorization check here
-    const updated = await universeSettingsService.updateUniverseSettings(DB, body);
-    return c.json({ settings: updated });
-  } catch (error) {
-    return c.json({ error: String(error) }, 400);
-  }
-});
-
-app.post('/api/universe/settings/reset', async (c) => {
-  const DB = c.env.DB;
-
-  try {
-    // TODO: Add admin authorization check here
-    const settings = await universeSettingsService.resetUniverseSettings(DB);
-    return c.json({ settings });
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-
-export default {
-  async fetch(request: Request, env: Bindings): Promise<Response> {
-    return app.fetch(request, env);
-  },
-
-  async scheduled(event: ScheduledEvent, env: Bindings): Promise<void> {
-    await handleScheduled(event, env);
-  },
-};
 
 // ============================================================================
 // DAILY MISSIONS API
@@ -6619,156 +6231,12 @@ app.get('/api/missions/definitions', (c) => {
   return c.json({ missions: DAILY_MISSIONS });
 });
 
-// ============================================================================
-// ADMIN MODERATION API
-// ============================================================================
+export default {
+  async fetch(request: Request, env: Bindings): Promise<Response> {
+    return app.fetch(request, env);
+  },
 
-/**
- * POST /api/admin/ban
- * Ban a player temporarily or permanently.
- * Body: { playerId: string, reason: string, durationDays?: number, bannedBy?: string }
- */
-app.post('/api/admin/ban', async (c) => {
-  const DB = c.env.DB;
-
-  let body: { playerId?: string; reason?: string; durationDays?: number; bannedBy?: string };
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400);
-  }
-
-  const { playerId, reason, durationDays, bannedBy } = body;
-  if (!playerId || !reason) {
-    return c.json({ error: 'playerId and reason required' }, 400);
-  }
-
-  try {
-    const ban = await moderationService.banPlayer(DB, playerId, reason, durationDays, bannedBy);
-    return c.json({
-      success: true,
-      ban,
-      message: durationDays
-        ? `Player ${playerId} banned for ${durationDays} days`
-        : `Player ${playerId} permanently banned`,
-    });
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-/**
- * POST /api/admin/unban
- * Lift a ban on a player.
- * Body: { playerId: string, unbannedBy?: string }
- */
-app.post('/api/admin/unban', async (c) => {
-  const DB = c.env.DB;
-
-  let body: { playerId?: string; unbannedBy?: string };
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: 'Invalid JSON body' }, 400);
-  }
-
-  const { playerId, unbannedBy } = body;
-  if (!playerId) {
-    return c.json({ error: 'playerId required' }, 400);
-  }
-
-  try {
-    const ban = await moderationService.unbanPlayer(DB, playerId, unbannedBy);
-    if (!ban) {
-      return c.json({ error: `Player ${playerId} is not currently banned` }, 404);
-    }
-    return c.json({
-      success: true,
-      ban,
-      message: `Player ${playerId} unbanned`,
-    });
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-/**
- * GET /api/admin/bans
- * Get paginated list of currently banned players.
- * Query: ?limit=50&offset=0
- */
-app.get('/api/admin/bans', async (c) => {
-  const DB = c.env.DB;
-  const limit = Math.min(parseInt(c.req.query('limit') || '50'), 500);
-  const offset = parseInt(c.req.query('offset') || '0');
-
-  try {
-    const result = await moderationService.getActiveBans(DB, limit, offset);
-    return c.json({
-      success: true,
-      bans: result.bans,
-      total: result.total,
-      limit,
-      offset,
-      hasMore: offset + limit < result.total,
-    });
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-/**
- * GET /api/player/:id/ban-status
- * Check ban status for a player (public endpoint).
- */
-app.get('/api/player/:id/ban-status', async (c) => {
-  const DB = c.env.DB;
-  const playerId = c.req.param('id');
-
-  if (!playerId) {
-    return c.json({ error: 'Player ID required' }, 400);
-  }
-
-  try {
-    const status = await moderationService.isPlayerBanned(DB, playerId);
-    return c.json({
-      playerId,
-      isBanned: status.isBanned,
-      ...(status.isBanned && { message: status.message }),
-      ...(status.ban && {
-        ban: {
-          reason: status.ban.reason,
-          bannedAt: status.ban.bannedAt,
-          expiresAt: status.ban.expiresAt,
-        },
-      }),
-    });
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-/**
- * GET /api/player/:id/ban-history
- * Get complete ban history for a player (admin endpoint).
- */
-app.get('/api/player/:id/ban-history', async (c) => {
-  const DB = c.env.DB;
-  const playerId = c.req.param('id');
-
-  if (!playerId) {
-    return c.json({ error: 'Player ID required' }, 400);
-  }
-
-  try {
-    const history = await moderationService.getBanHistory(DB, playerId);
-    return c.json({
-      playerId,
-      history,
-      totalBans: history.length,
-      activeBans: history.filter((b) => b.isActive).length,
-    });
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
+  async scheduled(event: ScheduledEvent, env: Bindings): Promise<void> {
+    await handleScheduled(event, env);
+  },
+};
