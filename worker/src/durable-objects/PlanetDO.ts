@@ -1,5 +1,19 @@
-import { Coordinate, PlanetState, QueueItem, BuildingLevels, Resources, Ships } from '../game/types';
+import { Coordinate, PlanetState, QueueItem, BuildingLevels, Resources, Ships, TechLevels } from '../game/types';
 import { calculateProduction, BASE_PRODUCTION, calculateBuildTime } from '../game/formulas';
+import {
+  ShipyardQueue,
+  ShipBuildOrder,
+  buildShips,
+  processShipyardQueue,
+  cancelShipOrder,
+  createEmptyQueue,
+  getNextCompletionTime,
+  getAvailableShips,
+  getAllShipInfo,
+  getShipCost,
+  getShipBuildTime,
+  SHIP_NAMES,
+} from '../game/services/shipyardService';
 
 /**
  * PlanetDO — Durable Object for per-planet game state
@@ -24,6 +38,8 @@ interface PlanetDOState {
   resources: Resources;
   ships: Ships;
   queue: QueueItem[];
+  shipQueue: ShipyardQueue;  // Shipyard build queue
+  techLevels: TechLevels;    // Player's tech levels (synced from D1)
   lastTickAt: number; // unix ms
   alarmAt: number | null;
 }
@@ -50,6 +66,19 @@ export class PlanetDO implements DurableObject {
     const stored = await this.state.storage.get<PlanetDOState>(STORAGE_KEY);
     if (stored) {
       this.planetState = stored;
+      // Migration: add shipQueue if missing (pre-shipyard-system state)
+      if (!this.planetState.shipQueue) {
+        this.planetState.shipQueue = createEmptyQueue();
+      }
+      // Migration: add techLevels if missing
+      if (!this.planetState.techLevels) {
+        this.planetState.techLevels = {
+          energyTech: 0, laserTech: 0, ionTech: 0, hyperspaceTech: 0,
+          plasmaTech: 0, combustionDrive: 0, impulseDrive: 0, hyperspaceDrive: 0,
+          espionageTech: 0, computerTech: 0, astrophysics: 0,
+          weaponTech: 0, shieldingTech: 0, armorTech: 0, gravitonTech: 0,
+        };
+      }
     } else {
       // Default new planet state
       this.planetState = {
@@ -89,6 +118,24 @@ export class PlanetDO implements DurableObject {
           espionageProbe: 0,
         },
         queue: [],
+        shipQueue: createEmptyQueue(),
+        techLevels: {
+          energyTech: 0,
+          laserTech: 0,
+          ionTech: 0,
+          hyperspaceTech: 0,
+          plasmaTech: 0,
+          combustionDrive: 0,
+          impulseDrive: 0,
+          hyperspaceDrive: 0,
+          espionageTech: 0,
+          computerTech: 0,
+          astrophysics: 0,
+          weaponTech: 0,
+          shieldingTech: 0,
+          armorTech: 0,
+          gravitonTech: 0,
+        },
         lastTickAt: Date.now(),
         alarmAt: null,
       };
@@ -140,6 +187,16 @@ export class PlanetDO implements DurableObject {
         return await this.handleGetShips();
       } else if (path === '/ships/add' && request.method === 'POST') {
         return await this.handleAddShips(request);
+      } else if (path === '/ships/build' && request.method === 'POST') {
+        return await this.handleBuildShips(request);
+      } else if (path === '/ships/queue' && request.method === 'GET') {
+        return await this.handleGetShipQueue();
+      } else if (path === '/ships/cancel' && request.method === 'POST') {
+        return await this.handleCancelShipOrder(request);
+      } else if (path === '/ships/available' && request.method === 'GET') {
+        return await this.handleGetAvailableShips();
+      } else if (path === '/tech-levels' && request.method === 'POST') {
+        return await this.handleSetTechLevels(request);
       } else {
         return new Response('Not Found', { status: 404 });
       }
@@ -187,12 +244,18 @@ export class PlanetDO implements DurableObject {
 
     this.planetState.lastTickAt = nowMs;
 
-    // Check if queue head completed
+    // Check if building queue head completed
     if (this.planetState.queue.length > 0) {
       const head = this.planetState.queue[0];
       if (nowMs >= head.timeEnd) {
         await this.completeQueueItem();
       }
+    }
+
+    // Process shipyard queue — complete any finished ship builds
+    if (this.planetState.shipQueue.currentOrder || this.planetState.shipQueue.orders.length > 0) {
+      processShipyardQueue(this.planetState.shipQueue, this.planetState.ships, nowMs);
+      await this.updateShipyardAlarm();
     }
 
     await this.persistState();
@@ -358,7 +421,17 @@ export class PlanetDO implements DurableObject {
   async alarm(): Promise<void> {
     await this.initializeState();
     if (this.planetState) {
+      const nowMs = Date.now();
+
+      // Process building queue
       await this.completeQueueItem();
+
+      // Process shipyard queue
+      if (this.planetState.shipQueue.currentOrder || this.planetState.shipQueue.orders.length > 0) {
+        processShipyardQueue(this.planetState.shipQueue, this.planetState.ships, nowMs);
+        await this.updateShipyardAlarm();
+        await this.persistState();
+      }
     }
   }
 
@@ -604,5 +677,200 @@ export class PlanetDO implements DurableObject {
       JSON.stringify({ added: true, ships: this.planetState.ships, resources: this.planetState.resources }),
       { headers: { 'Content-Type': 'application/json' } },
     );
+  }
+
+  // ==========================================================================
+  // SHIPYARD ENDPOINTS
+  // ==========================================================================
+
+  /**
+   * POST /ships/build
+   * Build ships and add to shipyard queue.
+   * Body: { shipType: keyof Ships, count: number }
+   */
+  private async handleBuildShips(request: Request): Promise<Response> {
+    if (!this.planetState) throw new Error('State not initialized');
+
+    const body = await request.json<{ shipType: keyof Ships; count: number }>();
+    const { shipType, count } = body;
+
+    if (!shipType || !count || count <= 0) {
+      return new Response(
+        JSON.stringify({ error: 'shipType and count (> 0) are required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // Process any completed ships first
+    const nowMs = Date.now();
+    processShipyardQueue(this.planetState.shipQueue, this.planetState.ships, nowMs);
+
+    try {
+      const order = buildShips(
+        shipType,
+        count,
+        this.planetState.buildings,
+        this.planetState.techLevels,
+        this.planetState.resources,
+        this.planetState.universeSpeed,
+      );
+
+      // Add order to queue
+      if (!this.planetState.shipQueue.currentOrder && this.planetState.shipQueue.orders.length === 0) {
+        // Queue is empty, start building immediately
+        this.planetState.shipQueue.currentOrder = order;
+        this.planetState.shipQueue.currentProgress = 0;
+        this.planetState.shipQueue.startedAt = nowMs;
+      } else {
+        // Append to queue
+        this.planetState.shipQueue.orders.push(order);
+      }
+
+      await this.updateShipyardAlarm();
+      await this.persistState();
+
+      return new Response(
+        JSON.stringify({
+          order,
+          resources: this.planetState.resources,
+          shipQueue: this.planetState.shipQueue,
+        }),
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+    } catch (err) {
+      return new Response(
+        JSON.stringify({ error: String(err) }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+  }
+
+  /**
+   * GET /ships/queue
+   * Get current shipyard build queue
+   */
+  private async handleGetShipQueue(): Promise<Response> {
+    if (!this.planetState) throw new Error('State not initialized');
+
+    // Process any completed ships before returning
+    const nowMs = Date.now();
+    processShipyardQueue(this.planetState.shipQueue, this.planetState.ships, nowMs);
+    await this.persistState();
+
+    return new Response(
+      JSON.stringify(this.planetState.shipQueue),
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  /**
+   * POST /ships/cancel
+   * Cancel a queued ship build order.
+   * Body: { orderIndex: number }
+   */
+  private async handleCancelShipOrder(request: Request): Promise<Response> {
+    if (!this.planetState) throw new Error('State not initialized');
+
+    const body = await request.json<{ orderIndex: number }>();
+    const { orderIndex } = body;
+
+    if (orderIndex === undefined || orderIndex === null) {
+      return new Response(
+        JSON.stringify({ error: 'orderIndex is required' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    const cancelled = cancelShipOrder(
+      this.planetState.shipQueue,
+      orderIndex,
+      this.planetState.resources,
+    );
+
+    if (!cancelled) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid order index or order not found' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    await this.updateShipyardAlarm();
+    await this.persistState();
+
+    return new Response(
+      JSON.stringify({
+        cancelled,
+        resources: this.planetState.resources,
+        shipQueue: this.planetState.shipQueue,
+      }),
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  /**
+   * GET /ships/available
+   * List all buildable ships with costs, build times, and requirements
+   */
+  private async handleGetAvailableShips(): Promise<Response> {
+    if (!this.planetState) throw new Error('State not initialized');
+
+    const shipInfo = getAllShipInfo(
+      this.planetState.buildings,
+      this.planetState.techLevels,
+      this.planetState.buildings.naniteFactory,
+      this.planetState.universeSpeed,
+    );
+
+    return new Response(JSON.stringify(shipInfo), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  /**
+   * POST /tech-levels
+   * Sync technology levels from D1 into the Durable Object.
+   * Called when tech levels change (research completion).
+   * Body: TechLevels
+   */
+  private async handleSetTechLevels(request: Request): Promise<Response> {
+    if (!this.planetState) throw new Error('State not initialized');
+
+    const techLevels = await request.json<TechLevels>();
+    this.planetState.techLevels = techLevels;
+
+    await this.persistState();
+
+    return new Response(
+      JSON.stringify({ updated: true, techLevels: this.planetState.techLevels }),
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  // ==========================================================================
+  // SHIPYARD ALARM HELPER
+  // ==========================================================================
+
+  /**
+   * Update the alarm to fire when the next shipyard unit completes,
+   * if that's sooner than the existing building-queue alarm.
+   */
+  private async updateShipyardAlarm(): Promise<void> {
+    if (!this.planetState) return;
+
+    const nextShipTime = getNextCompletionTime(this.planetState.shipQueue);
+
+    // Determine the earliest alarm needed (building queue or shipyard queue)
+    let earliestAlarm = this.planetState.alarmAt;
+
+    if (nextShipTime !== null) {
+      if (earliestAlarm === null || nextShipTime < earliestAlarm) {
+        earliestAlarm = nextShipTime;
+      }
+    }
+
+    if (earliestAlarm !== null && earliestAlarm !== this.planetState.alarmAt) {
+      this.planetState.alarmAt = earliestAlarm;
+      await this.state.storage.setAlarm(new Date(earliestAlarm));
+    }
   }
 }
