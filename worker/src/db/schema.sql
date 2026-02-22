@@ -141,6 +141,31 @@ CREATE TABLE IF NOT EXISTS battle_reports (
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
+CREATE TABLE IF NOT EXISTS espionage_reports (
+  id TEXT PRIMARY KEY,
+  attacker_id TEXT NOT NULL,
+  defender_id TEXT,
+  target_galaxy INTEGER NOT NULL,
+  target_system INTEGER NOT NULL,
+  target_position INTEGER NOT NULL,
+  target_player_name TEXT NOT NULL DEFAULT 'Unknown',
+  resources_json TEXT,
+  fleet_json TEXT,
+  defenses_json TEXT,
+  buildings_json TEXT,
+  research_json TEXT,
+  counter_chance REAL NOT NULL DEFAULT 0,
+  probes_lost INTEGER NOT NULL DEFAULT 0,
+  probes_sent INTEGER NOT NULL DEFAULT 1,
+  info_level INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE INDEX IF NOT EXISTS idx_espionage_attacker ON espionage_reports(attacker_id);
+CREATE INDEX IF NOT EXISTS idx_espionage_defender ON espionage_reports(defender_id);
+CREATE INDEX IF NOT EXISTS idx_espionage_target ON espionage_reports(target_galaxy, target_system, target_position);
+CREATE INDEX IF NOT EXISTS idx_espionage_date ON espionage_reports(created_at);
+
 CREATE TABLE IF NOT EXISTS moons (
   id TEXT PRIMARY KEY,
   planet_id TEXT NOT NULL REFERENCES planets(id),

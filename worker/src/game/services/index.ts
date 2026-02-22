@@ -57,3 +57,17 @@ export {
   getTemperatureRange,
   getFieldsRange,
 } from './galaxyService';
+export type {
+  EspionageReport,
+  CounterEspionageResult,
+  EspionageNotification,
+  EspionageParams,
+} from './espionageService';
+export {
+  EspionageService,
+  espionageService,
+  InfoLevel,
+  generateEspionageReport,
+  calculateCounterChance,
+  calculateEffectiveSpyDiff,
+} from './espionageService';
