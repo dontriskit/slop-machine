@@ -672,6 +672,102 @@ app.get('/api/battle-reports/:id', async (c) => {
 });
 
 // ============================================================================
+// SHIPYARD ENDPOINTS
+// ============================================================================
+
+/**
+ * POST /api/planet/:id/ships/build
+ * Build ships at a planet's shipyard.
+ * Body: { shipType: string, count: number }
+ */
+app.post('/api/planet/:id/ships/build', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json();
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(
+      new Request('https://planet/ships/build', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    );
+
+    if (!response.ok) {
+      return new Response(response.body, { status: response.status, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    return c.json(await response.json());
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/planet/:id/ships/queue
+ * Get current shipyard build queue for a planet.
+ */
+app.get('/api/planet/:id/ships/queue', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(new Request('https://planet/ships/queue'));
+    return c.json(await response.json());
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/planet/:id/ships/cancel
+ * Cancel a queued ship build order.
+ * Body: { orderIndex: number }
+ */
+app.post('/api/planet/:id/ships/cancel', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json();
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(
+      new Request('https://planet/ships/cancel', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    );
+
+    if (!response.ok) {
+      return new Response(response.body, { status: response.status, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    return c.json(await response.json());
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/planet/:id/ships/available
+ * List all ship types with costs, requirements, and whether they can be built.
+ */
+app.get('/api/planet/:id/ships/available', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(new Request('https://planet/ships/available'));
+    return c.json(await response.json());
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// ============================================================================
 // GALAXY MAP ENDPOINTS
 // ============================================================================
 
