@@ -57,6 +57,13 @@ import { createNotification, getNotifications, markRead as markNotifRead, markAl
   getNextStep,
   TUTORIAL_STEPS,
 } from './game/services/tutorialService';
+import {
+  getPublicProfile as getPlayerPublicProfile,
+  getRecentActivity,
+  getBattleHistory,
+  getPlayerComparison,
+  searchPlayers as searchPlayersByName,
+} from './game/services/playerProfileService';
 
 /**
  * Cosmic Protocol Worker
@@ -3188,6 +3195,114 @@ app.delete('/api/notifications/:id', async (c) => {
       return c.json({ error: 'Notification not found' }, 404);
     }
     return c.json({ deleted: true });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+
+// ============================================================================
+// PLAYER PUBLIC PROFILE ROUTES
+// ============================================================================
+
+/**
+ * GET /api/player/:id/profile
+ * Get a player's full public profile.
+ */
+app.get('/api/player/:id/profile', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('id');
+
+  try {
+    const profile = await getPlayerPublicProfile(DB, playerId);
+    if (!profile) {
+      return c.json({ error: 'Player not found' }, 404);
+    }
+    return c.json(profile);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/player/:id/activity
+ * Get a player's recent public activity.
+ * Query: ?limit=20
+ */
+app.get('/api/player/:id/activity', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('id');
+  const limit = parseInt(c.req.query('limit') ?? '20', 10);
+
+  try {
+    const activity = await getRecentActivity(DB, playerId, limit);
+    return c.json({ playerId, activity });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/player/:id/battles
+ * Get paginated battle history for a player.
+ * Query: ?limit=20&offset=0
+ */
+app.get('/api/player/:id/battles', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('id');
+  const limit = parseInt(c.req.query('limit') ?? '20', 10);
+  const offset = parseInt(c.req.query('offset') ?? '0', 10);
+
+  try {
+    const history = await getBattleHistory(DB, playerId, limit, offset);
+    return c.json(history);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/player/compare/:id1/:id2
+ * Compare two players side-by-side.
+ */
+app.get('/api/player/compare/:id1/:id2', async (c) => {
+  const DB = c.env.DB;
+  const player1Id = c.req.param('id1');
+  const player2Id = c.req.param('id2');
+
+  if (player1Id === player2Id) {
+    return c.json({ error: 'Cannot compare a player with themselves' }, 400);
+  }
+
+  try {
+    const comparison = await getPlayerComparison(DB, player1Id, player2Id);
+    if (!comparison) {
+      return c.json({ error: 'One or both players not found' }, 404);
+    }
+    return c.json(comparison);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/player/search
+ * Search players by name.
+ * Query: ?q=name&limit=20&alliance=TAG
+ */
+app.get('/api/player/search', async (c) => {
+  const DB = c.env.DB;
+  const query = c.req.query('q') ?? '';
+  const limit = parseInt(c.req.query('limit') ?? '20', 10);
+  const allianceTag = c.req.query('alliance') || undefined;
+
+  if (!query.trim()) {
+    return c.json({ error: 'Search query (q) is required' }, 400);
+  }
+
+  try {
+    const results = await searchPlayersByName(DB, query, limit, allianceTag);
+    return c.json(results);
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
