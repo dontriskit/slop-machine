@@ -7,6 +7,8 @@ import GalaxyMap from './components/GalaxyMap'
 import Leaderboard from './components/Leaderboard'
 import PlayerProfile from './components/PlayerProfile'
 import ResourceTrader from './components/ResourceTrader'
+import ShipyardPanel from './components/ShipyardPanel'
+import DefensePanel from './components/DefensePanel'
 import { GameStore } from './store/gameStore'
 
 // ---------------------------------------------------------------------------
@@ -42,7 +44,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'shipyard' | 'defense' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -64,6 +66,8 @@ export default function App() {
   //   G — Galaxy Map
   //   L — Leaderboard
   //   T — Trader
+  //   S — Shipyard
+  //   D — Defense
   //   Escape — close any open panel
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -83,6 +87,12 @@ export default function App() {
       }
       if (e.key === 't' || e.key === 'T') {
         setActivePanel((p) => (p === 'trader' ? null : 'trader'))
+      }
+      if (e.key === 's' || e.key === 'S') {
+        setActivePanel((p) => (p === 'shipyard' ? null : 'shipyard'))
+      }
+      if (e.key === 'd' || e.key === 'D') {
+        setActivePanel((p) => (p === 'defense' ? null : 'defense'))
       }
     }
     window.addEventListener('keydown', handler)
@@ -116,6 +126,8 @@ export default function App() {
         onOpenGalaxyMap={() => setActivePanel('galaxy-map')}
         onOpenLeaderboard={() => setActivePanel('leaderboard')}
         onOpenTrader={() => setActivePanel('trader')}
+        onOpenShipyard={() => setActivePanel('shipyard')}
+        onOpenDefense={() => setActivePanel('defense')}
       />
 
       {/* Galaxy Map modal */}
@@ -139,6 +151,20 @@ export default function App() {
       {activePanel === 'trader' && (
         <ModalOverlay onClose={closePanel}>
           <ResourceTrader onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {/* Shipyard modal */}
+      {activePanel === 'shipyard' && (
+        <ModalOverlay onClose={closePanel}>
+          <ShipyardPanel onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {/* Defense modal */}
+      {activePanel === 'defense' && (
+        <ModalOverlay onClose={closePanel}>
+          <DefensePanel onClose={closePanel} />
         </ModalOverlay>
       )}
 
