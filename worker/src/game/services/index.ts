@@ -106,18 +106,22 @@ export {
 export type { GetNotificationsOptions } from './notificationService';
 
 export type {
-  BattleSimulationResult,
-  FleetComparisonResult,
-  BreakEvenResult,
-  AverageLosses,
-  RoundDistribution,
-  ConfidenceInterval,
-  AverageSurvivors,
-} from './battleSimulatorService';
+  MissionType,
+  MissionStatus,
+  MissionReward,
+  MissionDefinition,
+  MissionRequirement,
+  DailyMission,
+} from './dailyMissionService';
 export {
-  simulateBattlePreview,
-  getBreakEvenFleet,
-  compareFleetCompositions,
-  BattleSimulatorService,
-  battleSimulatorService,
-} from './battleSimulatorService';
+  DAILY_MISSIONS,
+  MISSION_MAP,
+  getTodayKey,
+  pickMissions,
+  generateDailyMissions,
+  getDailyMissions,
+  checkMissionProgress,
+  claimMissionReward,
+  resetDailyMissions,
+  DailyMissionService,
+} from './dailyMissionService';

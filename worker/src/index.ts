@@ -58,6 +58,13 @@ import { simulateBattlePreview, getBreakEvenFleet, compareFleetCompositions } fr
   getNextStep,
   TUTORIAL_STEPS,
 } from './game/services/tutorialService';
+import {
+  DAILY_MISSIONS,
+  getDailyMissions,
+  checkMissionProgress,
+  claimMissionReward,
+  resetDailyMissions,
+} from './game/services/dailyMissionService';
 
 /**
  * Cosmic Protocol Worker
@@ -2130,6 +2137,14 @@ async function handleScheduled(event: ScheduledEvent, env: Bindings): Promise<vo
     );
 
     console.log(`[Cron] Agent run: ${results.succeeded}/${results.total} planets succeeded`);
+
+    // Reset daily missions at midnight UTC
+    try {
+      const dmReset = await resetDailyMissions(DB);
+      console.log(`[Cron] Daily missions reset for ${dmReset.reset} active players`);
+    } catch (dmErr) {
+      console.error("[Cron] Daily mission reset error:", dmErr);
+    }
   } catch (error) {
     console.error('Cron handler error:', error);
   }
@@ -3283,6 +3298,470 @@ app.post('/api/battle/compare', async (c) => {
   }
 });
 
+    // Persist fleet mission to D1
+    const m = result.mission;
+    await DB.prepare(
+      `INSERT INTO fleet_missions
+         (id, player_id, mission_type, mission_status, time_departure, time_arrival,
+          planet_id_from, galaxy_to, system_to, position_to, ships_json, resources_json, fuel_consumed)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(
+        m.id,
+        m.playerId,
+        m.missionType,
+        m.missionStatus,
+        m.timeDeparture,
+        m.timeArrival,
+        m.planetIdFrom,
+        m.targetCoordinate.galaxy,
+        m.targetCoordinate.system,
+        m.targetCoordinate.position,
+        JSON.stringify(m.ships),
+        JSON.stringify(m.resources),
+        m.fuelConsumed,
+      )
+      .run();
+
+    return c.json({ mission: m }, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+    // 4. Create fleet mission in DB
+    // 5. Return mission details
+
+    return c.json(
+      {
+        error: 'Fleet send not yet implemented — use POST /api/fleet/dispatch instead',
+      },
+      501
+    );
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.get('/api/fleet/missions', async (c) => {
+  const playerId = c.req.query('player_id');
+  const DB = c.env.DB;
+
+  if (!playerId) {
+    return c.json({ error: 'player_id query param required' }, 400);
+  }
+
+  try {
+    const missions = await DB.prepare(
+      `SELECT id, mission_type, mission_status, time_departure, time_arrival,
+              planet_id_from, galaxy_to, system_to, position_to
+       FROM fleet_missions
+       WHERE player_id = ?
+       ORDER BY time_arrival DESC
+       LIMIT 50`
+    )
+      .bind(playerId)
+      .all();
+
+    return c.json(missions.results || []);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.get('/api/fleet/missions/:id', async (c) => {
+  const missionId = c.req.param('id');
+  const DB = c.env.DB;
+
+  try {
+    const mission = await DB.prepare(
+      `SELECT * FROM fleet_missions WHERE id = ?`
+    )
+      .bind(missionId)
+      .first();
+
+    if (!mission) {
+      return c.json({ error: 'Mission not found' }, 404);
+    }
+
+    return c.json(mission);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.post('/api/fleet/missions/:id/recall', async (c) => {
+  const missionId = c.req.param('id');
+  const DB = c.env.DB;
+
+  try {
+    // TODO: Implement fleet recall logic
+    // 1. Get mission
+    // 2. Check if in transit
+    // 3. Create return mission
+    // 4. Update original mission status to canceled
+    // 5. Return new mission
+
+    return c.json(
+      {
+        error: 'Fleet recall not yet implemented',
+      },
+      501
+    );
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+    // 2. Validate mission
+    const validationError = espionageService.validateMission(probeCount, attackerPlanet.ships);
+    if (validationError) {
+      return c.json({ error: validationError }, 400);
+    }
+
+    // 3. Locate target planet
+    const targetPlanetRow = await DB.prepare(
+      'SELECT id, player_id, name FROM planets WHERE galaxy = ? AND system = ? AND position = ?',
+    )
+      .bind(targetGalaxy, targetSystem, targetPosition)
+      .first();
+
+    if (!targetPlanetRow) {
+      return c.json({ error: 'No planet found at target coordinates' }, 404);
+    }
+
+    const targetPlanetId = targetPlanetRow.id as string;
+    const defenderPlayerId = targetPlanetRow.player_id as string;
+    const defenderName = targetPlanetRow.name as string;
+
+    // Cannot spy on yourself
+    if (defenderPlayerId === attackerPlayerId) {
+      return c.json({ error: 'Cannot spy on your own planet' }, 400);
+    }
+
+    // 4. Get target planet state
+    const defenderStub = getPlanetStub(PLANET_DO, targetPlanetId);
+    const defenderStateRes = await defenderStub.fetch(new Request('https://planet/state'));
+    if (!defenderStateRes.ok) {
+      return c.json({ error: 'Could not retrieve target planet state' }, 500);
+    }
+    const targetPlanet = (await defenderStateRes.json()) as PlanetState;
+
+    // 5. Get attacker and defender tech levels (espionageTech)
+    // For now, use default tech levels — in production these would come from player state
+    const attackerTech = getEmptyTechLevels();
+    const defenderTech = getEmptyTechLevels();
+
+    // Try to load tech from D1 if available
+    // (Uses a best-effort approach; missing data defaults to 0)
+    const attackerTechRow = await DB.prepare(
+      'SELECT espionage_tech FROM players WHERE id = ?',
+    ).bind(attackerPlayerId).first();
+    if (attackerTechRow && typeof attackerTechRow.espionage_tech === 'number') {
+      attackerTech.espionageTech = attackerTechRow.espionage_tech;
+    }
+    const defenderTechRow = await DB.prepare(
+      'SELECT espionage_tech FROM players WHERE id = ?',
+    ).bind(defenderPlayerId).first();
+    if (defenderTechRow && typeof defenderTechRow.espionage_tech === 'number') {
+      defenderTech.espionageTech = defenderTechRow.espionage_tech;
+    }
+
+    // 6. Get target defenses (default to empty if not available)
+    const targetDefenses = getEmptyDefenses();
+
+    // 7. Generate espionage report
+    const report = espionageService.generateReport({
+      attackerId: attackerPlayerId,
+      attackerName: attackerPlayerId,
+      attackerSpyTech: attackerTech.espionageTech,
+      attackerCoordinate: attackerPlanet.coordinate,
+      probeCount,
+      defenderId: defenderPlayerId,
+      defenderName,
+      defenderSpyTech: defenderTech.espionageTech,
+      targetPlanet,
+      targetDefenses,
+      defenderTech,
+    });
+
+    // Dispatch fleet as expedition mission
+    const result = fleetService.dispatchFleet(
+      {
+        missionId: `exp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        playerId: body.playerId ?? planetState.playerId,
+        fromPlanetId,
+        toPlanetId: null,
+        from: planetState.coordinate,
+        to: toCoord,
+        ships: ships as any,
+        resources: { metal: 0, crystal: 0, deuterium: 0 },
+        missionType: 'expedition',
+        speedPercent: speedPercent ?? 100,
+      },
+      planetState,
+    );
+
+    if (!result.mission) {
+      return c.json({ error: result.reason ?? 'Expedition dispatch failed' }, 400);
+    }
+
+    // Persist updated planet state (ships deducted, fuel consumed)
+    await planetStub.fetch(
+      new Request('https://planet/setState', {
+        method: 'POST',
+        body: JSON.stringify(planetState),
+      })
+
+    // Persist expedition mission to D1
+    const m = result.mission;
+    await DB.prepare(
+      `INSERT INTO fleet_missions
+         (id, player_id, mission_type, mission_status, time_departure, time_arrival,
+          planet_id_from, galaxy_to, system_to, position_to, ships_json, resources_json, fuel_consumed)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(
+        m.id,
+        m.playerId,
+        m.missionType,
+        m.missionStatus,
+        m.timeDeparture,
+        m.timeArrival,
+        m.planetIdFrom,
+        m.targetCoordinate.galaxy,
+        m.targetCoordinate.system,
+        m.targetCoordinate.position,
+        JSON.stringify(m.ships),
+        JSON.stringify(m.resources),
+        m.fuelConsumed,
+      )
+      .run();
+
+    return c.json({
+      mission: m,
+      expeditionTarget: toCoord,
+      fleetValue: fleetValuePreview,
+    }, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.get('/api/expedition/result/:missionId', async (c) => {
+  const missionId = c.req.param('missionId');
+  const DB = c.env.DB;
+
+  try {
+    const mission = await DB.prepare(
+      `SELECT id, player_id, mission_type, mission_status,
+              time_departure, time_arrival,
+              planet_id_from, galaxy_to, system_to, position_to,
+              ships_json, resources_json, fuel_consumed
+       FROM fleet_missions
+       WHERE id = ? AND mission_type = 'expedition'`
+    )
+      .bind(missionId)
+      .first();
+
+    if (!mission) {
+      return c.json({ error: 'Expedition mission not found' }, 404);
+    }
+
+    // Parse JSON fields
+    const ships = mission.ships_json ? JSON.parse(mission.ships_json as string) : {};
+    const resources = mission.resources_json ? JSON.parse(mission.resources_json as string) : {};
+
+    // Compute fleet value for client display
+    const fleetValue = calculateFleetValue(ships);
+
+    return c.json({
+      missionId: mission.id,
+      playerId: mission.player_id,
+      missionType: mission.mission_type,
+      missionStatus: mission.mission_status,
+      timeDeparture: mission.time_departure,
+      timeArrival: mission.time_arrival,
+      planetIdFrom: mission.planet_id_from,
+      targetCoordinate: {
+        galaxy: mission.galaxy_to,
+        system: mission.system_to,
+        position: mission.position_to,
+      },
+      ships,
+      resources,
+      fleetValue,
+      fuelConsumed: mission.fuel_consumed,
+    });
+
+    // Reset daily missions at midnight UTC
+    try {
+      const dmReset = await resetDailyMissions(DB);
+      console.log(`[Cron] Daily missions reset for ${dmReset.reset} active players`);
+    } catch (dmErr) {
+      console.error("[Cron] Daily mission reset error:", dmErr);
+    }
+  } catch (error) {
+    console.error('Cron handler error:', error);
+  }
+}
+
+// ============================================================================
+// DEFENSE ENDPOINTS
+// ============================================================================
+
+/**
+ * POST /api/defense/build
+ * Queue a defense build order
+ * Body: { planetId, defenseType, count, shipyardLevel?, universeSpeed? }
+ */
+app.post('/api/defense/build', async (c) => {
+  try {
+    const body = await c.req.json() as any;
+    const { planetId, defenseType, count, shipyardLevel = 5, universeSpeed = 1 } = body;
+
+    if (!planetId || !defenseType || !count) {
+      return c.json({ error: 'planetId, defenseType, and count are required' }, 400);
+    }
+
+    // Get planet resources and tech levels from DB
+    const DB = c.env.DB;
+    const planet = await DB.prepare('SELECT * FROM planets WHERE id = ?').bind(planetId).first() as any;
+    if (!planet) {
+      return c.json({ error: 'Planet not found' }, 404);
+    }
+
+    const resources = {
+      metal: planet.metal ?? 0,
+      crystal: planet.crystal ?? 0,
+      deuterium: planet.deuterium ?? 0,
+    };
+
+    const tech = {
+      laserTech: planet.laser_tech ?? 0,
+      energyTech: planet.energy_tech ?? 0,
+      weaponTech: planet.weapon_tech ?? 0,
+      shieldingTech: planet.shielding_tech ?? 0,
+      ionTech: planet.ion_tech ?? 0,
+      plasmaTech: planet.plasma_tech ?? 0,
+      impulseDrive: planet.impulse_drive ?? 0,
+      missileSilo: planet.missile_silo ?? 0,
+    };
+
+    const currentDefenses = planet.defenses_json
+      ? JSON.parse(planet.defenses_json)
+      : { rocketLauncher: 0, lightLaser: 0, heavyLaser: 0, gaussCannon: 0, ionCannon: 0, plasmaTurret: 0, smallShieldDome: 0, largeShieldDome: 0, antiBallisticMissile: 0, interplanetaryMissile: 0 };
+
+    const order = buildDefense(
+      planetId,
+      defenseType,
+      count,
+      tech,
+      currentDefenses,
+      resources,
+      shipyardLevel,
+      universeSpeed,
+    );
+
+    // Persist updated resources
+    await DB.prepare(
+      'UPDATE planets SET metal = ?, crystal = ?, deuterium = ? WHERE id = ?'
+    ).bind(resources.metal, resources.crystal, resources.deuterium, planetId).run();
+
+    // Store queue order in KV
+    const KV = c.env.KV;
+    const queueKey = `defense_queue:${planetId}`;
+    const existingQueue = await KV.get(queueKey, 'json') as any ?? createEmptyDefenseQueue();
+    existingQueue.orders.push(order);
+    await KV.put(queueKey, JSON.stringify(existingQueue));
+
+    return c.json({ success: true, order });
+  } catch (error) {
+    return c.json({ error: String(error) }, 400);
+  }
+});
+
+// DAILY MISSIONS API
+// ============================================================================
+
+/**
+ * GET /api/missions/daily/:playerId
+ * Returns the player's 3 daily missions for today with progress.
+ */
+app.get('/api/missions/daily/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  if (!playerId) {
+    return c.json({ error: 'playerId required' }, 400);
+  }
+
+  try {
+    const missions = await getDailyMissions(DB, playerId);
+    return c.json({ playerId, dateKey: missions[0]?.dateKey, missions });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.post('/api/missions/daily/:playerId/check/:missionId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+  const missionId = c.req.param('missionId');
+
+  try {
+    const mission = await checkMissionProgress(DB, playerId, missionId);
+    if (!mission) {
+      return c.json({ error: 'Mission not found' }, 404);
+    }
+    return c.json({ mission });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.post('/api/missions/claim', async (c) => {
+  const DB = c.env.DB;
+
+  let body: { playerId?: string; missionId?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const { playerId, missionId } = body;
+  if (!playerId || !missionId) {
+    return c.json({ error: 'playerId and missionId required' }, 400);
+  }
+
+  try {
+    const result = await claimMissionReward(DB, playerId, missionId);
+    if (!result) {
+      return c.json({ error: 'Mission not found or not yet completed, or already claimed' }, 400);
+    }
+    return c.json({ claimed: true, reward: result.reward, mission: result.mission });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.post('/api/missions/reset', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const result = await resetDailyMissions(DB);
+    return c.json({ ok: true, playersReset: result.reset });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.get('/api/missions/definitions', (c) => {
+  return c.json({ missions: DAILY_MISSIONS });
+});
+
+
 export default {
   async fetch(request: Request, env: Bindings): Promise<Response> {
     return app.fetch(request, env);
@@ -3292,3 +3771,102 @@ export default {
     await handleScheduled(event, env);
   },
 };
+
+// ============================================================================
+// DAILY MISSIONS API
+// ============================================================================
+
+/**
+ * GET /api/missions/daily/:playerId
+ * Returns the player's 3 daily missions for today with progress.
+ */
+app.get('/api/missions/daily/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  if (!playerId) {
+    return c.json({ error: 'playerId required' }, 400);
+  }
+
+  try {
+    const missions = await getDailyMissions(DB, playerId);
+    return c.json({ playerId, dateKey: missions[0]?.dateKey, missions });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/missions/daily/:playerId/check/:missionId
+ * Re-check progress for a specific mission.
+ */
+app.post('/api/missions/daily/:playerId/check/:missionId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+  const missionId = c.req.param('missionId');
+
+  try {
+    const mission = await checkMissionProgress(DB, playerId, missionId);
+    if (!mission) {
+      return c.json({ error: 'Mission not found' }, 404);
+    }
+    return c.json({ mission });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/missions/claim
+ * Claim the reward for a completed daily mission.
+ * Body: { playerId: string, missionId: string }
+ */
+app.post('/api/missions/claim', async (c) => {
+  const DB = c.env.DB;
+
+  let body: { playerId?: string; missionId?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const { playerId, missionId } = body;
+  if (!playerId || !missionId) {
+    return c.json({ error: 'playerId and missionId required' }, 400);
+  }
+
+  try {
+    const result = await claimMissionReward(DB, playerId, missionId);
+    if (!result) {
+      return c.json({ error: 'Mission not found or not yet completed, or already claimed' }, 400);
+    }
+    return c.json({ claimed: true, reward: result.reward, mission: result.mission });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/missions/reset
+ * Admin/cron endpoint: reset all daily missions (midnight UTC).
+ * Body: { adminKey?: string }  — optional guard
+ */
+app.post('/api/missions/reset', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const result = await resetDailyMissions(DB);
+    return c.json({ ok: true, playersReset: result.reset });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/missions/definitions
+ * Returns all mission type definitions (static config).
+ */
+app.get('/api/missions/definitions', (c) => {
+  return c.json({ missions: DAILY_MISSIONS });
+});
