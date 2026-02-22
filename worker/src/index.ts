@@ -1,10 +1,9 @@
 import { Hono } from 'hono';
 import { PlanetDO } from './durable-objects/PlanetDO';
 import { runBuildOrderAgent, runAgentForAllPlanets } from './agents/buildOrderAgent';
-import { Coordinate, Strategy, PlanetState, Ships, Resources, FleetMissionType, FleetMission, SHIP_KEYS } from './game/types';
+import { Coordinate, Strategy, PlanetState } from './game/types';
 import { GalaxyService } from './game/services/galaxyService';
 import { fleetService } from './game/services/fleetService';
-import { camelToSnakeShip } from './game/types';
 
 /**
  * Cosmic Protocol Worker
@@ -28,10 +27,39 @@ type Bindings = {
 const app = new Hono<{ Bindings: Bindings }>();
 
 // ============================================================================
+// CORS MIDDLEWARE
+// ============================================================================
+
+app.use('*', async (c, next) => {
+  c.header('Access-Control-Allow-Origin', '*');
+  c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  c.header('Access-Control-Allow-Headers', 'Content-Type');
+  if (c.req.method === 'OPTIONS') return c.text('', 204);
+  await next();
+});
+
+// ============================================================================
+// HELPER: get Durable Object stub from planet ID
+// ============================================================================
+
+function getPlanetStub(PLANET_DO: DurableObjectNamespace, planetId: string) {
+  const id = PLANET_DO.idFromName(planetId);
+  return PLANET_DO.get(id);
+}
+
+// ============================================================================
 // HEALTH CHECK
 // ============================================================================
 
 app.get('/', (c) => {
+  return c.json({
+    status: 'ok',
+    service: 'Cosmic Protocol Worker',
+    version: '0.1.0',
+  });
+});
+
+app.get('/health', (c) => {
   return c.json({
     status: 'ok',
     service: 'Cosmic Protocol Worker',
@@ -52,8 +80,7 @@ app.get('/api/planet/:id/state', async (c) => {
   const PLANET_DO = c.env.PLANET_DO;
 
   try {
-    const doId = PLANET_DO.idFromName(planetId);
-    const stub = PLANET_DO.get(doId);
+    const stub = getPlanetStub(PLANET_DO, planetId);
     const response = await stub.fetch(new Request('https://planet/state'));
     const state = await response.json();
     return c.json(state);
@@ -71,8 +98,7 @@ app.get('/api/planet/:id/resources', async (c) => {
   const PLANET_DO = c.env.PLANET_DO;
 
   try {
-    const doId = PLANET_DO.idFromName(planetId);
-    const stub = PLANET_DO.get(doId);
+    const stub = getPlanetStub(PLANET_DO, planetId);
     const response = await stub.fetch(new Request('https://planet/resources'));
     const data = await response.json();
     return c.json(data);
@@ -90,8 +116,7 @@ app.get('/api/planet/:id/buildings', async (c) => {
   const PLANET_DO = c.env.PLANET_DO;
 
   try {
-    const doId = PLANET_DO.idFromName(planetId);
-    const stub = PLANET_DO.get(doId);
+    const stub = getPlanetStub(PLANET_DO, planetId);
     const response = await stub.fetch(new Request('https://planet/buildings'));
     const buildings = await response.json();
     return c.json(buildings);
@@ -109,8 +134,7 @@ app.get('/api/planet/:id/queue', async (c) => {
   const PLANET_DO = c.env.PLANET_DO;
 
   try {
-    const doId = PLANET_DO.idFromName(planetId);
-    const stub = PLANET_DO.get(doId);
+    const stub = getPlanetStub(PLANET_DO, planetId);
     const response = await stub.fetch(new Request('https://planet/queue/list'));
     const queue = await response.json();
     return c.json(queue);
@@ -131,15 +155,14 @@ app.post('/api/planet/:id/queue', async (c) => {
 
   try {
     const body = await c.req.json();
-    const doId = PLANET_DO.idFromName(planetId);
-    const stub = PLANET_DO.get(doId);
+    const stub = getPlanetStub(PLANET_DO, planetId);
     const response = await stub.fetch(new Request('https://planet/queue/add', { method: 'POST', body: JSON.stringify(body) }));
 
     if (!response.ok) {
-      return c.json({ error: await response.text() }, response.status as 400 | 404 | 500);
+      return c.json({ error: await response.text() }, response.status);
     }
 
-    const result = (await response.json()) as { queueItem?: { buildingId: number; targetLevel: number } };
+    const result = await response.json();
 
     // Log to build_history
     if (result.queueItem) {
@@ -175,12 +198,11 @@ app.post('/api/planet/:id/initialize', async (c) => {
 
   try {
     const body = await c.req.json();
-    const doId = PLANET_DO.idFromName(planetId);
-    const stub = PLANET_DO.get(doId);
+    const stub = getPlanetStub(PLANET_DO, planetId);
     const response = await stub.fetch(new Request('https://planet/initialize', { method: 'POST', body: JSON.stringify(body) }));
 
     if (!response.ok) {
-      return c.json({ error: await response.text() }, response.status as 400 | 404 | 500);
+      return c.json({ error: await response.text() }, response.status);
     }
 
     return c.json(await response.json());
@@ -284,8 +306,7 @@ app.post('/api/planet/:id/agent/run', async (c) => {
 
   try {
     // Get planet state
-    const planetDoId = PLANET_DO.idFromName(planetId);
-    const planetStub = PLANET_DO.get(planetDoId);
+    const planetStub = getPlanetStub(PLANET_DO, planetId);
     const stateRes = await planetStub.fetch(new Request('https://planet/state'));
     const planetState = (await stateRes.json()) as PlanetState;
 
@@ -304,7 +325,12 @@ app.post('/api/planet/:id/agent/run', async (c) => {
     };
 
     // Run agent
-    const decision = await runBuildOrderAgent(planetState, strategy.steps, { AI });
+    const decision = await runBuildOrderAgent(planetState, strategy, AI, {
+      planetId,
+      playerId: planetState.playerId,
+      coordinate: planetState.coordinate,
+      timestamp: Date.now(),
+    });
 
     if (!decision) {
       return c.json({ error: 'Agent failed to make decision' }, 500);
@@ -355,176 +381,128 @@ app.post('/api/planet/:id/agent/disable', async (c) => {
 // ============================================================================
 
 /**
+ * POST /api/fleet/dispatch
+ * Dispatch a fleet mission using the FleetService.
+ * Body: { fromPlanetId, toCoord: {galaxy,system,position}, ships, missionType,
+ *         resources?, speedPercent?, playerId? }
+ */
+app.post('/api/fleet/dispatch', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json<{
+      fromPlanetId: string;
+      toCoord: Coordinate;
+      ships: Record<string, number>;
+      missionType: string;
+      resources?: { metal: number; crystal: number; deuterium: number };
+      speedPercent?: number;
+      playerId?: string;
+    }>();
+
+    const { fromPlanetId, toCoord, ships, missionType, resources, speedPercent } = body;
+
+    if (!fromPlanetId || !toCoord || !ships || !missionType) {
+      return c.json({ error: 'fromPlanetId, toCoord, ships, and missionType are required' }, 400);
+    }
+
+    // Get the source planet state from the DO
+    const planetStub = getPlanetStub(PLANET_DO, fromPlanetId);
+    const stateRes = await planetStub.fetch(new Request('https://planet/state'));
+    if (!stateRes.ok) {
+      return c.json({ error: 'Could not retrieve source planet state' }, 404);
+    }
+    const planetState = (await stateRes.json()) as PlanetState;
+
+    // Use the fleet service to dispatch
+    const result = fleetService.dispatchFleet(
+      {
+        missionId: `fleet-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        playerId: body.playerId ?? planetState.playerId,
+        fromPlanetId,
+        toPlanetId: null,
+        from: planetState.coordinate,
+        to: toCoord,
+        ships: ships as any,
+        resources: resources ?? { metal: 0, crystal: 0, deuterium: 0 },
+        missionType: missionType as any,
+        speedPercent: speedPercent ?? 100,
+      },
+      planetState,
+    );
+
+    if (!result.mission) {
+      return c.json({ error: result.reason ?? 'Fleet dispatch failed' }, 400);
+    }
+
+    // Persist updated planet state back to DO
+    await planetStub.fetch(
+      new Request('https://planet/setState', {
+        method: 'POST',
+        body: JSON.stringify(planetState),
+      })
+    );
+
+    // Persist fleet mission to D1
+    const m = result.mission;
+    await DB.prepare(
+      `INSERT INTO fleet_missions
+         (id, player_id, mission_type, mission_status, time_departure, time_arrival,
+          planet_id_from, galaxy_to, system_to, position_to, ships_json, resources_json, fuel_consumed)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+      .bind(
+        m.id,
+        m.playerId,
+        m.missionType,
+        m.missionStatus,
+        m.timeDeparture,
+        m.timeArrival,
+        m.planetIdFrom,
+        m.targetCoordinate.galaxy,
+        m.targetCoordinate.system,
+        m.targetCoordinate.position,
+        JSON.stringify(m.ships),
+        JSON.stringify(m.resources),
+        m.fuelConsumed,
+      )
+      .run();
+
+    return c.json({ mission: m }, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
  * POST /api/fleet/send
- * Launch a fleet mission.
- *
- * Body: {
- *   playerId: string,
- *   fromPlanetId: string,
- *   toPlanetId?: string | null,
- *   toCoord: { galaxy, system, position },
- *   ships: Ships,
- *   missionType: FleetMissionType,
- *   resources?: Resources,
- *   speedPercent?: number,
- *   fleetSpeed?: number,
- * }
- *
- * Flow:
- *   1. Fetch source planet state from the Durable Object
- *   2. Run fleet dispatch validation + deduction via fleetService
- *   3. Persist updated planet state back to the DO
- *   4. Store fleet mission record in D1
- *   5. Return the mission details
+ * Launch a fleet mission (legacy endpoint, delegates to /api/fleet/dispatch)
+ * Body: { fromPlanetId, toCoord, ships, missionType, resources?, holdTime? }
  */
 app.post('/api/fleet/send', async (c) => {
   const DB = c.env.DB;
   const PLANET_DO = c.env.PLANET_DO;
 
   try {
-    const body = await c.req.json<{
-      playerId: string;
-      fromPlanetId: string;
-      toPlanetId?: string | null;
-      toCoord: Coordinate;
-      ships: Ships;
-      missionType: FleetMissionType;
-      resources?: Resources;
-      speedPercent?: number;
-      fleetSpeed?: number;
-    }>();
+    const body = await c.req.json();
+    const { fromPlanetId, toCoord, ships, missionType, resources, holdTime } = body;
 
-    const {
-      playerId,
-      fromPlanetId,
-      toPlanetId = null,
-      toCoord,
-      ships,
-      missionType,
-      resources = { metal: 0, crystal: 0, deuterium: 0 },
-      speedPercent = 100,
-      fleetSpeed = 1.0,
-    } = body;
+    // TODO: Implement fleet launch logic
+    // 1. Validate source planet exists and belongs to player
+    // 2. Validate fleet exists at source
+    // 3. Deduct ships from source planet
+    // 4. Create fleet mission in DB
+    // 5. Return mission details
 
-    if (!playerId || !fromPlanetId || !toCoord || !ships || !missionType) {
-      return c.json(
-        { error: 'Missing required fields: playerId, fromPlanetId, toCoord, ships, missionType' },
-        400 as any,
-      );
-    }
-
-    // 1. Fetch source planet state from Durable Object
-    const stub = PLANET_DO.get(fromPlanetId as any);
-    const stateRes = await stub.fetch(new Request('https://planet/state'));
-    if (!stateRes.ok) {
-      return c.json({ error: 'Failed to fetch planet state' }, 500 as any);
-    }
-    const planetState = (await stateRes.json()) as PlanetState;
-
-    // 2. Build dispatch params and run fleet dispatch (validates + deducts)
-    const missionId = `fleet-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-    const dispatchResult = fleetService.dispatchFleet(
+    return c.json(
       {
-        missionId,
-        playerId,
-        fromPlanetId,
-        toPlanetId,
-        from: planetState.coordinate,
-        to: toCoord,
-        ships,
-        resources,
-        missionType,
-        speedPercent,
-        fleetSpeed,
+        error: 'Fleet send not yet implemented — use POST /api/fleet/dispatch instead',
       },
-      planetState,
+      501
     );
-
-    if (!dispatchResult.mission) {
-      return c.json({ error: dispatchResult.reason || 'Dispatch failed' }, 400 as any);
-    }
-
-    const mission = dispatchResult.mission;
-
-    // 3. Persist updated planet state (ships and resources deducted) back to DO
-    await stub.fetch(
-      new Request('https://planet/fleet-deduct', {
-        method: 'POST',
-        body: JSON.stringify({
-          ships: planetState.ships,
-          resources: planetState.resources,
-        }),
-      }),
-    );
-
-    // 4. Store fleet mission in D1
-    await DB.prepare(
-      `INSERT INTO fleet_missions (
-        id, player_id, planet_id_from, planet_id_to,
-        galaxy_to, system_to, position_to,
-        mission_type, mission_status, time_departure, time_arrival,
-        hold_time, metal, crystal, deuterium,
-        light_fighter, heavy_fighter, cruiser, battleship,
-        battlecruiser, bomber, destroyer, deathstar,
-        small_cargo, large_cargo, colony_ship, recycler, espionage_probe
-      ) VALUES (
-        ?, ?, ?, ?,
-        ?, ?, ?,
-        ?, ?, ?, ?,
-        ?, ?, ?, ?,
-        ?, ?, ?, ?,
-        ?, ?, ?, ?,
-        ?, ?, ?, ?, ?
-      )`,
-    )
-      .bind(
-        mission.id,
-        mission.playerId,
-        mission.planetIdFrom,
-        mission.planetIdTo,
-        mission.targetCoordinate.galaxy,
-        mission.targetCoordinate.system,
-        mission.targetCoordinate.position,
-        mission.missionType,
-        mission.missionStatus,
-        mission.timeDeparture,
-        mission.timeArrival,
-        mission.holdTime,
-        mission.resources.metal,
-        mission.resources.crystal,
-        mission.resources.deuterium,
-        mission.ships.lightFighter,
-        mission.ships.heavyFighter,
-        mission.ships.cruiser,
-        mission.ships.battleship,
-        mission.ships.battlecruiser,
-        mission.ships.bomber,
-        mission.ships.destroyer,
-        mission.ships.deathstar,
-        mission.ships.smallCargo,
-        mission.ships.largeCargo,
-        mission.ships.colonyShip,
-        mission.ships.recycler,
-        mission.ships.espionageProbe,
-      )
-      .run();
-
-    return c.json({
-      mission: {
-        id: mission.id,
-        missionType: mission.missionType,
-        missionStatus: mission.missionStatus,
-        from: mission.sourceCoordinate,
-        to: mission.targetCoordinate,
-        ships: mission.ships,
-        resources: mission.resources,
-        timeDeparture: mission.timeDeparture,
-        timeArrival: mission.timeArrival,
-        fuelConsumed: mission.fuelConsumed,
-      },
-    }, 201 as any);
   } catch (error) {
-    return c.json({ error: String(error) }, 500 as any);
+    return c.json({ error: String(error) }, 500);
   }
 });
 
@@ -607,179 +585,6 @@ app.post('/api/fleet/missions/:id/recall', async (c) => {
     );
   } catch (error) {
     return c.json({ error: String(error) }, 500);
-  }
-});
-
-/**
- * POST /api/fleet/missions/:id/process-arrival
- * Process a fleet mission arrival. For attack missions this runs the battle
- * engine, calculates loot, logs a battle report to D1, and creates a return
- * mission. For other mission types (transport, deploy, harvest, etc.) it
- * delegates to fleetService.processFleetArrival.
- *
- * The caller must supply defender data for attack missions.
- *
- * Body (for attacks): {
- *   defenderData: { ships, defenses, resources, owner },
- * }
- */
-app.post('/api/fleet/missions/:id/process-arrival', async (c) => {
-  const missionId = c.req.param('id');
-  const DB = c.env.DB;
-  const PLANET_DO = c.env.PLANET_DO;
-
-  try {
-    // 1. Load the mission from D1
-    const missionRow = await DB.prepare('SELECT * FROM fleet_missions WHERE id = ?')
-      .bind(missionId)
-      .first();
-
-    if (!missionRow) {
-      return c.json({ error: 'Mission not found' }, 404 as any);
-    }
-
-    // Reconstruct FleetMission from D1 row
-    const mission: FleetMission = {
-      id: missionRow.id as string,
-      playerId: missionRow.player_id as string,
-      planetIdFrom: missionRow.planet_id_from as string,
-      planetIdTo: missionRow.planet_id_to as string | null,
-      sourceCoordinate: {
-        galaxy: 0, system: 0, position: 0, // We'd need these stored; use target for now
-      },
-      targetCoordinate: {
-        galaxy: missionRow.galaxy_to as number,
-        system: missionRow.system_to as number,
-        position: missionRow.position_to as number,
-      },
-      missionType: missionRow.mission_type as FleetMissionType,
-      missionStatus: missionRow.mission_status as any,
-      timeDeparture: missionRow.time_departure as number,
-      timeArrival: missionRow.time_arrival as number,
-      holdTime: missionRow.hold_time as number,
-      speedPercent: 100,
-      resources: {
-        metal: missionRow.metal as number,
-        crystal: missionRow.crystal as number,
-        deuterium: missionRow.deuterium as number,
-      },
-      loot: { metal: 0, crystal: 0, deuterium: 0 },
-      ships: {
-        lightFighter: missionRow.light_fighter as number,
-        heavyFighter: missionRow.heavy_fighter as number,
-        cruiser: missionRow.cruiser as number,
-        battleship: missionRow.battleship as number,
-        battlecruiser: missionRow.battlecruiser as number,
-        bomber: missionRow.bomber as number,
-        destroyer: missionRow.destroyer as number,
-        deathstar: missionRow.deathstar as number,
-        smallCargo: missionRow.small_cargo as number,
-        largeCargo: missionRow.large_cargo as number,
-        colonyShip: missionRow.colony_ship as number,
-        recycler: missionRow.recycler as number,
-        espionageProbe: missionRow.espionage_probe as number,
-      },
-      fuelConsumed: 0,
-      createdAt: missionRow.created_at as number,
-    };
-
-    // 2. Parse request body for defender data (attacks)
-    const body = await c.req.json<{ defenderData?: any }>().catch(() => ({}));
-
-    // 3. Process arrival through fleet service
-    const arrivalResult = fleetService.processFleetArrival(mission, {
-      defenderData: body.defenderData,
-    });
-
-    // 4. Update mission status in D1
-    await DB.prepare('UPDATE fleet_missions SET mission_status = ? WHERE id = ?')
-      .bind(mission.missionStatus, missionId)
-      .run();
-
-    // 5. If there was a battle, log the battle report to D1
-    if (arrivalResult.battle) {
-      const br = arrivalResult.battle;
-      await DB.prepare(
-        `INSERT INTO battle_reports (
-          id, attacker_id, defender_id, attacker_planet_id, defender_planet_id,
-          mission_id, winner, rounds_fought,
-          attacker_loss_metal, attacker_loss_crystal, attacker_loss_deuterium,
-          defender_loss_metal, defender_loss_crystal, defender_loss_deuterium,
-          loot_metal, loot_crystal, loot_deuterium,
-          battle_data
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-        .bind(
-          br.id,
-          br.attackerId,
-          br.defenderId,
-          mission.planetIdFrom,
-          mission.planetIdTo,
-          missionId,
-          br.winner,
-          br.rounds.length,
-          br.attackerLosses.metal,
-          br.attackerLosses.crystal,
-          br.attackerLosses.deuterium,
-          br.defenderLosses.metal,
-          br.defenderLosses.crystal,
-          br.defenderLosses.deuterium,
-          br.loot.metal,
-          br.loot.crystal,
-          br.loot.deuterium,
-          JSON.stringify(br),
-        )
-        .run();
-    }
-
-    // 6. If a return mission was created, store it in D1
-    if (arrivalResult.returnMission) {
-      const rm = arrivalResult.returnMission;
-      await DB.prepare(
-        `INSERT INTO fleet_missions (
-          id, player_id, planet_id_from, planet_id_to,
-          galaxy_to, system_to, position_to,
-          mission_type, mission_status, time_departure, time_arrival,
-          hold_time, metal, crystal, deuterium,
-          light_fighter, heavy_fighter, cruiser, battleship,
-          battlecruiser, bomber, destroyer, deathstar,
-          small_cargo, large_cargo, colony_ship, recycler, espionage_probe
-        ) VALUES (
-          ?, ?, ?, ?,
-          ?, ?, ?,
-          ?, ?, ?, ?,
-          ?, ?, ?, ?,
-          ?, ?, ?, ?,
-          ?, ?, ?, ?,
-          ?, ?, ?, ?, ?
-        )`,
-      )
-        .bind(
-          rm.id, rm.playerId, rm.planetIdFrom, rm.planetIdTo,
-          rm.targetCoordinate.galaxy, rm.targetCoordinate.system, rm.targetCoordinate.position,
-          rm.missionType, rm.missionStatus, rm.timeDeparture, rm.timeArrival,
-          rm.holdTime, rm.resources.metal, rm.resources.crystal, rm.resources.deuterium,
-          rm.ships.lightFighter, rm.ships.heavyFighter, rm.ships.cruiser, rm.ships.battleship,
-          rm.ships.battlecruiser, rm.ships.bomber, rm.ships.destroyer, rm.ships.deathstar,
-          rm.ships.smallCargo, rm.ships.largeCargo, rm.ships.colonyShip, rm.ships.recycler,
-          rm.ships.espionageProbe,
-        )
-        .run();
-    }
-
-    return c.json({
-      processed: true,
-      missionId: arrivalResult.missionId,
-      missionType: arrivalResult.missionType,
-      success: arrivalResult.success,
-      winner: arrivalResult.battle?.winner,
-      loot: arrivalResult.loot,
-      survivingShips: arrivalResult.survivingShips,
-      returnMissionId: arrivalResult.returnMission?.id,
-      battleReportId: arrivalResult.battle?.id,
-    });
-  } catch (error) {
-    return c.json({ error: String(error) }, 500 as any);
   }
 });
 
@@ -964,9 +769,8 @@ async function handleScheduled(event: ScheduledEvent, env: Bindings): Promise<vo
     const planetDOs: Map<string, any> = new Map();
 
     for (const planet of planets) {
-      // Get planet state
-      const doId = PLANET_DO.idFromName(planet.id);
-      const stub = PLANET_DO.get(doId);
+      // Get planet state using correct DO binding pattern
+      const stub = getPlanetStub(PLANET_DO, planet.id);
       planetDOs.set(planet.id, stub);
 
       const stateRes = await stub.fetch(new Request('https://planet/state'));

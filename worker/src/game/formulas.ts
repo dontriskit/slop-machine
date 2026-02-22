@@ -314,22 +314,26 @@ export function canCarryResources(ships: Ships, resources: Resources): boolean {
  *
  * Formula: base × level × 1.1^level
  *
+ * In canonical OGame, temperature only affects deuterium synthesizer output.
+ * Metal and crystal mines are temperature-independent.  This function returns
+ * the base production rate; callers should apply a temperature modifier for
+ * deuterium separately if needed.
+ *
  * @param baseProduction - Base production per hour (metal=30, crystal=20, deut=10)
  * @param level - Building level
- * @param temperature - Planet temperature (affects production: -20% to +40% range)
+ * @param _temperature - Planet temperature (reserved for future use / deuterium calc)
  * @returns Production per hour
  */
 export function calculateProduction(
   baseProduction: number,
   level: number,
-  temperature: number = 30
+  _temperature: number = 30
 ): number {
   if (level === 0) return 0;
 
   const baseCalc = baseProduction * level * Math.pow(1.1, level);
-  const tempMultiplier = 1 + (temperature - 40) / 100;
 
-  return Math.floor(baseCalc * tempMultiplier);
+  return Math.floor(baseCalc);
 }
 
 /**

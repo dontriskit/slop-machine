@@ -1,0 +1,8 @@
+{
+  "name": "og-game-test-4",
+  "private": true,
+  "devDependencies": {
+    "vitest": "^2.0.0",
+    "typescript": "^5.3.0"
+  }
+}

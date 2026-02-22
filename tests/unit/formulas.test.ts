@@ -79,20 +79,21 @@ describe('Building Costs', () => {
 
 describe('Build Time', () => {
   test('build time decreases with robotics level', () => {
-    const timeNoRobotics = calculateBuildTime(1000, 500, 5, 0, 0, 1);
-    const timeWithRobotics = calculateBuildTime(1000, 500, 5, 5, 0, 1);
+    // Use higher costs to avoid flooring to minimum (1 second)
+    const timeNoRobotics = calculateBuildTime(50000, 25000, 5, 0, 0, 1);
+    const timeWithRobotics = calculateBuildTime(50000, 25000, 5, 5, 0, 1);
     expect(timeWithRobotics).toBeLessThan(timeNoRobotics);
   });
 
   test('build time decreases with nanite level', () => {
-    const timeNoNanite = calculateBuildTime(1000, 500, 5, 5, 0, 1);
-    const timeWithNanite = calculateBuildTime(1000, 500, 5, 5, 2, 1);
+    const timeNoNanite = calculateBuildTime(50000, 25000, 5, 5, 0, 1);
+    const timeWithNanite = calculateBuildTime(50000, 25000, 5, 5, 2, 1);
     expect(timeWithNanite).toBeLessThan(timeNoNanite);
   });
 
   test('build time decreases with universe speed', () => {
-    const time1x = calculateBuildTime(1000, 500, 5, 0, 0, 1);
-    const time2x = calculateBuildTime(1000, 500, 5, 0, 0, 2);
+    const time1x = calculateBuildTime(50000, 25000, 5, 0, 0, 1);
+    const time2x = calculateBuildTime(50000, 25000, 5, 0, 0, 2);
     expect(time2x).toBeLessThan(time1x);
   });
 
