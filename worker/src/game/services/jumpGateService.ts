@@ -339,6 +339,7 @@ export async function teleportFleet(
     colonyShip: sourceFleet.colony_ship ?? 0,
     recycler: sourceFleet.recycler ?? 0,
     espionageProbe: sourceFleet.espionage_probe ?? 0,
+    solarSatellite: sourceFleet.solar_satellite ?? 0,
   };
 
   const fleetCheck = validateFleetAvailability(ships, availableShips);

@@ -125,6 +125,7 @@ const NPC_ALIEN_COMPOSITION: Record<keyof Ships, number> = {
   colonyShip: 0.0,
   recycler: 0.0,
   espionageProbe: 0.0,
+  solarSatellite: 0,
 };
 
 /**
@@ -145,6 +146,7 @@ const NPC_PIRATE_COMPOSITION: Record<keyof Ships, number> = {
   colonyShip: 0.0,
   recycler: 0.0,
   espionageProbe: 0.0,
+  solarSatellite: 0,
 };
 
 /**
@@ -165,6 +167,7 @@ const SHIP_METAL_COST: Record<keyof Ships, number> = {
   colonyShip: 10000,
   recycler: 10000,
   espionageProbe: 0,
+  solarSatellite: 0,
 };
 
 // ============================================================================
@@ -451,6 +454,7 @@ function getEmptyShips(): Ships {
     colonyShip: 0,
     recycler: 0,
     espionageProbe: 0,
+    solarSatellite: 0,
   };
 }
 

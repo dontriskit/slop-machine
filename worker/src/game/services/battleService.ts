@@ -449,6 +449,7 @@ function emptyShips(): Ships {
     colonyShip: 0,
     recycler: 0,
     espionageProbe: 0,
+    solarSatellite: 0,
   };
 }
 

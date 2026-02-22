@@ -37,6 +37,7 @@ export const SHIP_SPEEDS: Record<keyof Ships, number> = {
   colonyShip: 2500,
   recycler: 2000,
   espionageProbe: 100000000, // Basically instant
+  solarSatellite: 0,         // Cannot travel — stationary energy producer
 };
 
 // ============================================================================
@@ -57,6 +58,7 @@ export const SHIP_FUEL: Record<keyof Ships, number> = {
   colonyShip: 100,
   recycler: 20,
   espionageProbe: 1,
+  solarSatellite: 0, // No fuel — stationary
 };
 
 // ============================================================================
@@ -77,6 +79,7 @@ export const SHIP_CARGO: Record<keyof Ships, number> = {
   colonyShip: 7500,
   recycler: 20000,
   espionageProbe: 0,
+  solarSatellite: 0, // No cargo — stationary
 };
 
 // ============================================================================
@@ -433,4 +436,105 @@ export function calculateBuildTime(
 
   const time = costFactor / (2500 * levelFactor * roboticsBonus * universeSpeed * naniteBonus);
   return Math.max(Math.floor(time), 1); // Minimum 1 second
+}
+
+// ============================================================================
+// ENERGY SYSTEM FORMULAS (Issue #154)
+// ============================================================================
+
+/**
+ * Calculate total energy production per hour
+ *
+ * Sources:
+ *  - Solar Plant: 20 × level × 1.1^level
+ *  - Fusion Reactor: 30 × level × (1.05 + 0.01 × energyTech)^level
+ *  - Solar Satellites: (maxTemp / 4 + 20) × count
+ *
+ * @param solarPlantLevel - Solar plant building level
+ * @param fusionReactorLevel - Fusion reactor building level
+ * @param solarSatellites - Number of solar satellites deployed
+ * @param energyTech - Energy technology research level
+ * @param maxTemp - Maximum planet temperature (°C), used for satellite output
+ * @returns Total energy produced per hour
+ */
+export function calculateEnergyProduction(
+  solarPlantLevel: number,
+  fusionReactorLevel: number,
+  solarSatellites: number,
+  energyTech: number,
+  maxTemp: number = 30
+): number {
+  const solarPlant =
+    solarPlantLevel > 0
+      ? Math.floor(20 * solarPlantLevel * Math.pow(1.1, solarPlantLevel))
+      : 0;
+
+  const fusion =
+    fusionReactorLevel > 0
+      ? Math.floor(
+          30 * fusionReactorLevel * Math.pow(1.05 + 0.01 * energyTech, fusionReactorLevel)
+        )
+      : 0;
+
+  const satellites =
+    solarSatellites > 0
+      ? Math.floor((maxTemp / 4 + 20) * solarSatellites)
+      : 0;
+
+  return solarPlant + fusion + satellites;
+}
+
+/**
+ * Calculate total energy consumption per hour
+ *
+ * Consumers:
+ *  - Metal Mine:    10 × level × 1.1^level
+ *  - Crystal Mine:  10 × level × 1.1^level
+ *  - Deut Synth:    20 × level × 1.1^level
+ *
+ * @param metalMineLevel - Metal mine building level
+ * @param crystalMineLevel - Crystal mine building level
+ * @param deutLevel - Deuterium synthesizer building level
+ * @returns Total energy consumed per hour
+ */
+export function calculateEnergyConsumption(
+  metalMineLevel: number,
+  crystalMineLevel: number,
+  deutLevel: number
+): number {
+  const metalConsumption =
+    metalMineLevel > 0
+      ? Math.ceil(10 * metalMineLevel * Math.pow(1.1, metalMineLevel))
+      : 0;
+
+  const crystalConsumption =
+    crystalMineLevel > 0
+      ? Math.ceil(10 * crystalMineLevel * Math.pow(1.1, crystalMineLevel))
+      : 0;
+
+  const deutConsumption =
+    deutLevel > 0
+      ? Math.ceil(20 * deutLevel * Math.pow(1.1, deutLevel))
+      : 0;
+
+  return metalConsumption + crystalConsumption + deutConsumption;
+}
+
+/**
+ * Calculate the production multiplier based on energy balance
+ *
+ * If produced >= consumed: multiplier = 1.0 (full production)
+ * If produced < consumed (energy deficit): multiplier = produced / consumed (capped at 1.0)
+ *
+ * @param energyProduced - Total energy produced
+ * @param energyConsumed - Total energy consumed
+ * @returns Production multiplier in [0.0, 1.0]
+ */
+export function calculateProductionMultiplier(
+  energyProduced: number,
+  energyConsumed: number
+): number {
+  if (energyConsumed <= 0) return 1.0; // No consumers = full production
+  if (energyProduced <= 0) return 0.0; // No energy = no production
+  return Math.min(energyProduced / energyConsumed, 1.0);
 }
