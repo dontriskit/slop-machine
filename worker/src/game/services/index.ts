@@ -105,11 +105,19 @@ export {
 } from './notificationService';
 export type { GetNotificationsOptions } from './notificationService';
 
-export type { ProtectionCheckResult, AttackLog } from './protectionService';
+export type {
+  BattleSimulationResult,
+  FleetComparisonResult,
+  BreakEvenResult,
+  AverageLosses,
+  RoundDistribution,
+  ConfidenceInterval,
+  AverageSurvivors,
+} from './battleSimulatorService';
 export {
-  canAttack,
-  checkBashRule,
-  logAttack,
-  isNewbieProtected,
-  protectionService,
-} from './protectionService';
+  simulateBattlePreview,
+  getBreakEvenFleet,
+  compareFleetCompositions,
+  BattleSimulatorService,
+  battleSimulatorService,
+} from './battleSimulatorService';

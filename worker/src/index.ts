@@ -38,6 +38,7 @@ import type { OfficerType } from './game/types';
 import { ColonizationService } from './game/services/colonizationService';
 import { defenseService, buildDefense, cancelDefenseBuild, createEmptyDefenseQueue, processDefenseQueue, getDefenseBuildQueue, rebuildDefensesAfterBattle, launchMissileAttack } from './game/services/defenseService';
 import { createNotification, getNotifications, markRead as markNotifRead, markAllRead as markAllNotifsRead, deleteNotification, getUnreadCount as getNotifUnreadCount, getPreferences as getNotifPreferences, setPreferences as setNotifPreferences, getDefaultPreferences as getDefaultNotifPreferences } from './game/services/notificationService';
+import { simulateBattlePreview, getBreakEvenFleet, compareFleetCompositions } from './game/services/battleSimulatorService';
 
     const result = await svc.colonize({ playerId, fromPlanetId, galaxy, system, position });
     const result = await svc.colonizePlanet({ playerId, fromPlanetId, galaxy, system, position });
@@ -3188,6 +3189,95 @@ app.delete('/api/notifications/:id', async (c) => {
       return c.json({ error: 'Notification not found' }, 404);
     }
     return c.json({ deleted: true });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+
+// ============================================================================
+// BATTLE SIMULATOR ENDPOINTS
+// ============================================================================
+
+/**
+ * POST /api/battle/simulate
+ * Run Monte Carlo battle simulation and return statistical outcomes.
+ * Body: { attackerShips, defenderShips, defenderDefenses?, attackerTech?, defenderTech?, runs? }
+ */
+app.post('/api/battle/simulate', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { attackerShips, defenderShips, defenderDefenses, attackerTech, defenderTech, runs } = body;
+
+    if (!attackerShips || !defenderShips) {
+      return c.json({ error: 'attackerShips and defenderShips are required' }, 400);
+    }
+
+    const result = simulateBattlePreview(
+      attackerShips,
+      defenderShips,
+      defenderDefenses || undefined,
+      attackerTech || undefined,
+      defenderTech || undefined,
+      runs || 100,
+    );
+
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/battle/breakeven
+ * Find minimum fleet needed for 50%+ win rate against a target.
+ * Body: { targetFleet, targetDefenses?, targetTech?, attackerTech? }
+ */
+app.post('/api/battle/breakeven', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { targetFleet, targetDefenses, targetTech, attackerTech } = body;
+
+    if (!targetFleet) {
+      return c.json({ error: 'targetFleet is required' }, 400);
+    }
+
+    const result = getBreakEvenFleet(
+      targetDefenses || undefined,
+      targetFleet,
+      targetTech || undefined,
+      attackerTech || undefined,
+    );
+
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/battle/compare
+ * Compare two fleet compositions head-to-head.
+ * Body: { fleet1, fleet2, tech1?, tech2?, runs? }
+ */
+app.post('/api/battle/compare', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { fleet1, fleet2, tech1, tech2, runs } = body;
+
+    if (!fleet1 || !fleet2) {
+      return c.json({ error: 'fleet1 and fleet2 are required' }, 400);
+    }
+
+    const result = compareFleetCompositions(
+      fleet1,
+      fleet2,
+      tech1 || undefined,
+      tech2 || undefined,
+      runs || 100,
+    );
+
+    return c.json(result);
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
