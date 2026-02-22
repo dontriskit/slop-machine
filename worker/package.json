@@ -7,7 +7,10 @@
     "build": "tsc && wrangler deploy --dry-run",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "db:init": "bash scripts/init-db.sh",
+    "db:seed": "bash scripts/seed.sh",
+    "dev:fresh": "bash scripts/init-db.sh && bash scripts/seed.sh && wrangler dev"
   },
   "dependencies": {
     "@metaplex-foundation/mpl-bubblegum": "^5.0.2",
