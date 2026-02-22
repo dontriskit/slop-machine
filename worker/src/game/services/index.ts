@@ -104,3 +104,34 @@ export {
   getDefaultPreferences as getDefaultNotificationPreferences,
 } from './notificationService';
 export type { GetNotificationsOptions } from './notificationService';
+
+export type {
+  EventType,
+  ModifierType,
+  GameEvent,
+  EventModifiers,
+  CreateEventParams,
+} from './eventService';
+export {
+  EVENT_TYPE_DEFAULTS,
+  VALID_EVENT_TYPES,
+  NEUTRAL_MODIFIERS,
+  getActiveEvents,
+  getUpcomingEvents,
+  getEventHistory,
+  getEventById,
+  createEvent,
+  deleteEvent,
+  getActiveModifiers,
+  computeModifiers,
+  applyProductionModifier,
+  applyBuildTimeModifier,
+  applyXpModifier,
+  applyAttackModifier,
+  applyDebrisModifier,
+  applyFleetSpeedModifier,
+  isEventTypeActive,
+  scheduleWeekendEvent,
+  EventService,
+  eventService,
+} from './eventService';

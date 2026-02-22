@@ -38,6 +38,7 @@ import type { OfficerType } from './game/types';
 import { ColonizationService } from './game/services/colonizationService';
 import { defenseService, buildDefense, cancelDefenseBuild, createEmptyDefenseQueue, processDefenseQueue, getDefenseBuildQueue, rebuildDefensesAfterBattle, launchMissileAttack } from './game/services/defenseService';
 import { createNotification, getNotifications, markRead as markNotifRead, markAllRead as markAllNotifsRead, deleteNotification, getUnreadCount as getNotifUnreadCount, getPreferences as getNotifPreferences, setPreferences as setNotifPreferences, getDefaultPreferences as getDefaultNotifPreferences } from './game/services/notificationService';
+import { getActiveEvents, getUpcomingEvents, getEventHistory, getEventById, createEvent, deleteEvent, getActiveModifiers, scheduleWeekendEvent, isEventTypeActive } from './game/services/eventService';
 
     const result = await svc.colonize({ playerId, fromPlanetId, galaxy, system, position });
     const result = await svc.colonizePlanet({ playerId, fromPlanetId, galaxy, system, position });
@@ -2060,6 +2061,133 @@ app.post('/api/tutorial/:playerId/claim-reward', async (c) => {
 
 // ============================================================================
 // OFFICERS ENDPOINTS
+
+
+// ============================================================================
+// WEEKLY EVENTS ENDPOINTS
+// ============================================================================
+
+app.get('/api/events/active', async (c) => {
+  const DB = c.env.DB;
+  try {
+    const events = await getActiveEvents(DB);
+    const modifiers = await getActiveModifiers(DB);
+    return c.json({ events, modifiers, count: events.length });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.get('/api/events/upcoming', async (c) => {
+  const DB = c.env.DB;
+  try {
+    const limit = parseInt(c.req.query('limit') ?? '20', 10);
+    const events = await getUpcomingEvents(DB, limit);
+    return c.json({ events, count: events.length });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.get('/api/events/history', async (c) => {
+  const DB = c.env.DB;
+  try {
+    const limit = parseInt(c.req.query('limit') ?? '50', 10);
+    const offset = parseInt(c.req.query('offset') ?? '0', 10);
+    const events = await getEventHistory(DB, limit, offset);
+    return c.json({ events, count: events.length, limit, offset });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.get('/api/events/:id', async (c) => {
+  const DB = c.env.DB;
+  const id = c.req.param('id');
+  try {
+    const event = await getEventById(id, DB);
+    if (!event) {
+      return c.json({ error: 'Event not found' }, 404);
+    }
+    return c.json(event);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.post('/api/events/create', async (c) => {
+  const DB = c.env.DB;
+  try {
+    const body = await c.req.json() as {
+      name: string;
+      description?: string;
+      type: string;
+      startTime: number;
+      endTime: number;
+      createdBy?: string;
+    };
+
+    if (!body.name || !body.type || !body.startTime || !body.endTime) {
+      return c.json({ error: 'name, type, startTime, and endTime are required' }, 400);
+    }
+
+    const event = await createEvent(
+      {
+        name: body.name,
+        description: body.description,
+        type: body.type as any,
+        startTime: body.startTime,
+        endTime: body.endTime,
+        createdBy: body.createdBy ?? 'admin',
+      },
+      DB
+    );
+
+    return c.json(event, 201);
+  } catch (error) {
+    const msg = String(error);
+    if (msg.includes('Invalid event type') || msg.includes('endTime must')) {
+      return c.json({ error: msg }, 400);
+    }
+    return c.json({ error: msg }, 500);
+  }
+});
+
+app.delete('/api/events/:id', async (c) => {
+  const DB = c.env.DB;
+  const id = c.req.param('id');
+  try {
+    const deleted = await deleteEvent(id, DB);
+    if (!deleted) {
+      return c.json({ error: 'Event not found' }, 404);
+    }
+    return c.json({ deleted: true });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.post('/api/events/schedule-weekend', async (c) => {
+  const DB = c.env.DB;
+  try {
+    const body = await c.req.json() as { type?: string };
+    const event = await scheduleWeekendEvent(body.type as any, DB);
+    return c.json(event, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+app.get('/api/events/check/:type', async (c) => {
+  const DB = c.env.DB;
+  const type = c.req.param('type');
+  try {
+    const active = await isEventTypeActive(type as any, DB);
+    return c.json({ type, active });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
 
 // CRON TRIGGER
 // ============================================================================

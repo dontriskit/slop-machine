@@ -412,3 +412,25 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
   minimum_priority TEXT NOT NULL DEFAULT 'info',  -- 'critical' | 'warning' | 'info'
   updated_at INTEGER NOT NULL
 );
+
+-- ============================================================================
+-- WEEKLY EVENTS SYSTEM
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS game_events (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  type TEXT NOT NULL,                -- EventType: double_production | double_xp | reduced_build_time | combat_weekend | harvest_bonus | fleet_speed
+  modifier_type TEXT NOT NULL,       -- ModifierType: production_multiplier | xp_multiplier | build_time_multiplier | attack_multiplier | debris_multiplier | fleet_speed_multiplier
+  modifier_value REAL NOT NULL,      -- Multiplier value (e.g. 2.0 = double, 0.5 = half time)
+  start_time INTEGER NOT NULL,       -- Unix seconds
+  end_time INTEGER NOT NULL,         -- Unix seconds
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  created_by TEXT NOT NULL DEFAULT 'system'
+);
+
+CREATE INDEX IF NOT EXISTS idx_game_events_active ON game_events(start_time, end_time);
+CREATE INDEX IF NOT EXISTS idx_game_events_type ON game_events(type);
+CREATE INDEX IF NOT EXISTS idx_game_events_upcoming ON game_events(start_time);
+CREATE INDEX IF NOT EXISTS idx_game_events_history ON game_events(end_time DESC);
