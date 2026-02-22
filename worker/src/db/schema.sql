@@ -287,3 +287,101 @@ CREATE TABLE IF NOT EXISTS trade_offers (
 );
 CREATE INDEX IF NOT EXISTS idx_trades_status ON trade_offers(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_trades_player ON trade_offers(player_id);
+
+-- ============================================================================
+-- TOURNAMENT SYSTEM (E-Sport)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS tournaments (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,  -- 'arena_1v1' | 'alliance_war' | 'speed_round' | 'koth'
+  max_players INTEGER NOT NULL,
+  current_round INTEGER NOT NULL DEFAULT 0,
+  total_rounds INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft',  -- 'draft' | 'open' | 'in_progress' | 'completed'
+  season_id TEXT REFERENCES seasons(id),
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  started_at INTEGER,
+  completed_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_tournaments_status ON tournaments(status);
+CREATE INDEX IF NOT EXISTS idx_tournaments_season ON tournaments(season_id);
+CREATE INDEX IF NOT EXISTS idx_tournaments_date ON tournaments(created_at);
+
+CREATE TABLE IF NOT EXISTS tournament_players (
+  tournament_id TEXT NOT NULL REFERENCES tournaments(id),
+  player_id TEXT NOT NULL REFERENCES players(id),
+  joined_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  seed_rank INTEGER NOT NULL,
+  current_round INTEGER NOT NULL DEFAULT 0,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (tournament_id, player_id)
+);
+CREATE INDEX IF NOT EXISTS idx_tournament_players_player ON tournament_players(player_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_players_active ON tournament_players(tournament_id, is_active);
+
+CREATE TABLE IF NOT EXISTS brackets (
+  id TEXT PRIMARY KEY,
+  tournament_id TEXT NOT NULL REFERENCES tournaments(id),
+  round_number INTEGER NOT NULL,
+  total_matches INTEGER NOT NULL,
+  bracket_data TEXT NOT NULL,  -- JSON bracket tree structure
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_brackets_tournament ON brackets(tournament_id);
+
+CREATE TABLE IF NOT EXISTS matches (
+  id TEXT PRIMARY KEY,
+  tournament_id TEXT NOT NULL REFERENCES tournaments(id),
+  bracket_id TEXT NOT NULL REFERENCES brackets(id),
+  player1_id TEXT NOT NULL REFERENCES players(id),
+  player2_id TEXT NOT NULL REFERENCES players(id),
+  winner_id TEXT REFERENCES players(id),
+  loser_id TEXT REFERENCES players(id),
+  battle_data TEXT,  -- JSON battle result from battleService
+  scheduled_at INTEGER NOT NULL,
+  completed_at INTEGER,
+  status TEXT NOT NULL DEFAULT 'scheduled',  -- 'scheduled' | 'in_progress' | 'completed' | 'forfeited' | 'draw'
+  round INTEGER NOT NULL,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_matches_tournament ON matches(tournament_id);
+CREATE INDEX IF NOT EXISTS idx_matches_bracket ON matches(bracket_id);
+CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status);
+CREATE INDEX IF NOT EXISTS idx_matches_round ON matches(tournament_id, round);
+
+CREATE TABLE IF NOT EXISTS seasons (
+  id TEXT PRIMARY KEY,
+  season_number INTEGER UNIQUE NOT NULL,
+  start_date INTEGER NOT NULL,
+  end_date INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',  -- 'active' | 'closed'
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_seasons_status ON seasons(status);
+CREATE INDEX IF NOT EXISTS idx_seasons_number ON seasons(season_number);
+
+CREATE TABLE IF NOT EXISTS season_leaderboard (
+  season_id TEXT NOT NULL REFERENCES seasons(id),
+  player_id TEXT NOT NULL REFERENCES players(id),
+  points INTEGER NOT NULL DEFAULT 0,
+  rank INTEGER,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  PRIMARY KEY (season_id, player_id)
+);
+CREATE INDEX IF NOT EXISTS idx_season_leaderboard_rank ON season_leaderboard(season_id, rank);
+CREATE INDEX IF NOT EXISTS idx_season_leaderboard_points ON season_leaderboard(season_id, points DESC);
+
+CREATE TABLE IF NOT EXISTS tournament_rewards (
+  id TEXT PRIMARY KEY,
+  tournament_id TEXT NOT NULL REFERENCES tournaments(id),
+  player_id TEXT NOT NULL REFERENCES players(id),
+  placement INTEGER NOT NULL,
+  points INTEGER NOT NULL DEFAULT 0,
+  achievement_id TEXT,
+  title_earned TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_tournament_rewards_tournament ON tournament_rewards(tournament_id);
+CREATE INDEX IF NOT EXISTS idx_tournament_rewards_player ON tournament_rewards(player_id);
