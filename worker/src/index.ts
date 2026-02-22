@@ -36,6 +36,7 @@ import {
 } from './game/services/officerService';
 import type { OfficerType } from './game/types';
 import { ColonizationService } from './game/services/colonizationService';
+import { PlanetManagementService } from './game/services/planetManagementService';
 import { defenseService, buildDefense, cancelDefenseBuild, createEmptyDefenseQueue, processDefenseQueue, getDefenseBuildQueue, rebuildDefensesAfterBattle, launchMissileAttack } from './game/services/defenseService';
 import { createNotification, getNotifications, markRead as markNotifRead, markAllRead as markAllNotifsRead, deleteNotification, getUnreadCount as getNotifUnreadCount, getPreferences as getNotifPreferences, setPreferences as setNotifPreferences, getDefaultPreferences as getDefaultNotifPreferences } from './game/services/notificationService';
 <<<<<<< HEAD
@@ -3212,6 +3213,106 @@ app.delete('/api/notifications/:id', async (c) => {
     return c.json({ error: String(error) }, 500);
   }
 });
+// ============================================================================
+// PLANET MANAGEMENT: Abandon, Fleet Save, Fleet Recall (#72, #73)
+// ============================================================================
+
+/**
+ * POST /api/planet/abandon
+ * Abandon a colony — return fleet to homeworld, delete planet
+ * Body: { playerId, planetId }
+ */
+app.post('/api/planet/abandon', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json<{ playerId: string; planetId: string }>();
+    const { playerId, planetId } = body;
+
+    if (!playerId || !planetId) {
+      return c.json({ error: 'playerId and planetId are required' }, 400);
+    }
+
+    const svc = new PlanetManagementService(DB, PLANET_DO);
+    const result = await svc.abandonPlanet(DB, playerId, planetId);
+
+    if (!result.success) {
+      return c.json({ error: result.error }, 400);
+    }
+
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/fleet/save
+ * Fleet Save — deploy fleet to own planet (no combat)
+ * Body: { playerId, planetId, targetPlanetId, ships, speed? }
+ */
+app.post('/api/fleet/save', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json<{
+      playerId: string;
+      planetId: string;
+      targetPlanetId: string;
+      ships: Record<string, number>;
+      speed?: number;
+    }>();
+    const { playerId, planetId, targetPlanetId, ships, speed } = body;
+
+    if (!playerId || !planetId || !targetPlanetId || !ships) {
+      return c.json({ error: 'playerId, planetId, targetPlanetId, and ships are required' }, 400);
+    }
+
+    const svc = new PlanetManagementService(DB, PLANET_DO);
+    const result = await svc.fleetSave(DB, playerId, planetId, targetPlanetId, ships as any, speed);
+
+    if (!result.success) {
+      return c.json({ error: result.error }, 400);
+    }
+
+    return c.json(result, 201);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/fleet/recall
+ * Recall an in-flight fleet — reverse direction
+ * Body: { playerId, missionId }
+ */
+app.post('/api/fleet/recall', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json<{ playerId: string; missionId: string }>();
+    const { playerId, missionId } = body;
+
+    if (!playerId || !missionId) {
+      return c.json({ error: 'playerId and missionId are required' }, 400);
+    }
+
+    const svc = new PlanetManagementService(DB, PLANET_DO);
+    const result = await svc.recallFleet(DB, playerId, missionId);
+
+    if (!result.success) {
+      return c.json({ error: result.error }, 400);
+    }
+
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
 
 
 // ============================================================================
