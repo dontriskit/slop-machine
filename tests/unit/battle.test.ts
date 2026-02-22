@@ -78,8 +78,8 @@ describe('Battle Engine', () => {
     // 10 cruisers with tech 10 can beat 100 LF; without tech they cannot.
     const attacker = { ...emptyShips(), cruiser: 10 };
     const defender = { ...emptyShips(), lightFighter: 100 };
-    const techHigh = { weaponsTech: 10, shieldTech: 10, armorTech: 10 };
-    const techLow = { weaponsTech: 0, shieldTech: 0, armorTech: 0 };
+    const techHigh = { weaponTech: 10, shieldingTech: 10, armorTech: 10 };
+    const techLow = { weaponTech: 0, shieldingTech: 0, armorTech: 0 };
 
     // Run multiple times since battle has RNG
     let highTechWins = 0;

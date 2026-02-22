@@ -34,7 +34,7 @@ app.use('*', async (c, next) => {
   c.header('Access-Control-Allow-Origin', '*');
   c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   c.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (c.req.method === 'OPTIONS') return c.text('', 204);
+  if (c.req.method === 'OPTIONS') return c.text('', 204 as any);
   await next();
 });
 
@@ -159,10 +159,10 @@ app.post('/api/planet/:id/queue', async (c) => {
     const response = await stub.fetch(new Request('https://planet/queue/add', { method: 'POST', body: JSON.stringify(body) }));
 
     if (!response.ok) {
-      return c.json({ error: await response.text() }, response.status);
+      return c.json({ error: await response.text() }, response.status as any);
     }
 
-    const result = await response.json();
+    const result = await response.json() as any;
 
     // Log to build_history
     if (result.queueItem) {
@@ -202,7 +202,7 @@ app.post('/api/planet/:id/initialize', async (c) => {
     const response = await stub.fetch(new Request('https://planet/initialize', { method: 'POST', body: JSON.stringify(body) }));
 
     if (!response.ok) {
-      return c.json({ error: await response.text() }, response.status);
+      return c.json({ error: await response.text() }, response.status as any);
     }
 
     return c.json(await response.json());
@@ -325,12 +325,7 @@ app.post('/api/planet/:id/agent/run', async (c) => {
     };
 
     // Run agent
-    const decision = await runBuildOrderAgent(planetState, strategy, AI, {
-      planetId,
-      playerId: planetState.playerId,
-      coordinate: planetState.coordinate,
-      timestamp: Date.now(),
-    });
+    const decision = await runBuildOrderAgent(planetState, strategy.steps, { AI });
 
     if (!decision) {
       return c.json({ error: 'Agent failed to make decision' }, 500);
