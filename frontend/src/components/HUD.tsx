@@ -39,9 +39,17 @@ interface HUDProps {
   onOpenGalaxyMap?: () => void
   onOpenLeaderboard?: () => void
   onOpenTrader?: () => void
+  onOpenShipyard?: () => void
+  onOpenDefense?: () => void
 }
 
-export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader }: HUDProps) {
+export default function HUD({
+  onOpenGalaxyMap,
+  onOpenLeaderboard,
+  onOpenTrader,
+  onOpenShipyard,
+  onOpenDefense,
+}: HUDProps) {
   const selectedGalaxy = GameStore((s) => s.selectedGalaxy)
   const selectedSystem = GameStore((s) => s.selectedSystem)
   const selectedPlanet = GameStore((s) => s.selectedPlanet)
@@ -227,6 +235,16 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader }
         {onOpenTrader && (
           <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenTrader}>
             Marketplace (T)
+          </button>
+        )}
+        {onOpenShipyard && (
+          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenShipyard}>
+            Shipyard (S)
+          </button>
+        )}
+        {onOpenDefense && (
+          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenDefense}>
+            Defense (D)
           </button>
         )}
       </div>
