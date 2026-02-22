@@ -104,3 +104,12 @@ export {
   getDefaultPreferences as getDefaultNotificationPreferences,
 } from './notificationService';
 export type { GetNotificationsOptions } from './notificationService';
+
+export type { ProtectionCheckResult, AttackLog } from './protectionService';
+export {
+  canAttack,
+  checkBashRule,
+  logAttack,
+  isNewbieProtected,
+  protectionService,
+} from './protectionService';
