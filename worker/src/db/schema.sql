@@ -97,6 +97,49 @@ CREATE TABLE IF NOT EXISTS fleet_missions (
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
+CREATE TABLE IF NOT EXISTS defenses (
+  id TEXT PRIMARY KEY,
+  planet_id TEXT NOT NULL REFERENCES planets(id),
+  player_id TEXT NOT NULL REFERENCES players(id),
+  -- Defense units (quantities at this location)
+  small_shield INTEGER NOT NULL DEFAULT 0,
+  large_shield INTEGER NOT NULL DEFAULT 0,
+  small_laser INTEGER NOT NULL DEFAULT 0,
+  big_laser INTEGER NOT NULL DEFAULT 0,
+  gauss_cannon INTEGER NOT NULL DEFAULT 0,
+  ion_cannon INTEGER NOT NULL DEFAULT 0,
+  anti_ballistic_missile INTEGER NOT NULL DEFAULT 0,
+  interplanetary_missile INTEGER NOT NULL DEFAULT 0,
+  plasma_turret INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE TABLE IF NOT EXISTS battle_reports (
+  id TEXT PRIMARY KEY,
+  attacker_id TEXT NOT NULL REFERENCES players(id),
+  defender_id TEXT NOT NULL REFERENCES players(id),
+  attacker_planet_id TEXT REFERENCES planets(id),
+  defender_planet_id TEXT NOT NULL REFERENCES planets(id),
+  mission_id TEXT REFERENCES fleet_missions(id),
+  -- Battle outcome
+  winner TEXT NOT NULL,  -- 'attacker' | 'defender' | 'draw'
+  rounds_fought INTEGER NOT NULL,
+  -- Losses (in resources)
+  attacker_loss_metal INTEGER NOT NULL DEFAULT 0,
+  attacker_loss_crystal INTEGER NOT NULL DEFAULT 0,
+  attacker_loss_deuterium INTEGER NOT NULL DEFAULT 0,
+  defender_loss_metal INTEGER NOT NULL DEFAULT 0,
+  defender_loss_crystal INTEGER NOT NULL DEFAULT 0,
+  defender_loss_deuterium INTEGER NOT NULL DEFAULT 0,
+  -- Loot for attacker
+  loot_metal INTEGER NOT NULL DEFAULT 0,
+  loot_crystal INTEGER NOT NULL DEFAULT 0,
+  loot_deuterium INTEGER NOT NULL DEFAULT 0,
+  -- Raw battle data (JSON)
+  battle_data TEXT,  -- JSON serialized battle report
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
 CREATE INDEX IF NOT EXISTS idx_planets_player ON planets(player_id);
 CREATE INDEX IF NOT EXISTS idx_planets_agent ON planets(agent_enabled);
 CREATE INDEX IF NOT EXISTS idx_planets_coord ON planets(galaxy, system, position);
@@ -107,3 +150,9 @@ CREATE INDEX IF NOT EXISTS idx_fleets_player ON fleets(player_id);
 CREATE INDEX IF NOT EXISTS idx_fleet_missions_player ON fleet_missions(player_id);
 CREATE INDEX IF NOT EXISTS idx_fleet_missions_from ON fleet_missions(planet_id_from);
 CREATE INDEX IF NOT EXISTS idx_fleet_missions_status ON fleet_missions(mission_status, time_arrival);
+CREATE INDEX IF NOT EXISTS idx_defenses_planet ON defenses(planet_id);
+CREATE INDEX IF NOT EXISTS idx_defenses_player ON defenses(player_id);
+CREATE INDEX IF NOT EXISTS idx_battle_reports_attacker ON battle_reports(attacker_id);
+CREATE INDEX IF NOT EXISTS idx_battle_reports_defender ON battle_reports(defender_id);
+CREATE INDEX IF NOT EXISTS idx_battle_reports_planet ON battle_reports(defender_planet_id);
+CREATE INDEX IF NOT EXISTS idx_battle_reports_date ON battle_reports(created_at);

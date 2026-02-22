@@ -21,6 +21,10 @@ export type {
 
 export { BUILDING_ID, BUILDING_NAME, SHIP_KEYS } from './types';
 
+// Defenses
+export type { DefenseStructure, DefenseStructures } from './defenses';
+export { DEFENSE_SPECS, DEFENSE_ID, DEFENSE_NAME, getDefensePower, getDefenseHull } from './defenses';
+
 // Formulas
 export {
   UNIVERSE_CONFIG,
