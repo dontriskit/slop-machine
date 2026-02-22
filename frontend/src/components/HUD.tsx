@@ -1,7 +1,11 @@
 import { GameStore } from '../store/gameStore'
 import './HUD.css'
 
-export default function HUD() {
+interface HUDProps {
+  onOpenGalaxyMap?: () => void
+}
+
+export default function HUD({ onOpenGalaxyMap }: HUDProps) {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
   const selectedSystem = GameStore((state) => state.selectedSystem)
   const selectedPlanet = GameStore((state) => state.selectedPlanet)
@@ -28,6 +32,17 @@ export default function HUD() {
             <span className="value">{selectedPlanet}</span>
           </div>
         )}
+
+        {/* Galaxy Map toggle */}
+        {onOpenGalaxyMap && (
+          <button
+            className="galaxy-btn"
+            style={{ marginTop: 14, width: '100%', letterSpacing: 1 }}
+            onClick={onOpenGalaxyMap}
+          >
+            Galaxy Map
+          </button>
+        )}
       </div>
 
       {/* Bottom: Galaxy selector */}
@@ -51,9 +66,10 @@ export default function HUD() {
       {/* Right-side: Controls */}
       <div className="hud-panel controls-panel">
         <h3>Controls</h3>
-        <p className="control-item">🖱️ Drag to rotate</p>
-        <p className="control-item">🔍 Scroll to zoom</p>
-        <p className="control-item">💾 Click system/planet</p>
+        <p className="control-item">Drag to rotate</p>
+        <p className="control-item">Scroll to zoom</p>
+        <p className="control-item">Click system/planet</p>
+        <p className="control-item">G — toggle galaxy map</p>
       </div>
     </div>
   )

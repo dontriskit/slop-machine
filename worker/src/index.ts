@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { PlanetDO } from './durable-objects/PlanetDO';
 import { runBuildOrderAgent, runAgentForAllPlanets } from './agents/buildOrderAgent';
 import { Coordinate, Strategy, PlanetState } from './game/types';
+import { GalaxyService } from './game/services/galaxyService';
 
 /**
  * Cosmic Protocol Worker
@@ -520,6 +521,94 @@ app.get('/api/battle-reports/:id', async (c) => {
     }
 
     return c.json(result);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+// ============================================================================
+// GALAXY MAP ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/galaxy/:galaxy/:system
+ * Returns a full 15-slot SystemView for the given (galaxy, system).
+ */
+app.get('/api/galaxy/:galaxy/:system', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+
+  const galaxy = parseInt(c.req.param('galaxy'), 10);
+  const system = parseInt(c.req.param('system'), 10);
+
+  if (isNaN(galaxy) || isNaN(system)) {
+    return c.json({ error: 'galaxy and system must be integers' }, 400);
+  }
+
+  try {
+    const svc = new GalaxyService(DB, PLANET_DO);
+    const view = await svc.getSystemView(galaxy, system);
+    return c.json(view);
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/galaxy/:galaxy
+ * Returns a summary of how many slots are occupied per system in the galaxy.
+ */
+app.get('/api/galaxy/:galaxy', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+
+  const galaxy = parseInt(c.req.param('galaxy'), 10);
+
+  if (isNaN(galaxy)) {
+    return c.json({ error: 'galaxy must be an integer' }, 400);
+  }
+
+  try {
+    const svc = new GalaxyService(DB, PLANET_DO);
+    const summary = await svc.getGalaxySummary(galaxy);
+    return c.json({ galaxy, systems: summary });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/galaxy/colonize
+ * Colonize an empty position.
+ * Body: { playerId, fromPlanetId, galaxy, system, position }
+ */
+app.post('/api/galaxy/colonize', async (c) => {
+  const DB = c.env.DB;
+  const PLANET_DO = c.env.PLANET_DO;
+
+  try {
+    const body = await c.req.json<{
+      playerId: string;
+      fromPlanetId: string;
+      galaxy: number;
+      system: number;
+      position: number;
+    }>();
+
+    const { playerId, fromPlanetId, galaxy, system, position } = body;
+
+    if (!playerId || !fromPlanetId || !galaxy || !system || !position) {
+      return c.json({ error: 'playerId, fromPlanetId, galaxy, system, position are required' }, 400);
+    }
+
+    const svc = new GalaxyService(DB, PLANET_DO);
+    const result = await svc.colonize({ playerId, fromPlanetId, galaxy, system, position });
+
+    if (!result.success) {
+      return c.json({ error: result.error }, 400);
+    }
+
+    return c.json(result, 201);
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }

@@ -42,3 +42,18 @@ export {
   ResearchService,
   researchService,
 } from './researchService';
+export type {
+  SlotPlanet,
+  SystemSlot,
+  SystemView,
+  GalaxySummaryEntry,
+  ColonizeRequest,
+  ColonizeResult,
+} from './galaxyService';
+export {
+  GalaxyService,
+  getTemperatureForPosition,
+  getFieldsForPosition,
+  getTemperatureRange,
+  getFieldsRange,
+} from './galaxyService';
