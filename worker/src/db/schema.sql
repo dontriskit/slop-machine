@@ -161,6 +161,20 @@ CREATE TABLE IF NOT EXISTS debris_fields (
   PRIMARY KEY (galaxy, system, position)
 );
 
+CREATE TABLE IF NOT EXISTS messages (
+  id TEXT PRIMARY KEY,
+  from_player_id TEXT,                        -- NULL for system messages
+  from_player_name TEXT NOT NULL DEFAULT 'System',
+  to_player_id TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  body TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'player',        -- 'player' | 'system' | 'combat_report' | 'espionage_report' | 'alliance'
+  read INTEGER NOT NULL DEFAULT 0,
+  deleted_by_sender INTEGER NOT NULL DEFAULT 0,
+  deleted_by_recipient INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS alliances (
   id TEXT PRIMARY KEY,
   tag TEXT NOT NULL UNIQUE,
@@ -187,3 +201,6 @@ CREATE INDEX IF NOT EXISTS idx_battle_reports_planet ON battle_reports(defender_
 CREATE INDEX IF NOT EXISTS idx_battle_reports_date ON battle_reports(created_at);
 CREATE INDEX IF NOT EXISTS idx_moons_planet ON moons(planet_id);
 CREATE INDEX IF NOT EXISTS idx_debris_fields_coord ON debris_fields(galaxy, system);
+CREATE INDEX IF NOT EXISTS idx_messages_to ON messages(to_player_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_from ON messages(from_player_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_unread ON messages(to_player_id, read, deleted_by_recipient);

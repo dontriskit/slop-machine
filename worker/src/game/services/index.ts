@@ -57,3 +57,15 @@ export {
   getTemperatureRange,
   getFieldsRange,
 } from './galaxyService';
+export type { Message, MessageType, PaginatedMessages } from './messageService';
+export {
+  sendMessage,
+  getInbox,
+  getOutbox,
+  getMessage,
+  deleteMessage,
+  getUnreadCount,
+  markAllRead,
+  sendSystemMessage,
+  sendAllianceMessage,
+} from './messageService';
