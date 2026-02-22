@@ -249,3 +249,19 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE INDEX IF NOT EXISTS idx_messages_to ON messages(to_player_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_messages_from ON messages(from_player_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_messages_unread ON messages(to_player_id, read, deleted_by_recipient);
+
+-- Trade offers
+CREATE TABLE IF NOT EXISTS trade_offers (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL,
+  planet_id TEXT NOT NULL,
+  offer_resource TEXT NOT NULL,
+  offer_amount INTEGER NOT NULL,
+  want_resource TEXT NOT NULL,
+  want_amount INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  accepted_by TEXT,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_trades_status ON trade_offers(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_trades_player ON trade_offers(player_id);

@@ -7,6 +7,47 @@ import {
 } from '../lib/config'
 
 // ---------------------------------------------------------------------------
+// Marketplace types (kept here so components can import from store)
+// ---------------------------------------------------------------------------
+
+export type LeaderboardType = 'points' | 'fleet' | 'research' | 'economy'
+export type TradeResource = 'metal' | 'crystal' | 'deuterium'
+
+export interface LeaderboardEntry {
+  rank: number
+  playerId: string
+  playerName: string
+  allianceTag: string | null
+  score: number
+  economyScore: number
+  researchScore: number
+  fleetScore: number
+  planetCount: number
+}
+
+export interface LeaderboardPage {
+  type: LeaderboardType
+  page: number
+  limit: number
+  total: number
+  entries: LeaderboardEntry[]
+}
+
+export interface TradeOffer {
+  id: string
+  playerId: string
+  playerName: string
+  allianceTag: string | null
+  planetId: string
+  offerResource: TradeResource
+  offerAmount: number
+  wantResource: TradeResource
+  wantAmount: number
+  status: 'open' | 'accepted' | 'cancelled'
+  createdAt: number
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -78,6 +119,14 @@ interface GameState {
   error: string | null
   apiReachable: boolean
 
+  // Leaderboard
+  leaderboard: LeaderboardPage | null
+  leaderboardLoading: boolean
+
+  // Trades
+  trades: TradeOffer[]
+  tradesLoading: boolean
+
   // Actions
   setSelectedGalaxy: (galaxy: number) => void
   onSelectSystem: (systemId: string) => void
@@ -92,6 +141,20 @@ interface GameState {
   addToQueue: (buildingId: number, targetLevel: number) => Promise<void>
   toggleAgent: () => Promise<void>
   runAgentNow: () => Promise<void>
+
+  // Marketplace actions
+  fetchLeaderboard: (type: LeaderboardType, page: number, limit: number) => Promise<void>
+  fetchTrades: (filter?: TradeResource) => Promise<void>
+  createTrade: (
+    planetId: string,
+    offerResource: TradeResource,
+    offerAmount: number,
+    wantResource: TradeResource,
+    wantAmount: number,
+    playerId: string
+  ) => Promise<boolean>
+  acceptTrade: (tradeId: string, playerId: string, planetId: string) => Promise<boolean>
+  cancelTrade: (tradeId: string, playerId: string) => Promise<boolean>
 
   // Polling / interpolation
   _startPolling: () => void
@@ -132,6 +195,14 @@ export const GameStore = create<GameState>((set, get) => ({
   loading: false,
   error: null,
   apiReachable: true,
+
+  // Leaderboard
+  leaderboard: null,
+  leaderboardLoading: false,
+
+  // Trades
+  trades: [],
+  tradesLoading: false,
 
   // ------- Navigation -------
 
@@ -279,6 +350,83 @@ export const GameStore = create<GameState>((set, get) => ({
         agentRunning: false,
         error: err instanceof Error ? err.message : String(err),
       })
+    }
+  },
+
+  // ------- Marketplace actions -------
+
+  fetchLeaderboard: async (type, page, limit) => {
+    set({ leaderboardLoading: true })
+    try {
+      const res = await fetch(`/api/leaderboard?type=${type}&page=${page}&limit=${limit}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data: LeaderboardPage = await res.json()
+      set({ leaderboard: data, leaderboardLoading: false })
+    } catch (err) {
+      console.warn('[GameStore] fetchLeaderboard failed:', err)
+      set({ leaderboardLoading: false })
+    }
+  },
+
+  fetchTrades: async (filter) => {
+    set({ tradesLoading: true })
+    try {
+      const params = new URLSearchParams({ limit: '20' })
+      if (filter) params.set('resource', filter)
+      const res = await fetch(`/api/trades?${params}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data: { trades: TradeOffer[] } = await res.json()
+      set({ trades: data.trades, tradesLoading: false })
+    } catch (err) {
+      console.warn('[GameStore] fetchTrades failed:', err)
+      set({ tradesLoading: false })
+    }
+  },
+
+  createTrade: async (planetId, offerResource, offerAmount, wantResource, wantAmount, playerId) => {
+    try {
+      const res = await fetch('/api/trades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId, planetId, offerResource, offerAmount, wantResource, wantAmount }),
+      })
+      if (!res.ok) return false
+      await get().fetchTrades()
+      return true
+    } catch (err) {
+      console.warn('[GameStore] createTrade failed:', err)
+      return false
+    }
+  },
+
+  acceptTrade: async (tradeId, playerId, planetId) => {
+    try {
+      const res = await fetch(`/api/trades/${encodeURIComponent(tradeId)}/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId, planetId }),
+      })
+      if (!res.ok) return false
+      set((state) => ({ trades: state.trades.filter((t) => t.id !== tradeId) }))
+      return true
+    } catch (err) {
+      console.warn('[GameStore] acceptTrade failed:', err)
+      return false
+    }
+  },
+
+  cancelTrade: async (tradeId, playerId) => {
+    try {
+      const res = await fetch(
+        `/api/trades/${encodeURIComponent(tradeId)}?playerId=${encodeURIComponent(playerId)}`,
+        { method: 'DELETE' }
+      )
+      if (!res.ok) return false
+      set((state) => ({ trades: state.trades.filter((t) => t.id !== tradeId) }))
+      return true
+    } catch (err) {
+      console.warn('[GameStore] cancelTrade failed:', err)
+      return false
     }
   },
 

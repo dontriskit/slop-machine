@@ -6,6 +6,7 @@ import { Coordinate, Strategy, PlanetState } from './game/types';
 import { GalaxyService } from './game/services/galaxyService';
 import { fleetService } from './game/services/fleetService';
 import { espionageService } from './game/services/espionageService';
+import { getLeaderboard, getPlayerProfile } from './game/services/leaderboardService';
 import { sendMessage, getInbox, getOutbox, getMessage, deleteMessage, getUnreadCount, markAllRead, sendSystemMessage } from './game/services/messageService';
 import { getEmptyDefenses } from './game/defenses';
 import { getEmptyTechLevels } from './game/services/researchService';
