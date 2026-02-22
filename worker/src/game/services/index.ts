@@ -104,3 +104,24 @@ export {
   getDefaultPreferences as getDefaultNotificationPreferences,
 } from './notificationService';
 export type { GetNotificationsOptions } from './notificationService';
+
+export type {
+  MissionType,
+  MissionStatus,
+  MissionReward,
+  MissionDefinition,
+  MissionRequirement,
+  DailyMission,
+} from './dailyMissionService';
+export {
+  DAILY_MISSIONS,
+  MISSION_MAP,
+  getTodayKey,
+  pickMissions,
+  generateDailyMissions,
+  getDailyMissions,
+  checkMissionProgress,
+  claimMissionReward,
+  resetDailyMissions,
+  DailyMissionService,
+} from './dailyMissionService';

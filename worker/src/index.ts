@@ -57,6 +57,13 @@ import { createNotification, getNotifications, markRead as markNotifRead, markAl
   getNextStep,
   TUTORIAL_STEPS,
 } from './game/services/tutorialService';
+import {
+  DAILY_MISSIONS,
+  getDailyMissions,
+  checkMissionProgress,
+  claimMissionReward,
+  resetDailyMissions,
+} from './game/services/dailyMissionService';
 
 /**
  * Cosmic Protocol Worker
@@ -2129,6 +2136,14 @@ async function handleScheduled(event: ScheduledEvent, env: Bindings): Promise<vo
     );
 
     console.log(`[Cron] Agent run: ${results.succeeded}/${results.total} planets succeeded`);
+
+    // Reset daily missions at midnight UTC
+    try {
+      const dmReset = await resetDailyMissions(DB);
+      console.log(`[Cron] Daily missions reset for ${dmReset.reset} active players`);
+    } catch (dmErr) {
+      console.error("[Cron] Daily mission reset error:", dmErr);
+    }
   } catch (error) {
     console.error('Cron handler error:', error);
   }
@@ -3202,3 +3217,102 @@ export default {
     await handleScheduled(event, env);
   },
 };
+
+// ============================================================================
+// DAILY MISSIONS API
+// ============================================================================
+
+/**
+ * GET /api/missions/daily/:playerId
+ * Returns the player's 3 daily missions for today with progress.
+ */
+app.get('/api/missions/daily/:playerId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+
+  if (!playerId) {
+    return c.json({ error: 'playerId required' }, 400);
+  }
+
+  try {
+    const missions = await getDailyMissions(DB, playerId);
+    return c.json({ playerId, dateKey: missions[0]?.dateKey, missions });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/missions/daily/:playerId/check/:missionId
+ * Re-check progress for a specific mission.
+ */
+app.post('/api/missions/daily/:playerId/check/:missionId', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.param('playerId');
+  const missionId = c.req.param('missionId');
+
+  try {
+    const mission = await checkMissionProgress(DB, playerId, missionId);
+    if (!mission) {
+      return c.json({ error: 'Mission not found' }, 404);
+    }
+    return c.json({ mission });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/missions/claim
+ * Claim the reward for a completed daily mission.
+ * Body: { playerId: string, missionId: string }
+ */
+app.post('/api/missions/claim', async (c) => {
+  const DB = c.env.DB;
+
+  let body: { playerId?: string; missionId?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const { playerId, missionId } = body;
+  if (!playerId || !missionId) {
+    return c.json({ error: 'playerId and missionId required' }, 400);
+  }
+
+  try {
+    const result = await claimMissionReward(DB, playerId, missionId);
+    if (!result) {
+      return c.json({ error: 'Mission not found or not yet completed, or already claimed' }, 400);
+    }
+    return c.json({ claimed: true, reward: result.reward, mission: result.mission });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/missions/reset
+ * Admin/cron endpoint: reset all daily missions (midnight UTC).
+ * Body: { adminKey?: string }  — optional guard
+ */
+app.post('/api/missions/reset', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const result = await resetDailyMissions(DB);
+    return c.json({ ok: true, playersReset: result.reset });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/missions/definitions
+ * Returns all mission type definitions (static config).
+ */
+app.get('/api/missions/definitions', (c) => {
+  return c.json({ missions: DAILY_MISSIONS });
+});
