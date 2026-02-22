@@ -114,3 +114,12 @@ export {
   PlanetManagementService,
   createPlanetManagementService,
 } from './planetManagementService';
+
+export type { UniverseSettings } from './universeSettingsService';
+export {
+  getUniverseSettings,
+  updateUniverseSettings,
+  resetUniverseSettings,
+  DEFAULT_UNIVERSE_SETTINGS,
+  universeSettingsService,
+} from './universeSettingsService';

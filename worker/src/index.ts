@@ -39,11 +39,9 @@ import { ColonizationService } from './game/services/colonizationService';
 import { PlanetManagementService } from './game/services/planetManagementService';
 import { defenseService, buildDefense, cancelDefenseBuild, createEmptyDefenseQueue, processDefenseQueue, getDefenseBuildQueue, rebuildDefensesAfterBattle, launchMissileAttack } from './game/services/defenseService';
 import { createNotification, getNotifications, markRead as markNotifRead, markAllRead as markAllNotifsRead, deleteNotification, getUnreadCount as getNotifUnreadCount, getPreferences as getNotifPreferences, setPreferences as setNotifPreferences, getDefaultPreferences as getDefaultNotifPreferences } from './game/services/notificationService';
-<<<<<<< HEAD
+import { universeSettingsService } from './game/services/universeSettingsService';
 import { simulateBattlePreview, getBreakEvenFleet, compareFleetCompositions } from './game/services/battleSimulatorService';
-=======
 import { getDarkMatter, addDarkMatter, spendDarkMatter, getDarkMatterHistory, instantFinish, merchantTrade } from './game/services/darkMatterService';
->>>>>>> agent/wave3-7
 
     const result = await svc.colonize({ playerId, fromPlanetId, galaxy, system, position });
     const result = await svc.colonizePlanet({ playerId, fromPlanetId, galaxy, system, position });
@@ -3316,7 +3314,6 @@ app.post('/api/fleet/recall', async (c) => {
 
 
 // ============================================================================
-<<<<<<< HEAD
 // BATTLE SIMULATOR ENDPOINTS
 // ============================================================================
 
@@ -4134,7 +4131,6 @@ app.post('/api/espionage/send', async (c) => {
       .run();
 
     return c.json({ report }, 201);
-=======
 // DARK MATTER API
 // ============================================================================
 
@@ -4155,14 +4151,12 @@ app.get('/api/dm/:playerId', async (c) => {
       balance,
       history,
     });
->>>>>>> agent/wave3-7
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
 });
 
 /**
-<<<<<<< HEAD
  * GET /api/espionage/reports
  * List espionage reports for a player.
  * Query: ?player_id=xxx&limit=50
@@ -4238,18 +4232,15 @@ app.get('/api/espionage/reports/:id', async (c) => {
  * Body: { fromPlayerId, toPlayerId, subject, body }
  */
 app.post('/api/messages/send', async (c) => {
-=======
  * POST /api/dm/instant-finish
  * Spend dark matter to instantly complete a queue item
  * Body: { playerId, planetId, queueType, queueIndex }
  */
 app.post('/api/dm/instant-finish', async (c) => {
->>>>>>> agent/wave3-7
   const DB = c.env.DB;
 
   try {
     const body = await c.req.json<{
-<<<<<<< HEAD
       fromPlayerId: string;
       toPlayerId: string;
       subject: string;
@@ -4778,6 +4769,61 @@ app.post('/api/tutorial/:playerId/claim-reward', async (c) => {
 
 // ============================================================================
 // OFFICERS ENDPOINTS
+
+
+// ============================================================================
+// UNIVERSE SETTINGS ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/universe/settings
+ * Returns current universe settings (public, no auth required).
+ */
+app.get('/api/universe/settings', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const settings = await universeSettingsService.getUniverseSettings(DB);
+    return c.json({ settings });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * PUT /api/universe/settings
+ * Update universe settings (admin-only).
+ * Body: Partial<UniverseSettings>
+ */
+app.put('/api/universe/settings', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    const body = await c.req.json();
+    // TODO: Add admin authorization check here
+    const updated = await universeSettingsService.updateUniverseSettings(DB, body);
+    return c.json({ settings: updated });
+  } catch (error) {
+    return c.json({ error: String(error) }, 400);
+  }
+});
+
+/**
+ * POST /api/universe/settings/reset
+ * Reset universe settings to defaults (admin-only).
+ */
+app.post('/api/universe/settings/reset', async (c) => {
+  const DB = c.env.DB;
+
+  try {
+    // TODO: Add admin authorization check here
+    const settings = await universeSettingsService.resetUniverseSettings(DB);
+    return c.json({ settings });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
 
 // CRON TRIGGER
 // ============================================================================
@@ -5637,7 +5683,6 @@ app.delete('/api/notifications/:id', async (c) => {
       return c.json({ error: 'Notification not found' }, 404);
     }
     return c.json({ deleted: true });
-=======
       playerId: string;
       planetId: string;
       queueType: 'building' | 'research';
@@ -5697,13 +5742,11 @@ app.post('/api/dm/merchant', async (c) => {
       success: true,
       trade: result,
     });
->>>>>>> agent/wave3-7
   } catch (error) {
     return c.json({ error: String(error) }, 500);
   }
 });
 
-<<<<<<< HEAD
 
 // ============================================================================
 // PLAYER PUBLIC PROFILE ROUTES
@@ -5822,8 +5865,6 @@ app.get('/api/hall-of-fame/player/:playerId', async (c) => {
 });
 
 
-=======
->>>>>>> agent/wave3-7
 app.post('/api/dm/instant-finish', async (c) => {
   const DB = c.env.DB;
 
