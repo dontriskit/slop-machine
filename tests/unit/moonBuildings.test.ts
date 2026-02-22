@@ -166,19 +166,21 @@ describe('Moon Building Service', () => {
       expect(Number.isInteger(time)).toBe(true);
     });
 
-    it('build time increases with robotics factory', () => {
-      const time0 = calculateMoonBuildingBuildTime('lunarBase', 2, 0, 0);
-      const time5 = calculateMoonBuildingBuildTime('lunarBase', 2, 5, 0);
-      const time10 = calculateMoonBuildingBuildTime('lunarBase', 2, 10, 0);
+    it('build time decreases with robotics factory', () => {
+      // Use sensorPhalanx level 5: high cost so robotics modifier is visible
+      const time0 = calculateMoonBuildingBuildTime('sensorPhalanx', 5, 0, 0);
+      const time5 = calculateMoonBuildingBuildTime('sensorPhalanx', 5, 5, 0);
+      const time10 = calculateMoonBuildingBuildTime('sensorPhalanx', 5, 10, 0);
 
       expect(time5).toBeLessThan(time0);
       expect(time10).toBeLessThan(time5);
     });
 
     it('build time decreases with nanite factory', () => {
-      const time0 = calculateMoonBuildingBuildTime('lunarBase', 2, 0, 0);
-      const time5 = calculateMoonBuildingBuildTime('lunarBase', 2, 0, 5);
-      const time10 = calculateMoonBuildingBuildTime('lunarBase', 2, 0, 10);
+      // Use sensorPhalanx level 5: high cost so nanite modifier is visible
+      const time0 = calculateMoonBuildingBuildTime('sensorPhalanx', 5, 0, 0);
+      const time5 = calculateMoonBuildingBuildTime('sensorPhalanx', 5, 0, 5);
+      const time10 = calculateMoonBuildingBuildTime('sensorPhalanx', 5, 0, 10);
 
       expect(time5).toBeLessThan(time0);
       expect(time10).toBeLessThan(time5);
