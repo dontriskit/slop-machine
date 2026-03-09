@@ -9,6 +9,7 @@ import PlayerProfile from './components/PlayerProfile'
 import ResourceTrader from './components/ResourceTrader'
 import ResearchTree from './components/ResearchTree'
 import FleetDispatch from './components/FleetDispatch'
+import SettingsPage from './components/SettingsPage'
 import { GameStore } from './store/gameStore'
 
 // ---------------------------------------------------------------------------
@@ -44,7 +45,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'settings' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -94,6 +95,9 @@ export default function App() {
       if (e.key === 'f' || e.key === 'F') {
         setActivePanel((p) => (p === 'fleet' ? null : 'fleet'))
       }
+      if (e.key === 's' || e.key === 'S') {
+        setActivePanel((p) => (p === 'settings' ? null : 'settings'))
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -128,6 +132,7 @@ export default function App() {
         onOpenTrader={() => setActivePanel('trader')}
         onOpenResearch={() => setActivePanel('research')}
         onOpenFleet={() => setActivePanel('fleet')}
+        onOpenSettings={() => setActivePanel('settings')}
       />
 
       {/* Galaxy Map modal */}
@@ -172,6 +177,13 @@ export default function App() {
       {activePanel === 'profile' && profilePlayerId && (
         <ModalOverlay onClose={closePanel}>
           <PlayerProfile playerId={profilePlayerId} onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {/* Settings modal */}
+      {activePanel === 'settings' && (
+        <ModalOverlay onClose={closePanel}>
+          <SettingsPage onClose={closePanel} />
         </ModalOverlay>
       )}
     </div>
