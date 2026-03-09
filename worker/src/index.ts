@@ -6272,6 +6272,34 @@ app.get('/api/missions/definitions', (c) => {
   return c.json({ missions: DAILY_MISSIONS });
 });
 
+// DEV CHEAT — POST /api/dev/give-resources
+// Give a planet a large amount of resources for testing (dev only)
+app.post('/api/dev/give-resources', async (c) => {
+  const DB = c.env.DB
+  try {
+    const { planetId, metal = 10000000, crystal = 10000000, deuterium = 1000000 } = await c.req.json() as any
+    if (!planetId) return c.json({ error: 'planetId required' }, 400)
+    // Use PlanetDO to set resources
+    const id = c.env.PLANET.idFromName(planetId)
+    const stub = c.env.PLANET.get(id)
+    const resp = await stub.fetch(new Request('https://planet/cheat-resources', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ metal, crystal, deuterium })
+    }))
+    if (!resp.ok) {
+      // Fallback: update D1 directly
+      await DB.prepare('UPDATE planets SET metal=?, crystal=?, deuterium=? WHERE id=?')
+        .bind(metal, crystal, deuterium, planetId).run()
+      return c.json({ ok: true, method: 'd1' })
+    }
+    return c.json({ ok: true, method: 'do' })
+  } catch (err) {
+    return c.json({ error: String(err) }, 500)
+  }
+})
+
+
 // Combat Simulator — POST /api/simulate/battle
 app.post('/api/simulate/battle', async (c) => {
   try {
