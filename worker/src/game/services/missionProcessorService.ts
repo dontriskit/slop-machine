@@ -39,6 +39,7 @@ function shipsFromRow(row: Record<string, unknown>): Ships {
     colonyShip: (row.colony_ship as number) ?? 0,
     recycler: (row.recycler as number) ?? 0,
     espionageProbe: (row.espionage_probe as number) ?? 0,
+    solarSatellite: (row.solar_satellite as number) ?? 0,
   };
 }
 
@@ -216,6 +217,8 @@ async function processAttackArrival(
     defenderData: {
       ships: defState.ships || emptyShips(),
       resources: defState.resources || { metal: 0, crystal: 0, deuterium: 0 },
+      defenses: defState.defenses || {},
+      owner: planetIdTo || 'unknown',
     },
   });
 
@@ -246,31 +249,6 @@ async function processAttackArrival(
       loot.metal, loot.crystal, loot.deuterium,
       JSON.stringify(battle), nowSeconds,
     ).run();
-
-    // Also log to battle_replays for spectator mode
-    try {
-      const replayId = `replay-${reportId}`;
-      const g = row.galaxy_to as number || defState.coordinate?.galaxy || 1;
-      const s = row.system_to as number || defState.coordinate?.system || 1;
-      const p = row.position_to as number || defState.coordinate?.position || 1;
-      // Fetch player names for readable spectator list
-      const attackerRow = await DB.prepare('SELECT username FROM players WHERE id = ?').bind(playerId).first() as any;
-      const defenderRow = await DB.prepare('SELECT username FROM players WHERE id = ?').bind(defenderId).first() as any;
-      const attackerName = attackerRow?.username || 'Unknown';
-      const defenderName = defenderRow?.username || 'Unknown';
-      await DB.prepare(
-        `INSERT INTO battle_replays (id, attacker_id, defender_id, planet_id,
-           winner, galaxy, system, position, attacker_name, defender_name,
-           battle_data_json, is_public, timestamp)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
-      ).bind(
-        replayId, playerId, defenderId, planetIdTo,
-        battle.winner, g, s, p, attackerName, defenderName,
-        JSON.stringify(battle), nowSeconds,
-      ).run();
-    } catch (_replayErr) {
-      // Non-critical — spectator logging failure must not break battle resolution
-    }
 
     // Update debris field
     if (battle.debrisField.metal > 0 || battle.debrisField.crystal > 0) {
@@ -665,7 +643,7 @@ function emptyShips(): Ships {
     battleship: 0, battlecruiser: 0, bomber: 0,
     destroyer: 0, deathstar: 0, smallCargo: 0,
     largeCargo: 0, colonyShip: 0, recycler: 0,
-    espionageProbe: 0,
+    espionageProbe: 0, solarSatellite: 0,
   };
 }
 

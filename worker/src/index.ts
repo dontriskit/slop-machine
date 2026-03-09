@@ -74,7 +74,55 @@ import {
   getSeasonLeaderboard,
   createSeason,
 } from './game/services/tournamentService';
-import { generateH2MReport } from './agents/h2mProtocol';
+import {
+  getPublicProfile as getPlayerPublicProfile,
+  getRecentActivity,
+  getBattleHistory,
+} from './game/services/playerProfileService';
+import {
+  getHallOfFame,
+  getHallOfFameCategory,
+  getRecordHistory,
+  checkAndUpdateRecords,
+  getPlayerRecords as getPlayerHallOfFameRecords,
+  HALL_OF_FAME_CATEGORIES,
+} from './game/services/hallOfFameService';
+import type { HallOfFameCategory, CheckAndUpdateEvent } from './game/services/hallOfFameService';
+import {
+  getActiveEvents,
+  getActiveModifiers,
+  getUpcomingEvents,
+  getEventHistory,
+  getEventById,
+  createEvent,
+  deleteEvent,
+  scheduleWeekendEvent,
+  isEventTypeActive,
+} from './game/services/eventService';
+import {
+  getJumpGateStatus,
+  teleportFleet,
+  getJumpGateLogs,
+} from './game/services/jumpGateService';
+import {
+  createACSAttack,
+  joinACSAttack,
+  getACSStatus,
+  launchACSAttack,
+  cancelACSAttack,
+  withdrawFromACS,
+  getPlayerACSAttacks,
+} from './game/services/acsService';
+import {
+  getH2MMetrics,
+  detectOverrides,
+  storeOverrides,
+  generateImprovedStrategy,
+  applyLearnedStrategy,
+  generateH2MReport,
+  getAdoptionRate,
+} from './agents/h2mProtocol';
+
 
 /**
  * Cosmic Protocol Worker
@@ -4883,8 +4931,8 @@ app.post('/api/referral/apply', async (c) => {
   if (!player_id || !code) return c.json({ error: 'player_id and code required' }, 400);
   const { applyReferralCode } = await import('./game/services/referralService');
   const result = await applyReferralCode(DB, player_id, code);
-  if (!result.success) return c.json({ error: result.reason }, 400);
-  return c.json({ success: true, bonus: result.bonus });
+  if (!result.success) return c.json({ error: (result as any).reason }, 400);
+  return c.json({ success: true, bonus: (result as any).bonus });
 });
 
 // COLONIZATION ENDPOINTS
@@ -6285,6 +6333,25 @@ app.post('/api/dev/give-resources', async (c) => {
       body: JSON.stringify({ metal, crystal, deuterium })
     }))
     return c.json({ ok: true, metal, crystal, deuterium })
+  } catch (err) {
+    return c.json({ error: String(err) }, 500)
+  }
+})
+
+
+// DEV CHEAT — POST /api/dev/set-tech-levels
+app.post('/api/dev/set-tech-levels', async (c) => {
+  try {
+    const { planetId, techLevels } = await c.req.json() as any
+    if (!planetId) return c.json({ error: 'planetId required' }, 400)
+    const stub = getPlanetStub(c.env.PLANET_DO, planetId)
+    const res = await stub.fetch(new Request('https://planet/tech-levels', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(techLevels)
+    }))
+    const data = await res.json()
+    return c.json({ ok: true, ...(data as object) })
   } catch (err) {
     return c.json({ error: String(err) }, 500)
   }

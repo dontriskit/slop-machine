@@ -942,6 +942,7 @@ async function buildCombatant(playerId: string, db: D1Database): Promise<Combata
       colonyShip: fleet.colony_ship || 0,
       recycler: fleet.recycler || 0,
       espionageProbe: fleet.espionage_probe || 0,
+      solarSatellite: (fleet as any).solar_satellite || 0,
     },
     name: playerId,
   };

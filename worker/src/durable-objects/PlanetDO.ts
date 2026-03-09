@@ -204,7 +204,7 @@ export class PlanetDO implements DurableObject {
           this.planetState.resources.metal = body.metal ?? this.planetState.resources.metal;
           this.planetState.resources.crystal = body.crystal ?? this.planetState.resources.crystal;
           this.planetState.resources.deuterium = body.deuterium ?? this.planetState.resources.deuterium;
-          await this.ctx.storage.put('state', this.planetState);
+          await this.state.storage.put('state', this.planetState);
         }
         return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
       } else {
@@ -521,6 +521,7 @@ export class PlanetDO implements DurableObject {
       resources: currentResources,
       ships: this.planetState.ships,
       queue: this.planetState.queue,
+      techLevels: this.planetState.techLevels,
       lastTickAt: nowMs,
     };
 

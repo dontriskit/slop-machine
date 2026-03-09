@@ -98,7 +98,7 @@ export class GalaxyHistoryService {
       .bind(galaxy, system)
       .all();
 
-    return this.mapRows(result.results as GalaxyEventRow[]);
+    return this.mapRows(result.results as unknown as GalaxyEventRow[]);
   }
 
   /**
@@ -114,7 +114,7 @@ export class GalaxyHistoryService {
       )
       .all();
 
-    return this.mapRows(result.results as GalaxyEventRow[]);
+    return this.mapRows(result.results as unknown as GalaxyEventRow[]);
   }
 
   // --------------------------------------------------------------------------

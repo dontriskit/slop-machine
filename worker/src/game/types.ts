@@ -405,6 +405,79 @@ export interface H2MMetrics {
   }>;
 }
 
+// ============================================================================
+// DARK MATTER TYPES
+// ============================================================================
+
+export interface DarkMatterBalance {
+  playerId: string;
+  balance: number;
+  updatedAt: number;
+}
+
+export type DarkMatterSource =
+  | 'expedition'
+  | 'achievement'
+  | 'reward'
+  | 'purchase'
+  | 'admin'
+  | 'other';
+
+export type DarkMatterPurpose =
+  | 'officer'
+  | 'instant_finish'
+  | 'merchant'
+  | 'cosmetic'
+  | 'other';
+
+export interface DarkMatterTransaction {
+  id: string;
+  playerId: string;
+  amount: number;
+  source?: DarkMatterSource;
+  purpose?: DarkMatterPurpose;
+  reference?: string;
+  balanceBefore: number;
+  balanceAfter: number;
+  createdAt: number;
+}
+
+// ============================================================================
+// OFFICER TYPES
+// ============================================================================
+
+export type OfficerType = 'commander' | 'admiral' | 'engineer' | 'geologist' | 'technocrat';
+
+export interface OfficerBonuses {
+  buildQueueSlots?: number;
+  fleetShortcuts?: boolean;
+  fleetSlots?: number;
+  fleetRecall?: boolean;
+  defenseRepairFactor?: number;
+  energyProductionBonus?: number;
+  mineProductionBonus?: number;
+  espionageLevelBonus?: number;
+  researchSpeedBonus?: number;
+  [key: string]: number | boolean | undefined;
+}
+
+export interface OfficerDefinition {
+  type: OfficerType;
+  name: string;
+  description: string;
+  cost: number;
+  durationDays: number;
+  bonuses: OfficerBonuses;
+}
+
+export interface ActiveOfficer {
+  id: string;
+  playerId: string;
+  officerType: OfficerType;
+  activatedAt: number;
+  expiresAt: number;
+}
+
 export interface H2MReport {
   playerId: string;
   generatedAt: number;

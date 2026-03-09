@@ -320,6 +320,15 @@ const SHIP_SPECS: Record<keyof Ships, ShipSpec> = {
     deuterium: 0,
     rapidfire: {},
   },
+  solarSatellite: {
+    hull: 2000,
+    shield: 1,
+    attack: 1,
+    metal: 0,
+    crystal: 2000,
+    deuterium: 500,
+    rapidfire: {},
+  },
 };
 
 /**
