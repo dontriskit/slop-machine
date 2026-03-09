@@ -4552,6 +4552,39 @@ app.get('/api/galaxy/history/recent', async (c) => {
 });
 
 
+
+// ============================================================================
+// REFERRAL ENDPOINTS
+
+app.get('/api/referral/code', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.query('player_id');
+  if (\!playerId) return c.json({ error: 'player_id required' }, 400);
+  const { getReferralCode } = await import('./game/services/referralService');
+  const result = await getReferralCode(DB, playerId);
+  return c.json(result);
+});
+
+app.get('/api/referral/stats', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.query('player_id');
+  if (\!playerId) return c.json({ error: 'player_id required' }, 400);
+  const { getReferralStats } = await import('./game/services/referralService');
+  const stats = await getReferralStats(DB, playerId);
+  return c.json(stats);
+});
+
+app.post('/api/referral/apply', async (c) => {
+  const DB = c.env.DB;
+  const { player_id, code } = await c.req.json<{ player_id: string; code: string }>();
+  if (\!player_id || \!code) return c.json({ error: 'player_id and code required' }, 400);
+  const { applyReferralCode } = await import('./game/services/referralService');
+  const result = await applyReferralCode(DB, player_id, code);
+  if (\!result.success) return c.json({ error: result.reason }, 400);
+  return c.json({ success: true, bonus: result.bonus });
+});
+
+
 // CRON TRIGGER
 // ============================================================================
 

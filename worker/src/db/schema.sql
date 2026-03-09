@@ -473,3 +473,30 @@ CREATE INDEX IF NOT EXISTS idx_player_bans_player ON player_bans(player_id);
 CREATE INDEX IF NOT EXISTS idx_player_bans_active ON player_bans(player_id, is_active);
 CREATE INDEX IF NOT EXISTS idx_player_bans_expires ON player_bans(expires_at);
 CREATE INDEX IF NOT EXISTS idx_player_bans_date ON player_bans(banned_at);
+
+CREATE TABLE IF NOT EXISTS referrals (
+  id TEXT PRIMARY KEY,
+  referrer_id TEXT NOT NULL REFERENCES players(id),  -- player who owns the code
+  referee_id TEXT NOT NULL REFERENCES players(id),   -- player who applied the code
+  code TEXT NOT NULL,                                -- referral code that was applied
+  bonus_amount INTEGER NOT NULL DEFAULT 250,         -- dark matter awarded to each side
+  applied_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_referee ON referrals(referee_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_code ON referrals(code);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_referrals_unique_referee ON referrals(referee_id);
+
+
+-- ============================================================================
+-- PROTECTION: Newbie Protection + Bash Rule
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS attack_log (
+  id TEXT PRIMARY KEY,
+  attacker_id TEXT NOT NULL,
+  defender_id TEXT NOT NULL,
+  timestamp INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_attack_log_pair ON attack_log(attacker_id, defender_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_attack_log_timestamp ON attack_log(timestamp);

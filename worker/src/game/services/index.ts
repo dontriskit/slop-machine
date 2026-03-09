@@ -1,5 +1,8 @@
 export { GalaxyHistoryService, createGalaxyHistoryService } from './galaxyHistoryService';
 export type { GalaxyEvent, GalaxyEventType, LogGalaxyEventParams } from './galaxyHistoryService';
+export { protectionService, canAttack, checkBashRule, logAttack, isNewbieProtected } from './protectionService';
+export type { ProtectionCheckResult, AttackLog } from './protectionService';
+export { generateReferralCode, assignReferralCode, applyReferralCode, getReferralCode, getReferralStats } from './referralService';
 // Service exports for game logic
 
 export { CoordinateService, coordinateService } from './coordinateService';
