@@ -58,6 +58,22 @@ import {
 
 import { mvpRoutes, processFleetMissions } from './routes/mvp';
 import { checkBuildingPrerequisites, BUILDING_ID_TO_KEY } from './game/prerequisites';
+import {
+  getActiveSeason,
+  createTournament,
+  getTournament,
+  joinTournament,
+  listTournaments,
+  generateBracket,
+  getBracket,
+  resolveMatch,
+  getMatch,
+  getTournamentMatches,
+  getTournamentStandings,
+  getSeasonLeaderboard,
+  createSeason,
+} from './game/services/tournamentService';
+import { generateH2MReport } from './agents/h2mProtocol';
 
 /**
  * Cosmic Protocol Worker
@@ -251,7 +267,7 @@ app.post('/api/planet/:id/queue', async (c) => {
     // Log to build_history
     if (result.queueItem) {
       await DB.prepare(
-        `INSERT INTO build_history (id, planet_id, building_id, level, source, ai_reason, created_at)
+        `INSERT OR IGNORE INTO build_history (id, planet_id, building_id, level, source, ai_reason, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
         .bind(
@@ -2539,7 +2555,7 @@ app.post('/api/planet/:id/queue', async (c) => {
     // Log to build_history
     if (result.queueItem) {
       await DB.prepare(
-        `INSERT INTO build_history (id, planet_id, building_id, level, source, ai_reason, created_at)
+        `INSERT OR IGNORE INTO build_history (id, planet_id, building_id, level, source, ai_reason, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
         .bind(
@@ -4702,7 +4718,7 @@ app.post('/api/planet/:id/queue', async (c) => {
     // Log to build_history
     if (result.queueItem) {
       await DB.prepare(
-        `INSERT INTO build_history (id, planet_id, building_id, level, source, ai_reason, created_at)
+        `INSERT OR IGNORE INTO build_history (id, planet_id, building_id, level, source, ai_reason, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
         .bind(

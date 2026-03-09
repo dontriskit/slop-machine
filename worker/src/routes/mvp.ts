@@ -82,7 +82,9 @@ mvpRoutes.post('/api/players/register', async (c) => {
     ).bind(name).first();
 
     if (existing) {
-      return c.json({ error: 'Player name already taken' }, 409);
+      // Return existing player data so the client can log in
+      const planet = await DB.prepare('SELECT id FROM planets WHERE player_id = ? LIMIT 1').bind(existing.id).first<{ id: string }>();
+      return c.json({ player_id: existing.id, planet_id: planet?.id ?? '', existing: true }, 200);
     }
 
     // Generate IDs
