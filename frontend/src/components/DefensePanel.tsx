@@ -132,6 +132,19 @@ const DEFENSE_PREREQS: Record<DefenseKey, { label: string; level: number }[]> = 
   interplanetaryMissile: [{ label: 'Missile Silo', level: 4 }, { label: 'Impulse Drive', level: 1 }],
 }
 
+const DEFENSE_IMAGES: Partial<Record<DefenseKey, string>> = {
+  rocketLauncher:        '/img/objects/units/rocket_launcher_small.jpg',
+  lightLaser:            '/img/objects/units/light_laser_small.jpg',
+  heavyLaser:            '/img/objects/units/heavy_laser_small.jpg',
+  gaussCannon:           '/img/objects/units/gauss_cannon_small.jpg',
+  ionCannon:             '/img/objects/units/ion_cannon_small.jpg',
+  plasmaTurret:          '/img/objects/units/plasma_turret_small.jpg',
+  smallShieldDome:       '/img/objects/units/small_shield_dome_small.jpg',
+  largeShieldDome:       '/img/objects/units/large_shield_dome_small.jpg',
+  antiBallisticMissile:  '/img/objects/units/anti_ballistic_missile_small.jpg',
+  interplanetaryMissile: '/img/objects/units/interplanetary_missile_small.jpg',
+}
+
 const UNIQUE_DEFENSES: Set<DefenseKey> = new Set(['smallShieldDome', 'largeShieldDome'])
 
 const DEFENSE_ORDER: DefenseKey[] = [
@@ -347,6 +360,12 @@ export default function DefensePanel({ onClose, planetId }: DefensePanelProps) {
 
   return (
     <div style={s.container}>
+      {/* Banner image */}
+      <div style={s.bannerWrap}>
+        <img src="/img/headers/defense/defense.jpg" alt="Defense" style={s.bannerImg} />
+        <span style={s.bannerTitle}>DEFENSE</span>
+      </div>
+
       {/* Header */}
       <div style={s.header}>
         <span style={s.title}>// DEFENSE — PLANETARY PROTECTION</span>
@@ -399,10 +418,24 @@ export default function DefensePanel({ onClose, planetId }: DefensePanelProps) {
                     }}
                   >
                     <div style={s.defHeader}>
-                      <span style={s.defName}>{DEFENSE_NAMES[key]}</span>
-                      <span style={s.defCount}>
-                        {isUnique ? (alreadyBuilt ? 'BUILT' : 'MAX 1') : `x${currentCount}`}
-                      </span>
+                      {DEFENSE_IMAGES[key] && (
+                        <img
+                          src={DEFENSE_IMAGES[key]}
+                          alt={DEFENSE_NAMES[key]}
+                          width={48}
+                          height={48}
+                          style={s.defThumb}
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                        />
+                      )}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={s.defName}>{DEFENSE_NAMES[key]}</span>
+                          <span style={s.defCount}>
+                            {isUnique ? (alreadyBuilt ? 'BUILT' : 'MAX 1') : `x${currentCount}`}
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
                     <div style={s.defDesc}>
@@ -626,6 +659,30 @@ const s: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
     textShadow: '0 0 6px #00ff00',
   },
+  bannerWrap: {
+    position: 'relative' as const,
+    height: 200,
+    flexShrink: 0,
+    overflow: 'hidden',
+  },
+  bannerImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover' as const,
+    display: 'block',
+    filter: 'brightness(0.6)',
+  },
+  bannerTitle: {
+    position: 'absolute' as const,
+    bottom: 16,
+    left: 20,
+    fontSize: 28,
+    fontWeight: 'bold',
+    letterSpacing: 6,
+    color: '#00ff00',
+    textShadow: '0 0 20px #00ff00, 0 2px 8px rgba(0,0,0,0.8)',
+    fontFamily: "'Courier New', monospace",
+  },
   header: {
     display: 'flex',
     alignItems: 'center',
@@ -736,8 +793,16 @@ const s: Record<string, React.CSSProperties> = {
   },
   defHeader: {
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  defThumb: {
+    width: 48,
+    height: 48,
+    objectFit: 'cover' as const,
+    borderRadius: 3,
+    border: '1px solid #003300',
+    flexShrink: 0,
   },
   defName: {
     color: '#00ffff',

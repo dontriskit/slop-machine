@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { GameStore } from '../store/gameStore'
+import { planetSmallImg } from '../lib/planetUtils'
 
 // ============================================================================
 // TYPES (mirror worker/src/game/services/galaxyService.ts)
@@ -515,11 +516,19 @@ export default function GalaxyMap({ currentPlayerId = 'local-player', onClose }:
                     <td style={styles.td}>
                       {planet ? (
                         <button
-                          style={styles.planetNameBtn}
+                          style={{ ...styles.planetNameBtn, display: 'inline-flex', alignItems: 'center', gap: 5 }}
                           onClick={() =>
                             setDetailPlanet(isDetailOpen ? null : { planet, position })
                           }
                         >
+                          <img
+                            src={planetSmallImg(position)}
+                            alt=""
+                            width={24}
+                            height={24}
+                            style={{ borderRadius: '50%', flexShrink: 0 }}
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                          />
                           {planet.name}
                           {isDetailOpen && (
                             <PlanetDetail

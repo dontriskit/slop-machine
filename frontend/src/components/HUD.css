@@ -1,3 +1,19 @@
+/* Space background behind 3D canvas */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/img/bg/background-large.jpg');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.3;
+  z-index: -1;
+  pointer-events: none;
+}
+
 .hud {
   position: absolute;
   top: 0;

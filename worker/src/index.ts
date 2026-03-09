@@ -114,6 +114,30 @@ app.use('*', async (c, next) => {
   await next();
 });
 
+// ============================================================================
+// SECURITY HEADERS MIDDLEWARE (#139)
+// ============================================================================
+
+app.use('*', async (c, next) => {
+  await next();
+  c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('X-Frame-Options', 'DENY');
+  c.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://api.devnet.solana.com");
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+});
+
+// ============================================================================
+// API v1 COMPATIBILITY REWRITE MIDDLEWARE (#128)
+// ============================================================================
+
+app.use('/api/v1/*', async (c, next) => {
+  const url = new URL(c.req.url);
+  url.pathname = url.pathname.replace(/^\/api\/v1\//, '/api/');
+  const newRequest = new Request(url.toString(), c.req.raw);
+  const response = await app.fetch(newRequest, c.env, c.executionCtx);
+  return response;
+});
 
 // ============================================================================
 // MVP ROUTES (Player registration, login, prerequisite validation)

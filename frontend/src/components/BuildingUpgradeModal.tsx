@@ -12,6 +12,22 @@
 import { useState, useCallback } from 'react'
 import { GameStore } from '../store/gameStore'
 
+// Building ID -> image filename stem
+const BUILDING_IMAGE: Record<number, string> = {
+  1: 'metal_mine',
+  2: 'crystal_mine',
+  3: 'deuterium_synthesizer',
+  4: 'solar_plant',
+  12: 'fusion_plant',
+  14: 'robot_factory',
+  15: 'nanite_factory',
+  21: 'shipyard',
+  22: 'metal_store',
+  23: 'crystal_store',
+  24: 'deuterium_store',
+  31: 'research_lab',
+}
+
 // ---------------------------------------------------------------------------
 // Cost formulas (OGame standard)
 // ---------------------------------------------------------------------------
@@ -202,6 +218,20 @@ export default function BuildingUpgradeModal({
           <span style={s.title}>// UPGRADE: {buildingName.toUpperCase()}</span>
           <button style={s.closeBtn} onClick={onClose}>[X]</button>
         </div>
+
+        {/* Building image */}
+        {BUILDING_IMAGE[buildingId] && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 16px 0' }}>
+            <img
+              src={`/img/objects/buildings/${BUILDING_IMAGE[buildingId]}_small.jpg`}
+              alt={buildingName}
+              width={80}
+              height={80}
+              style={{ borderRadius: 4, border: '1px solid #00ff0033', objectFit: 'cover' }}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+            />
+          </div>
+        )}
 
         {/* Level bar */}
         <div style={s.levelBar}>

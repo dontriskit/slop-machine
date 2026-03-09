@@ -5,6 +5,22 @@ import PlanetSelector from './PlanetSelector'
 import BuildingUpgradeModal from './BuildingUpgradeModal'
 import './HUD.css'
 
+// Building ID -> image filename stem
+const BUILDING_IMAGE: Record<number, string> = {
+  1: 'metal_mine',
+  2: 'crystal_mine',
+  3: 'deuterium_synthesizer',
+  4: 'solar_plant',
+  12: 'fusion_plant',
+  14: 'robot_factory',
+  15: 'nanite_factory',
+  21: 'shipyard',
+  22: 'metal_store',
+  23: 'crystal_store',
+  24: 'deuterium_store',
+  31: 'research_lab',
+}
+
 // Building ID -> human-readable name
 const BUILDING_NAMES: Record<number, string> = {
   1: 'Metal Mine',
@@ -510,6 +526,8 @@ function BuildingRow({ label, level, buildingId }: { label: string; level: numbe
     }
   }, [activePlanetId, buildingId, level, fetchPlanetState])
 
+  const imgStem = BUILDING_IMAGE[buildingId]
+
   return (
     <>
       <div
@@ -518,6 +536,16 @@ function BuildingRow({ label, level, buildingId }: { label: string; level: numbe
         onClick={() => setModalOpen(true)}
         title={`Click to view upgrade details for ${label}`}
       >
+        {imgStem && (
+          <img
+            src={`/img/objects/buildings/${imgStem}_micro.jpg`}
+            alt=""
+            width={24}
+            height={24}
+            style={{ imageRendering: 'pixelated', flexShrink: 0, borderRadius: 2 }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+          />
+        )}
         <span className="label">{label}</span>
         <span className="value" style={{ minWidth: 36 }}>Lv {level}</span>
         <button

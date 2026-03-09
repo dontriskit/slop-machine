@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { GameStore } from '../store/gameStore'
 import { DEFAULT_PLAYER_ID } from '../lib/config'
+import { planetSmallImg, positionFromCoords } from '../lib/planetUtils'
 
 interface Planet {
   id: string
@@ -48,6 +49,16 @@ export default function PlanetSelector() {
       >
         <span className="label">Colony:</span>
         <span className="value" style={{ color: '#00ff41', display: 'flex', alignItems: 'center', gap: 4 }}>
+          {activePlanet && (
+            <img
+              src={planetSmallImg(positionFromCoords(activePlanet.coordinates))}
+              alt=""
+              width={24}
+              height={24}
+              style={{ borderRadius: '50%', flexShrink: 0 }}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+            />
+          )}
           {activePlanet
             ? `${activePlanet.name} [${activePlanet.coordinates}]`
             : activePlanetId}
@@ -97,7 +108,15 @@ export default function PlanetSelector() {
                   if (!isActive) (e.currentTarget as HTMLDivElement).style.background = 'transparent'
                 }}
               >
-                <span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <img
+                    src={planetSmallImg(positionFromCoords(planet.coordinates))}
+                    alt=""
+                    width={24}
+                    height={24}
+                    style={{ borderRadius: '50%', flexShrink: 0 }}
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                  />
                   {planet.name}
                   {planet.is_homeworld && (
                     <span style={{ fontSize: 9, marginLeft: 4, color: '#ffff00', opacity: 0.8 }}>HW</span>

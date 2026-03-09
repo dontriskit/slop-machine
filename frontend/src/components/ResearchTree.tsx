@@ -192,6 +192,24 @@ const TECH_DEFS: TechDefinition[] = [
   },
 ]
 
+const RESEARCH_IMAGES: Record<string, string> = {
+  weaponTech:       '/img/objects/research/weapons_technology_small.jpg',
+  laserTech:        '/img/objects/research/laser_technology_small.jpg',
+  ionTech:          '/img/objects/research/ion_technology_small.jpg',
+  plasmaTech:       '/img/objects/research/plasma_technology_small.jpg',
+  gravitonTech:     '/img/objects/research/graviton_technology_small.jpg',
+  energyTech:       '/img/objects/research/energy_technology_small.jpg',
+  computerTech:     '/img/objects/research/computer_technology_small.jpg',
+  espionageTech:    '/img/objects/research/espionage_technology_small.jpg',
+  astrophysics:     '/img/objects/research/astrophysics_technology_small.jpg',
+  hyperspaceTech:   '/img/objects/research/hyperspace_technology_small.jpg',
+  combustionDrive:  '/img/objects/research/combustion_drive_small.jpg',
+  impulseDrive:     '/img/objects/research/impulse_drive_small.jpg',
+  hyperspaceDrive:  '/img/objects/research/hyperspace_drive_small.jpg',
+  shieldingTech:    '/img/objects/research/shielding_technology_small.jpg',
+  armorTech:        '/img/objects/research/armor_technology_small.jpg',
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   military: 'Military',
   economy: 'Economy',
@@ -425,6 +443,12 @@ export default function ResearchTree({
 
   return (
     <div style={styles.container}>
+      {/* Banner image */}
+      <div style={styles.bannerWrap}>
+        <img src="/img/headers/research/research.jpg" alt="Research" style={styles.bannerImg} />
+        <span style={styles.bannerTitle}>RESEARCH</span>
+      </div>
+
       {/* Header */}
       <div style={styles.header}>
         <span style={styles.title}>RESEARCH TREE</span>
@@ -520,6 +544,16 @@ export default function ResearchTree({
                           }}
                           onClick={() => setSelectedTech(isSelected ? null : def)}
                         >
+                          {RESEARCH_IMAGES[def.key] && (
+                            <img
+                              src={RESEARCH_IMAGES[def.key]}
+                              alt={def.name}
+                              width={40}
+                              height={40}
+                              style={styles.techThumb}
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                            />
+                          )}
                           <div style={{ ...styles.nodeStatus, color: nodeColor }}>
                             {isActive ? 'RES' : status === 'researched' ? 'OK' : status === 'available' ? 'AVL' : 'LCK'}
                           </div>
@@ -686,7 +720,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#050d05',
     border: '1px solid #00ff00',
     borderRadius: 4,
-    padding: 20,
+    padding: '0 20px 20px 20px',
     color: '#00ff00',
     fontFamily: '"Courier New", monospace',
     width: 900,
@@ -694,6 +728,31 @@ const styles: Record<string, React.CSSProperties> = {
     maxHeight: '90vh',
     overflowY: 'auto',
     boxShadow: '0 0 32px rgba(0,255,0,0.2)',
+  },
+  bannerWrap: {
+    position: 'relative' as const,
+    height: 200,
+    margin: '0 -20px 16px -20px',
+    overflow: 'hidden',
+    borderRadius: '4px 4px 0 0',
+  },
+  bannerImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover' as const,
+    display: 'block',
+    filter: 'brightness(0.6)',
+  },
+  bannerTitle: {
+    position: 'absolute' as const,
+    bottom: 16,
+    left: 20,
+    fontSize: 28,
+    fontWeight: 'bold',
+    letterSpacing: 6,
+    color: '#00ff00',
+    textShadow: '0 0 20px #00ff00, 0 2px 8px rgba(0,0,0,0.8)',
+    fontFamily: '"Courier New", monospace',
   },
   header: {
     display: 'flex',
@@ -807,6 +866,14 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     textAlign: 'center' as const,
     transition: 'all 0.15s ease',
+  },
+  techThumb: {
+    width: 40,
+    height: 40,
+    objectFit: 'cover' as const,
+    borderRadius: 3,
+    marginBottom: 4,
+    border: '1px solid #002200',
   },
   nodeStatus: {
     fontSize: 9,

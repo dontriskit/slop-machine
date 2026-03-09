@@ -135,6 +135,22 @@ const SHIP_SHIPYARD_REQ: Record<ShipType, number> = {
   espionageProbe: 3,
 }
 
+const SHIP_IMAGES: Record<ShipType, string> = {
+  lightFighter:   '/img/objects/units/light_fighter_small.jpg',
+  heavyFighter:   '/img/objects/units/heavy_fighter_small.jpg',
+  cruiser:        '/img/objects/units/cruiser_small.jpg',
+  battleship:     '/img/objects/units/battleship_small.jpg',
+  battlecruiser:  '/img/objects/units/battlecruiser_small.jpg',
+  bomber:         '/img/objects/units/bomber_small.jpg',
+  destroyer:      '/img/objects/units/destroyer_small.jpg',
+  deathstar:      '/img/objects/units/deathstar_small.jpg',
+  smallCargo:     '/img/objects/units/small_cargo_small.jpg',
+  largeCargo:     '/img/objects/units/large_cargo_small.jpg',
+  colonyShip:     '/img/objects/units/colony_ship_small.jpg',
+  recycler:       '/img/objects/units/recycler_small.jpg',
+  espionageProbe: '/img/objects/units/espionage_probe_small.jpg',
+}
+
 const SHIP_ORDER: ShipType[] = [
   'lightFighter', 'heavyFighter', 'cruiser', 'battleship', 'battlecruiser',
   'bomber', 'destroyer', 'deathstar',
@@ -345,6 +361,12 @@ export default function ShipyardPanel({ onClose, planetId }: ShipyardPanelProps)
 
   return (
     <div style={s.container}>
+      {/* Banner image */}
+      <div style={s.bannerWrap}>
+        <img src="/img/headers/shipyard/shipyard.jpg" alt="Shipyard" style={s.bannerImg} />
+        <span style={s.bannerTitle}>SHIPYARD</span>
+      </div>
+
       {/* Header */}
       <div style={s.header}>
         <span style={s.title}>// SHIPYARD — BUILD QUEUE</span>
@@ -392,10 +414,22 @@ export default function ShipyardPanel({ onClose, planetId }: ShipyardPanelProps)
                     }}
                   >
                     <div style={s.shipHeader}>
-                      <span style={s.shipName}>{ship.name}</span>
-                      {!meetsReq && (
-                        <span style={s.lockBadge}>Lv{reqLevel} req</span>
-                      )}
+                      <img
+                        src={SHIP_IMAGES[ship.shipType as ShipType]}
+                        alt={ship.name}
+                        width={48}
+                        height={48}
+                        style={s.shipThumb}
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                          <span style={s.shipName}>{ship.name}</span>
+                          {!meetsReq && (
+                            <span style={s.lockBadge}>Lv{reqLevel} req</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     <div style={s.shipDesc}>
@@ -579,6 +613,30 @@ const s: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
     textShadow: '0 0 6px #00ff00',
   },
+  bannerWrap: {
+    position: 'relative' as const,
+    height: 200,
+    flexShrink: 0,
+    overflow: 'hidden',
+  },
+  bannerImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover' as const,
+    display: 'block',
+    filter: 'brightness(0.6)',
+  },
+  bannerTitle: {
+    position: 'absolute' as const,
+    bottom: 16,
+    left: 20,
+    fontSize: 28,
+    fontWeight: 'bold',
+    letterSpacing: 6,
+    color: '#00ff00',
+    textShadow: '0 0 20px #00ff00, 0 2px 8px rgba(0,0,0,0.8)',
+    fontFamily: "'Courier New', monospace",
+  },
   header: {
     display: 'flex',
     alignItems: 'center',
@@ -692,9 +750,16 @@ const s: Record<string, React.CSSProperties> = {
   },
   shipHeader: {
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 6,
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  shipThumb: {
+    width: 48,
+    height: 48,
+    objectFit: 'cover' as const,
+    borderRadius: 3,
+    border: '1px solid #003300',
+    flexShrink: 0,
   },
   shipName: {
     color: '#00ffff',
