@@ -15,6 +15,7 @@ import ShipyardPanel from './components/ShipyardPanel'
 import DefensePanel from './components/DefensePanel'
 import BuddyList from './components/BuddyList'
 import FriendsList from './components/FriendsList'
+import ChatPanel from './components/ChatPanel'
 import SpectatorMode from './components/SpectatorMode'
 import RegistrationModal from './components/RegistrationModal'
 import { GameStore } from './store/gameStore'
@@ -62,7 +63,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | 'messages' | 'shipyard' | 'defense' | 'buddy' | 'friends' | 'spectator' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | 'messages' | 'shipyard' | 'defense' | 'buddy' | 'friends' | 'spectator' | 'chat' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -133,8 +134,13 @@ export default function App() {
         setActivePanel((p) => (p === 'buddy' ? null : 'buddy'))
       }
       if (e.key === 'n' || e.key === 'N') {
-      if (e.key === 'w' || e.key === 'W') { setActivePanel((p) => (p === 'spectator' ? null : 'spectator')) }
         setActivePanel((p) => (p === 'friends' ? null : 'friends'))
+      }
+      if (e.key === 'w' || e.key === 'W') {
+        setActivePanel((p) => (p === 'spectator' ? null : 'spectator'))
+      }
+      if (e.key === 'k' || e.key === 'K') {
+        setActivePanel((p) => (p === 'chat' ? null : 'chat'))
       }
     }
     window.addEventListener('keydown', handler)
@@ -176,6 +182,7 @@ export default function App() {
         onOpenDefense={() => setActivePanel('defense')}
         onOpenBuddyList={() => setActivePanel('buddy')}
         onOpenFriendsList={() => setActivePanel('friends')}
+        onOpenChat={() => setActivePanel('chat')}
       />
 
       {/* Galaxy Map modal */}
@@ -261,6 +268,12 @@ export default function App() {
       {activePanel === 'spectator' && (
         <ModalOverlay onClose={closePanel}>
           <SpectatorMode onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {activePanel === 'chat' && (
+        <ModalOverlay onClose={closePanel}>
+          <ChatPanel onClose={closePanel} />
         </ModalOverlay>
       )}
 

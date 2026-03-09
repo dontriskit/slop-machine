@@ -711,3 +711,14 @@ CREATE TABLE IF NOT EXISTS battle_replays (
   -- Full replay JSON
 --
 CREATE INDEX IF NOT EXISTS idx_battle_replays_timestamp ON battle_replays(timestamp DESC);
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id TEXT PRIMARY KEY,
+  channel TEXT NOT NULL,                -- 'global', alliance ID, or custom string
+  player_id TEXT NOT NULL REFERENCES players(id),
+  player_name TEXT NOT NULL,            -- denormalized for display speed
+  message TEXT NOT NULL,
+  timestamp INTEGER NOT NULL,           -- unix seconds
+  is_deleted INTEGER NOT NULL DEFAULT 0 -- soft delete
+);
+CREATE INDEX IF NOT EXISTS idx_chat_channel ON chat_messages(channel, timestamp);
+CREATE INDEX IF NOT EXISTS idx_chat_player ON chat_messages(player_id, timestamp);

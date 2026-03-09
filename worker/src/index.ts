@@ -2319,6 +2319,51 @@ app.post('/api/phalanx/scan', async (c) => {
 });
 
 
+
+// ============================================================================
+// CHAT ENDPOINTS
+
+app.get('/api/chat/:channel', async (c) => {
+  const DB = c.env.DB;
+  const channel = c.req.param('channel');
+  const limit = Math.min(parseInt(c.req.query('limit') || '50', 10), 200);
+  const before = c.req.query('before') ? parseInt(c.req.query('before')!) : null;
+  try {
+    const query = before
+      ? `SELECT id, channel, player_id, player_name, message, timestamp FROM chat_messages WHERE channel = ? AND is_deleted = 0 AND timestamp < ? ORDER BY timestamp DESC LIMIT ?`
+      : `SELECT id, channel, player_id, player_name, message, timestamp FROM chat_messages WHERE channel = ? AND is_deleted = 0 ORDER BY timestamp DESC LIMIT ?`;
+    const stmt = before ? DB.prepare(query).bind(channel, before, limit) : DB.prepare(query).bind(channel, limit);
+    const rows = await stmt.all();
+    return c.json({ messages: (rows.results || []).reverse() });
+  } catch (error) { return c.json({ error: String(error) }, 500); }
+});
+
+app.post('/api/chat/:channel', async (c) => {
+  const DB = c.env.DB;
+  const channel = c.req.param('channel');
+  const { player_id, message } = await c.req.json<{ player_id: string; message: string }>();
+  if (!player_id || !message?.trim()) return c.json({ error: 'player_id and message required' }, 400);
+  if (message.length > 500) return c.json({ error: 'Message too long (max 500)' }, 400);
+  // Rate limit: 1 msg per 3 seconds
+  const lastMsg = await DB.prepare(`SELECT timestamp FROM chat_messages WHERE player_id = ? ORDER BY timestamp DESC LIMIT 1`).bind(player_id).first<{ timestamp: number }>();
+  if (lastMsg && (Date.now() / 1000 - lastMsg.timestamp) < 3) return c.json({ error: 'Rate limit: 1 message per 3 seconds' }, 429);
+  const player = await DB.prepare('SELECT name FROM players WHERE id = ?').bind(player_id).first<{ name: string }>();
+  const id = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  await DB.prepare(`INSERT INTO chat_messages (id, channel, player_id, player_name, message, timestamp) VALUES (?, ?, ?, ?, ?, unixepoch())`)
+    .bind(id, channel, player_id, player?.name ?? 'Unknown', message.trim()).run();
+  return c.json({ ok: true, id });
+});
+
+app.delete('/api/chat/:channel/:id', async (c) => {
+  const DB = c.env.DB;
+  const { channel, id } = c.req.param();
+  const playerId = c.req.query('player_id');
+  if (!playerId) return c.json({ error: 'player_id required' }, 400);
+  await DB.prepare(`UPDATE chat_messages SET is_deleted = 1 WHERE id = ? AND channel = ? AND player_id = ?`).bind(id, channel, playerId).run();
+  return c.json({ ok: true });
+});
+
+
 // CRON TRIGGER
 // ============================================================================
 
