@@ -209,27 +209,33 @@ export default function BuildingUpgradeModal({
     }
   }, [planetId, buildingId, targetLevel, fetchPlanetState, onClose])
 
+  const imageStem = BUILDING_IMAGE[buildingId]
+
   return (
     // Backdrop
     <div style={s.backdrop} onClick={onClose}>
       <div style={s.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div style={s.header}>
-          <span style={s.title}>// UPGRADE: {buildingName.toUpperCase()}</span>
-          <button style={s.closeBtn} onClick={onClose}>[X]</button>
-        </div>
 
-        {/* Building image */}
-        {BUILDING_IMAGE[buildingId] && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 16px 0' }}>
+        {/* Hero image with building name overlay */}
+        {imageStem ? (
+          <div style={s.heroWrap}>
             <img
-              src={`/img/objects/buildings/${BUILDING_IMAGE[buildingId]}_small.jpg`}
+              src={`/img/objects/buildings/${imageStem}_small.jpg`}
               alt={buildingName}
-              width={80}
-              height={80}
-              style={{ borderRadius: 4, border: '1px solid #00ff0033', objectFit: 'cover' }}
+              style={s.heroImg}
               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
             />
+            <div style={s.heroGradient} />
+            <div style={s.heroLabel}>
+              <span style={s.heroName}>{buildingName}</span>
+              <button style={s.closeBtn} onClick={onClose} aria-label="Close">&#x2715;</button>
+            </div>
+          </div>
+        ) : (
+          /* Fallback header when no image available */
+          <div style={s.header}>
+            <span style={s.title}>{buildingName}</span>
+            <button style={s.closeBtn} onClick={onClose} aria-label="Close">&#x2715;</button>
           </div>
         )}
 
@@ -239,10 +245,10 @@ export default function BuildingUpgradeModal({
             <span style={s.levelLabel}>CURRENT</span>
             <span style={s.levelNum}>{currentLevel}</span>
           </div>
-          <span style={s.arrow}>→</span>
+          <span style={s.arrow}>&#x2192;</span>
           <div style={s.levelBlock}>
             <span style={s.levelLabel}>TARGET</span>
-            <span style={{ ...s.levelNum, color: '#00ffff' }}>{targetLevel}</span>
+            <span style={{ ...s.levelNum, color: '#5b9cf6' }}>{targetLevel}</span>
           </div>
         </div>
 
@@ -252,36 +258,36 @@ export default function BuildingUpgradeModal({
           <div style={s.costTable}>
             {cost.metal > 0 && (
               <div style={s.costRow}>
-                <span style={s.resIcon}>Fe</span>
-                <span style={s.resName}>Metal</span>
-                <span style={{ ...s.costVal, color: canAffordMetal ? '#00ff41' : '#ff4444' }}>
+                <span style={{ ...s.resIcon, color: '#94a3b8', background: 'rgba(148,163,184,0.12)', borderColor: 'rgba(148,163,184,0.25)' }}>Fe</span>
+                <span style={{ ...s.resName, color: '#94a3b8' }}>Metal</span>
+                <span style={{ ...s.costVal, color: canAffordMetal ? '#34d399' : '#f87171' }}>
                   {fmt(cost.metal)}
                 </span>
-                <span style={{ ...s.resAvail, color: canAffordMetal ? '#006600' : '#662200' }}>
+                <span style={{ ...s.resAvail, color: canAffordMetal ? 'rgba(52,211,153,0.55)' : 'rgba(248,113,113,0.55)' }}>
                   / {fmt(resources.metal)}
                 </span>
               </div>
             )}
             {cost.crystal > 0 && (
               <div style={s.costRow}>
-                <span style={{ ...s.resIcon, color: '#64b4ff', background: 'rgba(100,180,255,0.15)', borderColor: '#64b4ff55' }}>Si</span>
-                <span style={s.resName}>Crystal</span>
-                <span style={{ ...s.costVal, color: canAffordCrystal ? '#00ff41' : '#ff4444' }}>
+                <span style={{ ...s.resIcon, color: '#7dd3fc', background: 'rgba(125,211,252,0.12)', borderColor: 'rgba(125,211,252,0.25)' }}>Si</span>
+                <span style={{ ...s.resName, color: '#7dd3fc' }}>Crystal</span>
+                <span style={{ ...s.costVal, color: canAffordCrystal ? '#34d399' : '#f87171' }}>
                   {fmt(cost.crystal)}
                 </span>
-                <span style={{ ...s.resAvail, color: canAffordCrystal ? '#006600' : '#662200' }}>
+                <span style={{ ...s.resAvail, color: canAffordCrystal ? 'rgba(52,211,153,0.55)' : 'rgba(248,113,113,0.55)' }}>
                   / {fmt(resources.crystal)}
                 </span>
               </div>
             )}
             {cost.deuterium > 0 && (
               <div style={s.costRow}>
-                <span style={{ ...s.resIcon, color: '#80ffb0', background: 'rgba(0,200,100,0.15)', borderColor: '#80ffb055' }}>D</span>
-                <span style={s.resName}>Deuterium</span>
-                <span style={{ ...s.costVal, color: canAffordDeut ? '#00ff41' : '#ff4444' }}>
+                <span style={{ ...s.resIcon, color: '#6ee7b7', background: 'rgba(110,231,183,0.12)', borderColor: 'rgba(110,231,183,0.25)' }}>D</span>
+                <span style={{ ...s.resName, color: '#6ee7b7' }}>Deuterium</span>
+                <span style={{ ...s.costVal, color: canAffordDeut ? '#34d399' : '#f87171' }}>
                   {fmt(cost.deuterium)}
                 </span>
-                <span style={{ ...s.resAvail, color: canAffordDeut ? '#006600' : '#662200' }}>
+                <span style={{ ...s.resAvail, color: canAffordDeut ? 'rgba(52,211,153,0.55)' : 'rgba(248,113,113,0.55)' }}>
                   / {fmt(resources.deuterium)}
                 </span>
               </div>
@@ -309,7 +315,7 @@ export default function BuildingUpgradeModal({
 
         {/* Status message */}
         {msg && (
-          <div style={{ ...s.statusMsg, color: success ? '#00ff41' : '#ff8800' }}>
+          <div style={{ ...s.statusMsg, color: success ? '#34d399' : '#f59e0b' }}>
             {msg}
           </div>
         )}
@@ -317,7 +323,7 @@ export default function BuildingUpgradeModal({
         {/* Action buttons */}
         <div style={s.actions}>
           <button style={s.cancelBtn} onClick={onClose} disabled={loading}>
-            CANCEL
+            Cancel
           </button>
           <button
             style={{
@@ -328,7 +334,7 @@ export default function BuildingUpgradeModal({
             disabled={!canAfford || loading || success}
             title={!canAfford ? 'Not enough resources' : `Upgrade ${buildingName} to level ${targetLevel}`}
           >
-            {loading ? 'QUEUING...' : success ? 'QUEUED!' : `▲ UPGRADE TO LV ${targetLevel}`}
+            {loading ? 'Queuing\u2026' : success ? 'Queued!' : `Upgrade to Lv\u00a0${targetLevel}`}
           </button>
         </div>
       </div>
@@ -337,67 +343,113 @@ export default function BuildingUpgradeModal({
 }
 
 // ---------------------------------------------------------------------------
-// Styles — green retro-terminal matching HUD / ShipyardPanel
+// Styles — cockpit aesthetic matching HUD (no neon greens/cyans)
 // ---------------------------------------------------------------------------
 
 const s: Record<string, React.CSSProperties> = {
   backdrop: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(0, 0, 0, 0.75)',
+    background: 'rgba(0,0,0,0.72)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1200,
-    backdropFilter: 'blur(2px)',
+    backdropFilter: 'blur(6px)',
   },
   modal: {
-    background: 'rgba(0, 8, 20, 0.98)',
-    border: '2px solid #00ff00',
-    borderRadius: 4,
-    color: '#00ff00',
-    fontFamily: "'Courier New', monospace",
+    background: 'rgba(8,14,28,0.95)',
+    border: '1px solid rgba(91,156,246,0.25)',
+    borderRadius: 8,
+    color: '#cbd5e1',
+    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
     fontSize: 13,
-    boxShadow: '0 0 30px rgba(0, 255, 0, 0.35)',
+    boxShadow: '0 8px 40px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.04)',
+    backdropFilter: 'blur(16px)',
     width: 440,
     maxWidth: '95vw',
-    textShadow: '0 0 6px #00ff00',
     display: 'flex',
     flexDirection: 'column',
     gap: 0,
+    overflow: 'hidden',
   },
+
+  /* Hero image */
+  heroWrap: {
+    position: 'relative',
+    width: '100%',
+    height: 160,
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  heroImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    display: 'block',
+  },
+  heroGradient: {
+    position: 'absolute',
+    inset: 0,
+    background: 'linear-gradient(to top, rgba(8,14,28,0.92) 0%, rgba(8,14,28,0.3) 55%, transparent 100%)',
+  },
+  heroLabel: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    display: 'flex',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    padding: '0 16px 12px',
+  },
+  heroName: {
+    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+    fontWeight: 600,
+    fontSize: 18,
+    color: '#f1f5f9',
+    letterSpacing: 0.3,
+    textShadow: '0 1px 8px rgba(0,0,0,0.85)',
+  },
+
+  /* Fallback header (no image) */
   header: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '10px 16px',
-    borderBottom: '1px solid #00ff0033',
+    padding: '14px 16px',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
   },
   title: {
-    fontWeight: 'bold',
-    fontSize: 13,
-    letterSpacing: 2,
-    color: '#ffff00',
-    textShadow: '0 0 10px #ffff00',
+    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+    fontWeight: 600,
+    fontSize: 16,
+    color: '#f1f5f9',
+    letterSpacing: 0.2,
   },
+
   closeBtn: {
-    background: 'transparent',
-    border: '1px solid #ff4444',
-    color: '#ff4444',
+    background: 'rgba(255,255,255,0.07)',
+    border: '1px solid rgba(255,255,255,0.13)',
+    color: '#94a3b8',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
-    fontSize: 12,
-    padding: '2px 8px',
-    borderRadius: 2,
-    textShadow: 'none',
+    fontFamily: 'inherit',
+    fontSize: 13,
+    lineHeight: 1,
+    padding: '4px 8px',
+    borderRadius: 4,
+    flexShrink: 0,
+    marginLeft: 8,
   },
+
   levelBar: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 24,
     padding: '16px 20px',
-    borderBottom: '1px solid #00ff0022',
+    borderBottom: '1px solid rgba(91,156,246,0.1)',
+    background: 'rgba(91,156,246,0.04)',
   },
   levelBlock: {
     display: 'flex',
@@ -407,37 +459,39 @@ const s: Record<string, React.CSSProperties> = {
   },
   levelLabel: {
     fontSize: 9,
-    color: '#006600',
+    color: '#64748b',
     letterSpacing: 2,
-    textShadow: 'none',
+    fontWeight: 600,
+    textTransform: 'uppercase' as const,
   },
   levelNum: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#00ff00',
+    fontWeight: 700,
+    color: '#94a3b8',
     lineHeight: 1,
-    textShadow: '0 0 12px #00ff00',
+    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
   },
   arrow: {
-    fontSize: 24,
-    color: '#004400',
-    textShadow: 'none',
+    fontSize: 20,
+    color: 'rgba(91,156,246,0.4)',
   },
+
   section: {
     padding: '12px 16px',
-    borderBottom: '1px solid #00ff0022',
+    borderBottom: '1px solid rgba(91,156,246,0.1)',
   },
   sectionTitle: {
     fontSize: 9,
-    color: '#006600',
+    color: '#475569',
     letterSpacing: 2,
-    textShadow: 'none',
+    fontWeight: 600,
+    textTransform: 'uppercase' as const,
     marginBottom: 10,
   },
   costTable: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 7,
+    gap: 8,
   },
   costRow: {
     display: 'flex',
@@ -450,32 +504,30 @@ const s: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     width: 22,
     height: 22,
-    borderRadius: 3,
+    borderRadius: 4,
     fontSize: 9,
-    fontWeight: 'bold',
-    background: 'rgba(160,160,160,0.15)',
-    border: '1px solid #55555566',
-    color: '#c0c0c0',
-    textShadow: 'none',
+    fontWeight: 700,
     flexShrink: 0,
+    border: '1px solid',
   },
   resName: {
-    color: '#006600',
-    fontSize: 11,
-    width: 68,
-    textShadow: 'none',
+    fontSize: 12,
+    width: 72,
+    fontWeight: 500,
   },
   costVal: {
-    fontWeight: 'bold',
+    fontWeight: 700,
     fontSize: 13,
     minWidth: 56,
     textAlign: 'right' as const,
+    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
   },
   resAvail: {
     fontSize: 10,
     marginLeft: 4,
-    textShadow: 'none',
+    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
   },
+
   timeRow: {
     display: 'flex',
     alignItems: 'baseline',
@@ -483,33 +535,32 @@ const s: Record<string, React.CSSProperties> = {
   },
   timeVal: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#00ffff',
-    textShadow: '0 0 8px #00ffff',
+    fontWeight: 700,
+    color: '#f59e0b',
+    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
   },
   timeNote: {
-    fontSize: 10,
-    color: '#006600',
-    textShadow: 'none',
+    fontSize: 11,
+    color: '#475569',
   },
+
   warning: {
     margin: '0 16px',
-    padding: '6px 10px',
-    background: 'rgba(255, 68, 68, 0.08)',
-    border: '1px solid #ff444433',
-    borderRadius: 2,
-    color: '#ff4444',
-    fontSize: 11,
-    textShadow: 'none',
+    padding: '7px 10px',
+    background: 'rgba(248,113,113,0.08)',
+    border: '1px solid rgba(248,113,113,0.25)',
+    borderRadius: 4,
+    color: '#f87171',
+    fontSize: 12,
   },
   statusMsg: {
     margin: '0 16px',
-    padding: '6px 10px',
-    background: 'rgba(0,255,0,0.05)',
-    borderRadius: 2,
-    fontSize: 11,
-    textShadow: 'none',
+    padding: '7px 10px',
+    background: 'rgba(52,211,153,0.06)',
+    borderRadius: 4,
+    fontSize: 12,
   },
+
   actions: {
     display: 'flex',
     gap: 10,
@@ -518,38 +569,35 @@ const s: Record<string, React.CSSProperties> = {
   cancelBtn: {
     flex: '0 0 auto',
     background: 'transparent',
-    border: '1px solid #444',
-    color: '#666',
+    border: '1px solid rgba(91,156,246,0.3)',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
-    fontSize: 12,
-    padding: '8px 16px',
-    borderRadius: 2,
-    letterSpacing: 1,
-    textShadow: 'none',
+    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+    fontSize: 13,
+    fontWeight: 500,
+    padding: '8px 18px',
+    borderRadius: 6,
+    letterSpacing: 0.2,
   },
   upgradeBtn: {
     flex: 1,
-    background: 'rgba(0, 255, 0, 0.12)',
-    border: '1px solid #00ff00',
-    color: '#00ff00',
+    background: '#5b9cf6',
+    border: '1px solid rgba(91,156,246,0.6)',
+    color: '#fff',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
-    fontSize: 12,
+    fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+    fontSize: 13,
+    fontWeight: 600,
     padding: '8px 16px',
-    borderRadius: 2,
-    boxShadow: '0 0 8px rgba(0, 255, 0, 0.3)',
-    letterSpacing: 1,
-    fontWeight: 'bold',
-    textShadow: '0 0 6px #00ff00',
-    transition: 'background 0.15s',
+    borderRadius: 6,
+    letterSpacing: 0.2,
+    boxShadow: '0 2px 12px rgba(91,156,246,0.35)',
   },
   upgradeBtnDisabled: {
-    background: 'rgba(0,0,0,0.3)',
-    border: '1px solid #333',
-    color: '#444',
+    background: 'rgba(91,156,246,0.12)',
+    border: '1px solid rgba(91,156,246,0.15)',
+    color: 'rgba(91,156,246,0.35)',
     cursor: 'not-allowed',
     boxShadow: 'none',
-    textShadow: 'none',
   },
 }
