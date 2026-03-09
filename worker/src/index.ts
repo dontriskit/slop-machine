@@ -2093,7 +2093,7 @@ app.post('/api/tutorial/:playerId/claim-reward', async (c) => {
 app.get('/api/relations', async (c) => {
   const DB = c.env.DB;
   const playerId = c.req.query('player_id');
-  if (\!playerId) return c.json({ error: 'player_id required' }, 400);
+  if (!playerId) return c.json({ error: 'player_id required' }, 400);
   try {
     const rows = await DB.prepare(
       `SELECT r.id, r.target_id, p.name AS target_name, r.relation_type, r.note, r.created_at
@@ -2110,8 +2110,8 @@ app.post('/api/relations', async (c) => {
   const DB = c.env.DB;
   const body = await c.req.json<{ player_id: string; target_id: string; relation_type: string; note?: string }>();
   const { player_id, target_id, relation_type, note } = body;
-  if (\!player_id || \!target_id || \!relation_type) return c.json({ error: 'Missing fields' }, 400);
-  if (\!['ally', 'enemy', 'neutral'].includes(relation_type)) return c.json({ error: 'Invalid relation_type' }, 400);
+  if (!player_id || !target_id || !relation_type) return c.json({ error: 'Missing fields' }, 400);
+  if (!['ally', 'enemy', 'neutral'].includes(relation_type)) return c.json({ error: 'Invalid relation_type' }, 400);
   if (player_id === target_id) return c.json({ error: 'Cannot mark yourself' }, 400);
   const id = player_id + '_' + target_id;
   await DB.prepare(
@@ -2126,7 +2126,7 @@ app.delete('/api/relations/:target_id', async (c) => {
   const DB = c.env.DB;
   const targetId = c.req.param('target_id');
   const playerId = c.req.query('player_id');
-  if (\!playerId) return c.json({ error: 'player_id required' }, 400);
+  if (!playerId) return c.json({ error: 'player_id required' }, 400);
   await DB.prepare('DELETE FROM player_relations WHERE player_id = ? AND target_id = ?').bind(playerId, targetId).run();
   return c.json({ ok: true });
 });
