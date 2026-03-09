@@ -19,6 +19,9 @@ import ChatPanel from './components/ChatPanel'
 import SpectatorMode from './components/SpectatorMode'
 import CombatSimulator from './components/CombatSimulator'
 import BuildingsPanel from './components/BuildingsPanel'
+import AlliancePage from './components/AlliancePage'
+import HallOfFame from './components/HallOfFame'
+import BattleReportList from './components/BattleReportList'
 import RegistrationModal from './components/RegistrationModal'
 import { GameStore } from './store/gameStore'
 import { LS_PLAYER_ID_KEY } from './lib/config'
@@ -65,7 +68,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | 'messages' | 'shipyard' | 'defense' | 'buddy' | 'friends' | 'spectator' | 'chat' | 'simulator' | 'buildings' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | 'messages' | 'shipyard' | 'defense' | 'buddy' | 'friends' | 'spectator' | 'chat' | 'simulator' | 'buildings' | 'alliance' | 'halloffame' | 'battle-reports' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -149,6 +152,15 @@ export default function App() {
       }
       if (e.key === 'i' || e.key === 'I') {
         setActivePanel((p) => (p === 'buildings' ? null : 'buildings'))
+      }
+      if (e.key === 'a' || e.key === 'A') {
+        setActivePanel((p) => (p === 'alliance' ? null : 'alliance'))
+      }
+      if (e.key === 'o' || e.key === 'O') {
+        setActivePanel((p) => (p === 'halloffame' ? null : 'halloffame'))
+      }
+      if (e.key === 'v' || e.key === 'V') {
+        setActivePanel((p) => (p === 'battle-reports' ? null : 'battle-reports'))
       }
     }
     window.addEventListener('keydown', handler)
@@ -303,6 +315,24 @@ export default function App() {
 
       {activePanel === 'buildings' && (
         <BuildingsPanel onClose={closePanel} />
+      )}
+
+      {activePanel === 'alliance' && (
+        <ModalOverlay onClose={closePanel}>
+          <AlliancePage onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {activePanel === 'halloffame' && (
+        <ModalOverlay onClose={closePanel}>
+          <HallOfFame onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {activePanel === 'battle-reports' && (
+        <ModalOverlay onClose={closePanel}>
+          <BattleReportList onClose={closePanel} />
+        </ModalOverlay>
       )}
 
       {/* Registration modal — shown only if no player identity in localStorage */}
