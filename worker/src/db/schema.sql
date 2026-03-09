@@ -654,3 +654,24 @@ CREATE TABLE IF NOT EXISTS friendships (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_friendships_pair ON friendships(player_id, friend_id);
 CREATE INDEX IF NOT EXISTS idx_friendships_player ON friendships(player_id, status);
 CREATE INDEX IF NOT EXISTS idx_friendships_friend ON friendships(friend_id, status);
+CREATE TABLE IF NOT EXISTS moon_building_levels (
+  moon_id TEXT NOT NULL REFERENCES moons(id),
+  jump_gate INTEGER NOT NULL DEFAULT 0,
+  lunar_base INTEGER NOT NULL DEFAULT 0,
+  sensor_phalanx INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  PRIMARY KEY (moon_id)
+);
+CREATE INDEX IF NOT EXISTS idx_moon_building_levels_moon ON moon_building_levels(moon_id);
+
+CREATE TABLE IF NOT EXISTS jump_gate_logs (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  source_moon_id TEXT NOT NULL REFERENCES moons(id),
+  destination_moon_id TEXT NOT NULL REFERENCES moons(id),
+  ships_json TEXT NOT NULL,
+  teleported_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_jump_gate_logs_player ON jump_gate_logs(player_id, teleported_at);
+CREATE INDEX IF NOT EXISTS idx_jump_gate_logs_source ON jump_gate_logs(source_moon_id, teleported_at);
+CREATE INDEX IF NOT EXISTS idx_jump_gate_logs_dest ON jump_gate_logs(destination_moon_id, teleported_at);
