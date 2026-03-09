@@ -362,6 +362,73 @@ app.post('/api/planet/:id/queue', async (c) => {
 });
 
 /**
+ * POST /api/planet/:id/research
+ * Start research on a technology. Body: { techId: number }
+ * Validates prerequisites and deducts resources.
+ */
+app.post('/api/planet/:id/research', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+  try {
+    const body = await c.req.json();
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(
+      new Request('https://planet/research/start', {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+    if (!response.ok) {
+      return c.json({ error: await response.text() }, response.status as any);
+    }
+    return c.json(await response.json());
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * GET /api/planet/:id/research/queue
+ * Get current research queue state. Auto-completes if research is done.
+ */
+app.get('/api/planet/:id/research/queue', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+  try {
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(new Request('https://planet/research/queue'));
+    if (!response.ok) {
+      return c.json({ error: await response.text() }, response.status as any);
+    }
+    return c.json(await response.json());
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
+ * POST /api/planet/:id/research/complete
+ * Force-complete finished research (idempotent cron helper).
+ */
+app.post('/api/planet/:id/research/complete', async (c) => {
+  const planetId = c.req.param('id');
+  const PLANET_DO = c.env.PLANET_DO;
+  try {
+    const stub = getPlanetStub(PLANET_DO, planetId);
+    const response = await stub.fetch(
+      new Request('https://planet/research/complete', { method: 'POST' })
+    );
+    if (!response.ok) {
+      return c.json({ error: await response.text() }, response.status as any);
+    }
+    return c.json(await response.json());
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
+/**
  * POST /api/planet/:id/initialize
  * Initialize planet with starting state
  */

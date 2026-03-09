@@ -1,4 +1,5 @@
-import { Coordinate, PlanetState, QueueItem, BuildingLevels, Resources, Ships, TechLevels } from '../game/types';
+import { Coordinate, PlanetState, QueueItem, BuildingLevels, Resources, Ships, TechLevels, ResearchQueueItem } from '../game/types';
+import { startResearch, completeResearch, TECH_DEFINITIONS } from '../game/services/researchService';
 import { calculateProduction, BASE_PRODUCTION, calculateBuildTime, calculateEnergyProduction, calculateEnergyConsumption, calculateProductionMultiplier } from '../game/formulas';
 import {
   ShipyardQueue,
@@ -40,6 +41,7 @@ interface PlanetDOState {
   queue: QueueItem[];
   shipQueue: ShipyardQueue;  // Shipyard build queue
   techLevels: TechLevels;    // Player's tech levels (synced from D1)
+  researchQueue: ResearchQueueItem | null; // Active research (one at a time)
   lastTickAt: number; // unix ms
   alarmAt: number | null;
 }
@@ -78,6 +80,10 @@ export class PlanetDO implements DurableObject {
           espionageTech: 0, computerTech: 0, astrophysics: 0,
           weaponTech: 0, shieldingTech: 0, armorTech: 0, gravitonTech: 0,
         };
+      }
+      // Migration: add researchQueue if missing
+      if (this.planetState.researchQueue === undefined) {
+        this.planetState.researchQueue = null;
       }
     } else {
       // Default new planet state
@@ -120,6 +126,7 @@ export class PlanetDO implements DurableObject {
         },
         queue: [],
         shipQueue: createEmptyQueue(),
+        researchQueue: null,
         techLevels: {
           energyTech: 0,
           laserTech: 0,
@@ -198,6 +205,12 @@ export class PlanetDO implements DurableObject {
         return await this.handleGetAvailableShips();
       } else if (path === '/tech-levels' && request.method === 'POST') {
         return await this.handleSetTechLevels(request);
+      } else if (path === '/research/start' && request.method === 'POST') {
+        return await this.handleResearchStart(request);
+      } else if (path === '/research/queue' && request.method === 'GET') {
+        return await this.handleResearchQueue();
+      } else if (path === '/research/complete' && request.method === 'POST') {
+        return await this.handleResearchComplete();
       } else if (path === '/cheat-resources' && request.method === 'POST') {
         const body = await request.json() as any;
         if (this.planetState) {
@@ -883,6 +896,141 @@ export class PlanetDO implements DurableObject {
     return new Response(
       JSON.stringify({ updated: true, techLevels: this.planetState.techLevels }),
       { headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  // ==========================================================================
+  // RESEARCH HANDLERS
+  // ==========================================================================
+
+  /**
+   * POST /research/start
+   * Start researching a technology. Body: { techId: number }
+   */
+  private async handleResearchStart(request: Request): Promise<Response> {
+    if (!this.planetState) throw new Error('State not initialized');
+
+    // Auto-complete any finished research first
+    if (this.planetState.researchQueue && Date.now() >= this.planetState.researchQueue.timeEnd) {
+      this.planetState.techLevels = completeResearch(
+        this.planetState.researchQueue.techId,
+        this.planetState.techLevels
+      );
+      this.planetState.researchQueue = null;
+    }
+
+    if (this.planetState.researchQueue) {
+      return new Response(
+        JSON.stringify({ error: 'Research already in progress', queue: this.planetState.researchQueue }),
+        { status: 409, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const body = await request.json<{ techId: number }>();
+    const { techId } = body;
+
+    if (!techId || !TECH_DEFINITIONS[techId]) {
+      return new Response(
+        JSON.stringify({ error: `Unknown technology ID: ${techId}` }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Build a PlanetState view for startResearch (it only needs resources + buildings)
+    const planetStateView = {
+      planetId: this.planetState.planetId,
+      playerId: this.planetState.playerId,
+      coordinate: this.planetState.coordinate,
+      planetType: 'planet' as const,
+      name: 'Planet',
+      temperature: this.planetState.temperature,
+      fields: 163,
+      universeSpeed: this.planetState.universeSpeed,
+      buildings: this.planetState.buildings,
+      resources: this.planetState.resources,
+      ships: this.planetState.ships,
+      queue: this.planetState.queue,
+      lastTickAt: this.planetState.lastTickAt,
+    };
+
+    try {
+      const queueItem = startResearch(
+        planetStateView,
+        techId,
+        this.planetState.techLevels,
+        this.planetState.universeSpeed
+      );
+      // startResearch mutates resources in the view — copy them back
+      this.planetState.resources = planetStateView.resources;
+      this.planetState.researchQueue = queueItem;
+      await this.persistState();
+
+      return new Response(
+        JSON.stringify({ ok: true, queue: queueItem, techLevels: this.planetState.techLevels }),
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+    } catch (err: any) {
+      return new Response(
+        JSON.stringify({ error: err.message }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
+  /**
+   * GET /research/queue
+   * Return current research queue state (auto-completes if done)
+   */
+  private async handleResearchQueue(): Promise<Response> {
+    if (!this.planetState) throw new Error('State not initialized');
+
+    // Auto-complete if done
+    if (this.planetState.researchQueue && Date.now() >= this.planetState.researchQueue.timeEnd) {
+      this.planetState.techLevels = completeResearch(
+        this.planetState.researchQueue.techId,
+        this.planetState.techLevels
+      );
+      this.planetState.researchQueue = null;
+      await this.persistState();
+    }
+
+    return new Response(
+      JSON.stringify({ queue: this.planetState.researchQueue, techLevels: this.planetState.techLevels }),
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  /**
+   * POST /research/complete
+   * Force-complete research if timeEnd has passed (called by cron or client poll)
+   */
+  private async handleResearchComplete(): Promise<Response> {
+    if (!this.planetState) throw new Error('State not initialized');
+
+    if (!this.planetState.researchQueue) {
+      return new Response(
+        JSON.stringify({ ok: true, message: 'No research in progress', techLevels: this.planetState.techLevels }),
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (Date.now() < this.planetState.researchQueue.timeEnd) {
+      return new Response(
+        JSON.stringify({ ok: false, message: 'Research not yet complete', queue: this.planetState.researchQueue }),
+        { status: 409, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    this.planetState.techLevels = completeResearch(
+      this.planetState.researchQueue.techId,
+      this.planetState.techLevels
+    );
+    this.planetState.researchQueue = null;
+    await this.persistState();
+
+    return new Response(
+      JSON.stringify({ ok: true, techLevels: this.planetState.techLevels }),
+      { headers: { 'Content-Type': 'application/json' } }
     );
   }
 

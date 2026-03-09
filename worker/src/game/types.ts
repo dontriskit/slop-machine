@@ -237,6 +237,7 @@ export interface PlanetState {
   ships: Ships;
   queue: QueueItem[];
   lastTickAt: number; // unix ms
+  techLevels?: TechLevels;
 }
 
 export interface StrategyStep {
