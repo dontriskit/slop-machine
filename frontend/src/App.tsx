@@ -22,6 +22,10 @@ import BuildingsPanel from './components/BuildingsPanel'
 import AlliancePage from './components/AlliancePage'
 import HallOfFame from './components/HallOfFame'
 import BattleReportList from './components/BattleReportList'
+import ACSPanel from './components/ACSPanel'
+import DarkMatterPanel from './components/DarkMatterPanel'
+import EventsPanel from './components/EventsPanel'
+import UniverseSettingsPanel from './components/UniverseSettingsPanel'
 import RegistrationModal from './components/RegistrationModal'
 import { GameStore } from './store/gameStore'
 import { LS_PLAYER_ID_KEY } from './lib/config'
@@ -68,7 +72,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | 'messages' | 'shipyard' | 'defense' | 'buddy' | 'friends' | 'spectator' | 'chat' | 'simulator' | 'buildings' | 'alliance' | 'halloffame' | 'battle-reports' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | 'messages' | 'shipyard' | 'defense' | 'buddy' | 'friends' | 'spectator' | 'chat' | 'simulator' | 'buildings' | 'alliance' | 'halloffame' | 'battle-reports' | 'acs' | 'dm' | 'events' | 'universe' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -161,6 +165,18 @@ export default function App() {
       }
       if (e.key === 'v' || e.key === 'V') {
         setActivePanel((p) => (p === 'battle-reports' ? null : 'battle-reports'))
+      }
+      if (e.key === 'x' || e.key === 'X') {
+        setActivePanel((p) => (p === 'acs' ? null : 'acs'))
+      }
+      if (e.key === 'z' || e.key === 'Z') {
+        setActivePanel((p) => (p === 'dm' ? null : 'dm'))
+      }
+      if (e.key === 'e' || e.key === 'E') {
+        setActivePanel((p) => (p === 'events' ? null : 'events'))
+      }
+      if (e.key === 'u' || e.key === 'U') {
+        setActivePanel((p) => (p === 'universe' ? null : 'universe'))
       }
     }
     window.addEventListener('keydown', handler)
@@ -332,6 +348,30 @@ export default function App() {
       {activePanel === 'battle-reports' && (
         <ModalOverlay onClose={closePanel}>
           <BattleReportList onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {activePanel === 'acs' && (
+        <ModalOverlay onClose={closePanel}>
+          <ACSPanel onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {activePanel === 'dm' && (
+        <ModalOverlay onClose={closePanel}>
+          <DarkMatterPanel onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {activePanel === 'events' && (
+        <ModalOverlay onClose={closePanel}>
+          <EventsPanel onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {activePanel === 'universe' && (
+        <ModalOverlay onClose={closePanel}>
+          <UniverseSettingsPanel onClose={closePanel} />
         </ModalOverlay>
       )}
 

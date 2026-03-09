@@ -73,7 +73,7 @@ interface HUDProps {
   onOpenBuildings?: () => void
 }
 
-export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenFleet, onOpenChart, onOpenMessages, onOpenShipyard, onOpenDefense, onOpenBuddyList, onOpenFriendsList, onOpenChat, onOpenSimulator , activePanel, onOpenBuildings, onOpenAlliance, onOpenHallOfFame, onOpenBattleReports }: HUDProps) {
+export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenFleet, onOpenChart, onOpenMessages, onOpenShipyard, onOpenDefense, onOpenBuddyList, onOpenFriendsList, onOpenChat, onOpenSimulator , activePanel, onOpenBuildings, onOpenAlliance, onOpenHallOfFame, onOpenBattleReports, onOpenACS, onOpenDarkMatter, onOpenEvents, onOpenUniverse }: HUDProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [unreadMessages, setUnreadMessages] = useState(0)
 
@@ -496,6 +496,18 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
           <button className={`galaxy-btn${activePanel === 'friends' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenFriendsList}>
             Friends (N)
           </button>
+        )}
+        {onOpenEvents && (
+          <button className={`galaxy-btn${activePanel === 'events' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenEvents}>Events (E)</button>
+        )}
+        {onOpenDarkMatter && (
+          <button className={`galaxy-btn${activePanel === 'dm' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenDarkMatter}>Dark Matter (Z)</button>
+        )}
+        {onOpenACS && (
+          <button className={`galaxy-btn${activePanel === 'acs' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenACS}>ACS Fleet (X)</button>
+        )}
+        {onOpenUniverse && (
+          <button className={`galaxy-btn${activePanel === 'universe' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenUniverse}>Universe (U)</button>
         )}
         {onOpenAlliance && (
           <button className={`galaxy-btn${activePanel === 'alliance' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenAlliance}>Alliance (A)</button>
