@@ -241,12 +241,12 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
           <div className="mobile-nav-section">
             <h3>Buildings</h3>
             <div style={{ fontSize: 12 }}>
-              <BuildingRow label="Metal Mine" level={buildings.metalMine} />
-              <BuildingRow label="Crystal Mine" level={buildings.crystalMine} />
-              <BuildingRow label="Deut Synth" level={buildings.deutSynth} />
-              <BuildingRow label="Solar Plant" level={buildings.solarPlant} />
-              <BuildingRow label="Shipyard" level={buildings.shipyard} />
-              <BuildingRow label="Research Lab" level={buildings.researchLab} />
+              <BuildingRow label="Metal Mine" level={buildings.metalMine} buildingId={1} />
+              <BuildingRow label="Crystal Mine" level={buildings.crystalMine} buildingId={2} />
+              <BuildingRow label="Deut Synth" level={buildings.deutSynth} buildingId={3} />
+              <BuildingRow label="Solar Plant" level={buildings.solarPlant} buildingId={4} />
+              <BuildingRow label="Shipyard" level={buildings.shipyard} buildingId={21} />
+              <BuildingRow label="Research Lab" level={buildings.researchLab} buildingId={31} />
             </div>
           </div>
         </div>
@@ -311,13 +311,13 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
       <div className="hud-panel buildings-panel">
         <h3>Buildings</h3>
         <div className="buildings-grid">
-          <BuildingRow label="Metal Mine" level={buildings.metalMine} />
-          <BuildingRow label="Crystal Mine" level={buildings.crystalMine} />
-          <BuildingRow label="Deut Synth" level={buildings.deutSynth} />
-          <BuildingRow label="Solar Plant" level={buildings.solarPlant} />
-          <BuildingRow label="Robotics" level={buildings.roboticsFactory} />
-          <BuildingRow label="Shipyard" level={buildings.shipyard} />
-          <BuildingRow label="Research Lab" level={buildings.researchLab} />
+          <BuildingRow label="Metal Mine" level={buildings.metalMine} buildingId={1} />
+          <BuildingRow label="Crystal Mine" level={buildings.crystalMine} buildingId={2} />
+          <BuildingRow label="Deut Synth" level={buildings.deutSynth} buildingId={3} />
+          <BuildingRow label="Solar Plant" level={buildings.solarPlant} buildingId={4} />
+          <BuildingRow label="Robotics" level={buildings.roboticsFactory} buildingId={14} />
+          <BuildingRow label="Shipyard" level={buildings.shipyard} buildingId={21} />
+          <BuildingRow label="Research Lab" level={buildings.researchLab} buildingId={31} />
         </div>
       </div>
 
@@ -464,11 +464,44 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function BuildingRow({ label, level }: { label: string; level: number }) {
+function BuildingRow({ label, level, buildingId }: { label: string; level: number; buildingId: number }) {
+  const activePlanetId = GameStore((s) => s.activePlanetId)
+  const fetchPlanetState = GameStore((s) => s.fetchPlanetState)
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+
+  const handleUpgrade = useCallback(async () => {
+    setLoading(true)
+    setMsg(null)
+    try {
+      const { addToQueue } = await import('../lib/api')
+      await addToQueue(activePlanetId, buildingId, level + 1)
+      setMsg('Queued!')
+      setTimeout(() => { setMsg(null); fetchPlanetState() }, 1500)
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : 'Error')
+      setTimeout(() => setMsg(null), 2000)
+    } finally {
+      setLoading(false)
+    }
+  }, [activePlanetId, buildingId, level, fetchPlanetState])
+
   return (
-    <div className="stat building-stat">
+    <div className="stat building-stat" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
       <span className="label">{label}</span>
-      <span className="value">Lv {level}</span>
+      <span className="value" style={{ minWidth: 36 }}>Lv {level}</span>
+      <button
+        onClick={handleUpgrade}
+        disabled={loading}
+        style={{
+          background: 'none', border: '1px solid #00ff41', color: '#00ff41',
+          fontSize: '0.65rem', padding: '1px 5px', cursor: 'pointer',
+          opacity: loading ? 0.5 : 1, minWidth: 42,
+        }}
+        title={`Upgrade ${label} to Lv ${level + 1}`}
+      >
+        {msg ?? (loading ? '...' : '▲ UP')}
+      </button>
     </div>
   )
 }
