@@ -125,6 +125,9 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
 
   return (
     <div className="hud">
+      {/* Live Activity Dashboard */}
+      <ActivityDashboard />
+
       {/* Hamburger button — mobile only */}
       <button
         className={`hamburger-btn${menuOpen ? ' open' : ''}`}
@@ -596,3 +599,4 @@ function QueueRow({ item, isFirst }: { item: api.QueueItem; isFirst: boolean }) 
 
 // Need to import the QueueItem type for the sub-component
 import type * as api from '../lib/api'
+import ActivityDashboard from './ActivityDashboard'
