@@ -9,6 +9,7 @@ import PlayerProfile from './components/PlayerProfile'
 import ResourceTrader from './components/ResourceTrader'
 import ResearchTree from './components/ResearchTree'
 import FleetDispatch from './components/FleetDispatch'
+import ResourceChart from './components/ResourceChart'
 import { GameStore } from './store/gameStore'
 
 // ---------------------------------------------------------------------------
@@ -53,7 +54,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -77,6 +78,7 @@ export default function App() {
   //   T — Trader
   //   R — Research Tree
   //   F — Fleet Dispatch
+  //   C — Resource Chart
   //   Escape — close any open panel
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -102,6 +104,9 @@ export default function App() {
       }
       if (e.key === 'f' || e.key === 'F') {
         setActivePanel((p) => (p === 'fleet' ? null : 'fleet'))
+      }
+      if (e.key === 'c' || e.key === 'C') {
+        setActivePanel((p) => (p === 'chart' ? null : 'chart'))
       }
     }
     window.addEventListener('keydown', handler)
@@ -137,6 +142,7 @@ export default function App() {
         onOpenTrader={() => setActivePanel('trader')}
         onOpenResearch={() => setActivePanel('research')}
         onOpenFleet={() => setActivePanel('fleet')}
+        onOpenChart={() => setActivePanel('chart')}
       />
 
       {/* Galaxy Map modal */}
@@ -174,6 +180,13 @@ export default function App() {
       {activePanel === 'fleet' && (
         <ModalOverlay onClose={closePanel}>
           <FleetDispatch onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {/* Resource Chart modal */}
+      {activePanel === 'chart' && (
+        <ModalOverlay onClose={closePanel}>
+          <ResourceChart onClose={closePanel} />
         </ModalOverlay>
       )}
 

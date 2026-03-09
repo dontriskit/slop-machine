@@ -41,9 +41,10 @@ interface HUDProps {
   onOpenTrader?: () => void
   onOpenResearch?: () => void
   onOpenFleet?: () => void
+  onOpenChart?: () => void
 }
 
-export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenFleet }: HUDProps) {
+export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenFleet, onOpenChart }: HUDProps) {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const closeMenu = () => setMenuOpen(false)
@@ -144,6 +145,11 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
             {onOpenFleet && (
               <button className="mobile-nav-btn" onClick={() => { onOpenFleet(); closeMenu() }}>
                 Fleet (F)
+              </button>
+            )}
+            {onOpenChart && (
+              <button className="mobile-nav-btn" onClick={() => { onOpenChart(); closeMenu() }}>
+                Production Chart (C)
               </button>
             )}
           </div>
@@ -362,6 +368,11 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
         {onOpenFleet && (
           <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenFleet}>
             Fleet (F)
+          </button>
+        )}
+        {onOpenChart && (
+          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenChart}>
+            Production Chart (C)
           </button>
         )}
       </div>
