@@ -21,19 +21,28 @@ body::before {
   width: 100%;
   height: 100%;
   pointer-events: none;
-  font-family: 'Courier New', monospace;
-  color: #00ff00;
-  text-shadow: 0 0 10px #00ff00;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: #e2e8f0;
 }
 
 .hud-panel {
   pointer-events: all;
-  background: rgba(0, 8, 20, 0.8);
-  border: 2px solid #00ff00;
-  border-radius: 4px;
-  padding: 16px;
-  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
-  backdrop-filter: blur(5px);
+  background: rgba(8, 14, 28, 0.88);
+  border: 1px solid rgba(100, 140, 200, 0.18);
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+}
+
+/* ---- Panel headings shared ---- */
+
+.hud-panel h2,
+.hud-panel h3 {
+  color: #5b9cf6;
+  letter-spacing: 0.01em;
+  font-weight: 600;
+  text-transform: none;
 }
 
 /* ---- Info panel (top-left) ---- */
@@ -47,26 +56,28 @@ body::before {
 
 .info-panel h2 {
   margin: 0 0 12px 0;
-  font-size: 18px;
-  letter-spacing: 2px;
-  color: #ffff00;
-  text-shadow: 0 0 10px #ffff00;
+  font-size: 17px;
+  color: #e2e8f0;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .stat {
   display: flex;
   justify-content: space-between;
-  margin: 8px 0;
+  margin: 6px 0;
   font-size: 12px;
 }
 
 .stat .label {
-  opacity: 0.7;
+  color: #64748b;
+  font-weight: 600;
 }
 
 .stat .value {
-  font-weight: bold;
-  color: #00ffff;
+  font-weight: 400;
+  color: #e2e8f0;
+  font-family: 'Courier New', monospace;
 }
 
 /* ---- Resource panel (top-right) ---- */
@@ -79,62 +90,63 @@ body::before {
 }
 
 .resource-panel h3 {
-  margin: 0 0 12px 0;
-  font-size: 14px;
-  color: #ffff00;
-  text-shadow: 0 0 8px #ffff00;
+  margin: 0 0 10px 0;
+  font-size: 13px;
 }
 
 .resource-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 6px 0;
-  font-size: 13px;
+  margin: 5px 0;
+  font-size: 12px;
 }
 
 .res-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 3px;
-  font-size: 11px;
-  font-weight: bold;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
   flex-shrink: 0;
+  font-family: 'Courier New', monospace;
 }
 
 .metal-icon {
-  background: rgba(160, 160, 160, 0.4);
-  border: 1px solid #a0a0a0;
-  color: #e0e0e0;
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  color: #94a3b8;
 }
 
 .crystal-icon {
-  background: rgba(100, 180, 255, 0.3);
-  border: 1px solid #64b4ff;
-  color: #a0d4ff;
+  background: rgba(125, 211, 252, 0.12);
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  color: #7dd3fc;
 }
 
 .deut-icon {
-  background: rgba(0, 200, 100, 0.3);
-  border: 1px solid #00c864;
-  color: #80ffb0;
+  background: rgba(110, 231, 183, 0.12);
+  border: 1px solid rgba(110, 231, 183, 0.35);
+  color: #6ee7b7;
 }
 
 .res-value {
   flex: 1;
   text-align: right;
-  color: #ffffff;
-  font-weight: bold;
+  color: #e2e8f0;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
 }
 
 .res-rate {
   width: 80px;
   text-align: right;
-  opacity: 0.6;
+  color: #64748b;
   font-size: 11px;
+  font-family: 'Courier New', monospace;
 }
 
 /* ---- Buildings panel (middle-right) ---- */
@@ -150,7 +162,7 @@ body::before {
 
 .buildings-panel h3 {
   margin: 0 0 10px 0;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .buildings-grid {
@@ -160,7 +172,8 @@ body::before {
 }
 
 .building-stat .value {
-  color: #00ffff;
+  color: #93c5fd;
+  font-family: 'Courier New', monospace;
 }
 
 /* ---- Queue panel (bottom-right above controls) ---- */
@@ -174,11 +187,11 @@ body::before {
 
 .queue-panel h3 {
   margin: 0 0 10px 0;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .queue-empty {
-  opacity: 0.5;
+  color: #64748b;
   font-size: 12px;
   margin: 4px 0;
 }
@@ -194,23 +207,25 @@ body::before {
   justify-content: space-between;
   align-items: center;
   font-size: 12px;
-  padding: 4px 6px;
-  border: 1px solid rgba(0, 255, 0, 0.15);
-  border-radius: 3px;
+  padding: 5px 8px;
+  border: 1px solid rgba(100, 140, 200, 0.12);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .queue-active {
-  border-color: #00ffff;
-  background: rgba(0, 255, 255, 0.08);
+  border-color: rgba(91, 156, 246, 0.45);
+  background: rgba(91, 156, 246, 0.07);
 }
 
 .queue-name {
-  opacity: 0.9;
+  color: #e2e8f0;
 }
 
 .queue-time {
-  color: #ffff00;
-  font-weight: bold;
+  color: #f59e0b;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
 }
 
 /* ---- Agent panel (left, below info) ---- */
@@ -224,7 +239,7 @@ body::before {
 
 .agent-panel h3 {
   margin: 0 0 10px 0;
-  font-size: 14px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -238,12 +253,12 @@ body::before {
 }
 
 .agent-dot.active {
-  background: #00ff00;
-  box-shadow: 0 0 8px #00ff00;
+  background: #34d399;
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
 }
 
 .agent-dot.inactive {
-  background: #666;
+  background: #334155;
 }
 
 .agent-controls {
@@ -254,47 +269,48 @@ body::before {
 
 .agent-btn {
   flex: 1;
-  padding: 6px 8px;
-  font-size: 11px;
-  font-family: 'Courier New', monospace;
-  border: 1px solid #00ff00;
-  background: rgba(0, 255, 0, 0.1);
-  color: #00ff00;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: 'Inter', system-ui, sans-serif;
+  letter-spacing: 0.01em;
+  border: 1px solid rgba(91, 156, 246, 0.3);
+  background: rgba(91, 156, 246, 0.12);
+  color: #93c5fd;
   cursor: pointer;
-  border-radius: 3px;
-  transition: all 0.2s;
+  border-radius: 6px;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .agent-btn:hover:not(:disabled) {
-  background: rgba(0, 255, 0, 0.25);
-  box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+  background: rgba(91, 156, 246, 0.22);
+  border-color: rgba(91, 156, 246, 0.6);
 }
 
 .agent-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .agent-btn.enabled {
-  border-color: #ff4444;
-  color: #ff4444;
-  background: rgba(255, 68, 68, 0.1);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #fca5a5;
+  background: rgba(248, 113, 113, 0.1);
 }
 
 .agent-btn.enabled:hover {
-  background: rgba(255, 68, 68, 0.25);
-  box-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+  background: rgba(248, 113, 113, 0.2);
+  border-color: rgba(248, 113, 113, 0.6);
 }
 
 .run-btn {
-  border-color: #00ffff;
-  color: #00ffff;
-  background: rgba(0, 255, 255, 0.1);
+  border-color: rgba(52, 211, 153, 0.3);
+  color: #6ee7b7;
+  background: rgba(52, 211, 153, 0.08);
 }
 
 .run-btn:hover:not(:disabled) {
-  background: rgba(0, 255, 255, 0.25);
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  background: rgba(52, 211, 153, 0.18);
+  border-color: rgba(52, 211, 153, 0.6);
 }
 
 .agent-decision {
@@ -303,19 +319,19 @@ body::before {
 }
 
 .agent-decision .label {
-  opacity: 0.6;
+  color: #64748b;
 }
 
 .agent-decision .value {
-  color: #ffff00;
+  color: #f59e0b;
   margin-left: 4px;
 }
 
 .agent-reason {
   margin: 4px 0 0 0;
-  opacity: 0.5;
+  color: #475569;
   font-size: 10px;
-  line-height: 1.3;
+  line-height: 1.4;
 }
 
 /* ---- Galaxy selector (bottom-left) ---- */
@@ -327,36 +343,39 @@ body::before {
 }
 
 .galaxy-selector h3 {
-  margin: 0 0 12px 0;
-  font-size: 14px;
+  margin: 0 0 10px 0;
+  font-size: 13px;
 }
 
 .galaxy-buttons {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 6px;
 }
 
 .galaxy-btn {
-  padding: 8px;
-  border: 1px solid #00ff00;
-  background: rgba(0, 255, 0, 0.1);
-  color: #00ff00;
+  padding: 7px;
+  border: 1px solid rgba(91, 156, 246, 0.3);
+  background: rgba(91, 156, 246, 0.12);
+  color: #93c5fd;
   cursor: pointer;
-  font-family: 'Courier New', monospace;
-  border-radius: 3px;
-  transition: all 0.2s;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  border-radius: 6px;
+  transition: background 0.15s, border-color 0.15s;
+  letter-spacing: 0.01em;
 }
 
 .galaxy-btn:hover {
-  background: rgba(0, 255, 0, 0.2);
-  box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+  background: rgba(91, 156, 246, 0.22);
+  border-color: rgba(91, 156, 246, 0.6);
 }
 
 .galaxy-btn.active {
-  background: rgba(0, 255, 0, 0.4);
-  box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.8);
-  font-weight: bold;
+  background: rgba(91, 156, 246, 0.28);
+  border-color: rgba(91, 156, 246, 0.7);
+  color: #bfdbfe;
+  font-weight: 600;
 }
 
 /* ---- Controls panel (bottom-right) ---- */
@@ -370,13 +389,14 @@ body::before {
 }
 
 .controls-panel h3 {
-  margin: 0 0 12px 0;
-  font-size: 14px;
+  margin: 0 0 10px 0;
+  font-size: 13px;
 }
 
 .control-item {
-  margin: 6px 0;
-  opacity: 0.8;
+  margin: 5px 0;
+  color: #64748b;
+  font-size: 11px;
 }
 
 /* ---- Loading / Error indicators ---- */
@@ -384,15 +404,14 @@ body::before {
 .loading-indicator {
   margin-top: 8px;
   font-size: 11px;
-  color: #ffff00;
+  color: #f59e0b;
   animation: pulse 1s infinite;
 }
 
 .error-indicator {
   margin-top: 8px;
   font-size: 11px;
-  color: #ff4444;
-  text-shadow: 0 0 8px #ff4444;
+  color: #f87171;
   word-break: break-word;
 }
 
@@ -416,7 +435,7 @@ body::before {
 }
 
 .buildings-panel::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 0, 0.3);
+  background: rgba(91, 156, 246, 0.25);
   border-radius: 2px;
 }
 
@@ -430,9 +449,9 @@ body::before {
   z-index: 1000;
   width: 44px;
   height: 44px;
-  background: rgba(0, 8, 20, 0.9);
-  border: 2px solid #00ff00;
-  border-radius: 4px;
+  background: rgba(8, 14, 28, 0.92);
+  border: 1px solid rgba(91, 156, 246, 0.4);
+  border-radius: 6px;
   cursor: pointer;
   flex-direction: column;
   align-items: center;
@@ -440,14 +459,14 @@ body::before {
   gap: 5px;
   padding: 0;
   pointer-events: all;
-  box-shadow: 0 0 12px rgba(0, 255, 0, 0.3);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 
 .hamburger-btn span {
   display: block;
   width: 20px;
   height: 2px;
-  background: #00ff00;
+  background: #93c5fd;
   border-radius: 1px;
   transition: all 0.2s;
 }
@@ -474,7 +493,7 @@ body::before {
   width: 100vw;
   height: 100vh;
   z-index: 900;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.55);
   pointer-events: all;
 }
 
@@ -488,25 +507,25 @@ body::before {
   left: 0;
   width: min(300px, 85vw);
   height: 100%;
-  background: rgba(0, 8, 20, 0.97);
-  border-right: 2px solid #00ff00;
-  box-shadow: 0 0 30px rgba(0, 255, 0, 0.2);
+  background: rgba(8, 14, 28, 0.97);
+  border-right: 1px solid rgba(100, 140, 200, 0.2);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
   padding: 64px 16px 16px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  font-family: 'Courier New', monospace;
-  color: #00ff00;
-  text-shadow: 0 0 10px #00ff00;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: #e2e8f0;
 }
 
 .mobile-nav-section h3 {
-  font-size: 12px;
-  opacity: 0.5;
-  letter-spacing: 2px;
+  font-size: 10px;
+  color: #64748b;
+  letter-spacing: 0.12em;
   margin: 0 0 8px 0;
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .mobile-nav-btn {
@@ -516,21 +535,22 @@ body::before {
   min-height: 44px;
   padding: 10px 14px;
   margin-bottom: 6px;
-  background: rgba(0, 255, 0, 0.08);
-  border: 1px solid #00ff00;
-  border-radius: 4px;
-  color: #00ff00;
-  font-family: 'Courier New', monospace;
+  background: rgba(91, 156, 246, 0.08);
+  border: 1px solid rgba(91, 156, 246, 0.25);
+  border-radius: 6px;
+  color: #93c5fd;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 13px;
   cursor: pointer;
   text-align: left;
-  transition: all 0.2s;
+  transition: background 0.15s, border-color 0.15s;
+  letter-spacing: 0.01em;
 }
 
 .mobile-nav-btn:hover,
 .mobile-nav-btn:active {
-  background: rgba(0, 255, 0, 0.2);
-  box-shadow: 0 0 10px rgba(0, 255, 0, 0.4);
+  background: rgba(91, 156, 246, 0.18);
+  border-color: rgba(91, 156, 246, 0.5);
 }
 
 .mobile-resource-bar {
@@ -572,14 +592,14 @@ body::before {
     left: 0;
     right: 0;
     z-index: 800;
-    background: rgba(0, 8, 20, 0.92);
-    border-bottom: 1px solid rgba(0, 255, 0, 0.4);
+    background: rgba(8, 14, 28, 0.94);
+    border-bottom: 1px solid rgba(100, 140, 200, 0.15);
     padding: 8px 12px 8px 64px;
     gap: 6px;
     align-items: center;
-    font-family: 'Courier New', monospace;
+    font-family: 'Inter', system-ui, sans-serif;
     font-size: 12px;
-    color: #00ff00;
+    color: #e2e8f0;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     flex-wrap: nowrap;
@@ -592,10 +612,11 @@ body::before {
     gap: 4px;
     white-space: nowrap;
     flex-shrink: 0;
+    font-family: 'Courier New', monospace;
   }
 
   .mobile-resource-separator {
-    opacity: 0.3;
+    color: rgba(100, 140, 200, 0.3);
     flex-shrink: 0;
   }
 

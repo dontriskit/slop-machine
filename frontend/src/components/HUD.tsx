@@ -4,6 +4,7 @@ import { DEFAULT_PLAYER_ID } from '../lib/config'
 import PlanetSelector from './PlanetSelector'
 import BuildingUpgradeModal from './BuildingUpgradeModal'
 import './HUD.css'
+import PlanetView from './PlanetView'
 
 // Building ID -> image filename stem
 const BUILDING_IMAGE: Record<number, string> = {
@@ -128,6 +129,9 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
       {/* Live Activity Dashboard */}
       <ActivityDashboard />
 
+      {/* Planet cinematic overview */}
+      <PlanetView />
+
       {/* Hamburger button — mobile only */}
       <button
         className={`hamburger-btn${menuOpen ? ' open' : ''}`}
@@ -158,7 +162,7 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
         {apiReachable !== undefined && (
           <>
             <span className="mobile-resource-separator">|</span>
-            <span className="mobile-resource-item" style={{ color: apiReachable ? '#00ff00' : '#ff4444' }}>
+            <span className="mobile-resource-item" style={{ color: apiReachable ? '#34d399' : '#f87171' }}>
               {apiReachable ? '● Online' : '● Offline'}
             </span>
           </>
@@ -207,7 +211,7 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
                 {unreadMessages > 0 && (
                   <span style={{
                     position: 'absolute', top: 4, right: 8,
-                    background: '#ff4444', color: '#fff',
+                    background: '#f87171', color: '#fff',
                     borderRadius: 8, fontSize: 9, padding: '0 5px',
                     lineHeight: '14px', fontWeight: 'bold',
                   }}>{unreadMessages}</span>
@@ -306,7 +310,7 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
           <span className="label">API:</span>
           <span
             className="value"
-            style={{ color: apiReachable ? '#00ff00' : '#ff4444' }}
+            style={{ color: apiReachable ? '#34d399' : '#f87171' }}
           >
             {apiReachable ? 'Connected' : 'Offline (mock)'}
           </span>
@@ -464,7 +468,7 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
             {unreadMessages > 0 && (
               <span style={{
                 position: 'absolute', top: 4, right: 8,
-                background: '#ff4444', color: '#fff',
+                background: '#f87171', color: '#fff',
                 borderRadius: 8, fontSize: 9, padding: '0 5px',
                 lineHeight: '14px', fontWeight: 'bold',
               }}>{unreadMessages}</span>
@@ -559,9 +563,10 @@ function BuildingRow({ label, level, buildingId }: { label: string; level: numbe
           onClick={handleQuickUpgrade}
           disabled={loading}
           style={{
-            background: 'none', border: '1px solid #00ff41', color: '#00ff41',
+            background: 'rgba(91,156,246,0.1)', border: '1px solid rgba(91,156,246,0.3)', color: '#93c5fd',
             fontSize: '0.65rem', padding: '1px 5px', cursor: 'pointer',
-            opacity: loading ? 0.5 : 1, minWidth: 42,
+            opacity: loading ? 0.5 : 1, minWidth: 42, borderRadius: 4,
+            fontFamily: 'Inter, system-ui, sans-serif',
           }}
           title={`Quick upgrade ${label} to Lv ${level + 1}`}
         >

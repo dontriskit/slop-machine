@@ -187,9 +187,9 @@ export default function ActivityDashboard() {
     return (
       <div style={panelStyle}>
         <div style={headerStyle} onClick={() => setCollapsed(v => !v)}>
-          <span style={{ color: '#00ffff', letterSpacing: 2 }}>LIVE ACTIVITY</span>
+          <span style={{ color: '#5b9cf6', letterSpacing: 2, fontWeight: 600, fontSize: 10 }}>LIVE ACTIVITY</span>
         </div>
-        <div style={{ padding: '8px 12px', color: '#888', fontSize: 11 }}>
+        <div style={{ padding: '8px 12px', color: '#64748b', fontSize: 11 }}>
           Register to play to see live data.
         </div>
       </div>
@@ -214,9 +214,9 @@ export default function ActivityDashboard() {
     <div style={panelStyle}>
       {/* Header / collapse toggle */}
       <div style={headerStyle} onClick={() => setCollapsed(v => !v)} title="Click to collapse/expand">
-        <span style={{ color: '#00ffff', letterSpacing: 2, fontSize: 11 }}>LIVE ACTIVITY</span>
-        <span style={{ color: '#00ff41', fontSize: 10, opacity: 0.7 }}>
-          {collapsed ? '▶ EXPAND' : '▼ COLLAPSE'}
+        <span style={{ color: '#5b9cf6', letterSpacing: 2, fontSize: 10, fontWeight: 600 }}>LIVE ACTIVITY</span>
+        <span style={{ color: '#475569', fontSize: 10 }}>
+          {collapsed ? '▶ Expand' : '▼ Collapse'}
         </span>
       </div>
 
@@ -232,7 +232,7 @@ export default function ActivityDashboard() {
                 <Row
                   label={`${getBuildingName(firstQueued)} Lv${getLevel(firstQueued)}`}
                   value={fmtCountdown(getCompletesAt(firstQueued) - now)}
-                  valueColor="#00ffff"
+                  valueColor="#f59e0b"
                   badge="ACTIVE"
                 />
                 {nextQueued && (
@@ -253,9 +253,9 @@ export default function ActivityDashboard() {
           <Section label="PRODUCTION /HR">
             {resources ? (
               <>
-                <Row label="Metal" value={`+${fmtNum(resources.production.metalPerHour)}`} valueColor="#c8a96e" />
-                <Row label="Crystal" value={`+${fmtNum(resources.production.crystalPerHour)}`} valueColor="#7ecaff" />
-                <Row label="Deut" value={`+${fmtNum(resources.production.deutPerHour)}`} valueColor="#8df5c0" />
+                <Row label="Metal" value={`+${fmtNum(resources.production.metalPerHour)}`} valueColor="#94a3b8" />
+                <Row label="Crystal" value={`+${fmtNum(resources.production.crystalPerHour)}`} valueColor="#7dd3fc" />
+                <Row label="Deut" value={`+${fmtNum(resources.production.deutPerHour)}`} valueColor="#6ee7b7" />
               </>
             ) : (
               <Row label="Status" value="Loading..." dim />
@@ -267,15 +267,15 @@ export default function ActivityDashboard() {
             {resources ? (
               energyCons > 0 ? (
                 <>
-                  <Row label="Production" value={fmtNum(energyProd)} valueColor="#ffd700" />
-                  <Row label="Consumption" value={fmtNum(energyCons)} valueColor="#ff8c00" />
+                  <Row label="Production" value={fmtNum(energyProd)} valueColor="#f59e0b" />
+                  <Row label="Consumption" value={fmtNum(energyCons)} valueColor="#fb923c" />
                   <Row
                     label="Balance"
                     value={(energyBalance >= 0 ? '+' : '') + fmtNum(energyBalance)}
-                    valueColor={energyNegative ? '#ff4444' : '#00ff41'}
+                    valueColor={energyNegative ? '#f87171' : '#34d399'}
                   />
                   {energyNegative && (
-                    <div style={{ color: '#ff4444', fontSize: 9, marginTop: 2, textAlign: 'center' }}>
+                    <div style={{ color: '#f59e0b', fontSize: 9, marginTop: 2, textAlign: 'center' }}>
                       ⚠ ENERGY DEFICIT — production reduced
                     </div>
                   )}
@@ -284,7 +284,7 @@ export default function ActivityDashboard() {
                 <Row
                   label="Energy"
                   value={fmtNum(resources.energy)}
-                  valueColor={resources.energy < 0 ? '#ff4444' : '#ffd700'}
+                  valueColor={resources.energy < 0 ? '#f87171' : '#f59e0b'}
                 />
               )
             ) : (
@@ -302,7 +302,7 @@ export default function ActivityDashboard() {
                   <Row
                     label={getMissionType(nearestMission)}
                     value={`ETA ${fmtCountdown(getArrivalTime(nearestMission) - now)}`}
-                    valueColor="#00ffff"
+                    valueColor="#93c5fd"
                     badge="NEXT"
                   />
                 )}
@@ -322,7 +322,7 @@ export default function ActivityDashboard() {
                 <div key={ev.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 4, marginBottom: 2 }}>
                   <span style={{
                     fontSize: 10,
-                    color: ev.type === 'attack' ? '#ff4444' : ev.type === 'build' ? '#00ff41' : '#aaa',
+                    color: ev.type === 'attack' ? '#f87171' : ev.type === 'build' ? '#34d399' : '#64748b',
                     flex: 1,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -330,7 +330,7 @@ export default function ActivityDashboard() {
                   }} title={ev.message}>
                     {ev.message}
                   </span>
-                  <span style={{ fontSize: 9, color: '#555', flexShrink: 0 }}>
+                  <span style={{ fontSize: 9, color: '#334155', flexShrink: 0 }}>
                     {fmtTime(ev.timestamp)}
                   </span>
                 </div>
@@ -339,8 +339,8 @@ export default function ActivityDashboard() {
           </Section>
 
           {/* Footer refresh indicator */}
-          <div style={{ textAlign: 'right', fontSize: 9, color: '#333', marginTop: 2 }}>
-            auto-refresh 5s · t={tick}
+          <div style={{ textAlign: 'right', fontSize: 9, color: '#1e293b', marginTop: 2, padding: '0 12px 4px' }}>
+            auto-refresh 5s
           </div>
         </div>
       )}
@@ -356,14 +356,14 @@ const panelStyle: React.CSSProperties = {
   position: 'absolute',
   bottom: 20,
   left: 20,
-  width: 240,
-  background: 'rgba(0, 8, 20, 0.88)',
-  border: '1px solid #00ff41',
-  borderRadius: 4,
-  boxShadow: '0 0 16px rgba(0,255,65,0.25)',
-  backdropFilter: 'blur(6px)',
-  fontFamily: "'Courier New', monospace",
-  color: '#00ff41',
+  width: 244,
+  background: 'rgba(8, 14, 28, 0.88)',
+  border: '1px solid rgba(100, 140, 200, 0.18)',
+  borderRadius: 8,
+  boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+  backdropFilter: 'blur(12px)',
+  fontFamily: "'Inter', system-ui, sans-serif",
+  color: '#e2e8f0',
   fontSize: 11,
   zIndex: 50,
   pointerEvents: 'all',
@@ -375,16 +375,18 @@ const headerStyle: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '6px 10px',
+  padding: '7px 12px',
   cursor: 'pointer',
-  borderBottom: '1px solid #00ff4133',
+  borderBottom: '1px solid rgba(100, 140, 200, 0.12)',
   userSelect: 'none',
+  background: 'rgba(255,255,255,0.03)',
+  borderRadius: '8px 8px 0 0',
 }
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ padding: '4px 10px 2px' }}>
-      <div style={{ color: '#ffd700', fontSize: 9, letterSpacing: 1.5, marginBottom: 3, opacity: 0.8 }}>
+    <div style={{ padding: '4px 12px 2px' }}>
+      <div style={{ color: '#64748b', fontSize: 9, letterSpacing: 1.5, marginBottom: 4, fontWeight: 600, textTransform: 'uppercase' }}>
         {label}
       </div>
       {children}
@@ -406,15 +408,15 @@ function Row({
   badge?: string
 }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-      <span style={{ color: dim ? '#555' : '#aaa', fontSize: 10, flex: 1 }}>{label}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+      <span style={{ color: dim ? '#334155' : '#64748b', fontSize: 10, flex: 1 }}>{label}</span>
       {badge && (
         <span style={{
-          fontSize: 8, color: '#000', background: '#00ff41',
-          borderRadius: 2, padding: '0 3px', marginRight: 4, letterSpacing: 0.5,
+          fontSize: 8, color: '#0f172a', background: '#5b9cf6',
+          borderRadius: 3, padding: '0 4px', marginRight: 5, letterSpacing: 0.5, fontWeight: 700,
         }}>{badge}</span>
       )}
-      <span style={{ color: valueColor ?? (dim ? '#555' : '#00ff41'), fontSize: 10, fontWeight: 'bold' }}>
+      <span style={{ color: valueColor ?? (dim ? '#334155' : '#e2e8f0'), fontSize: 10, fontWeight: 600, fontFamily: "'Courier New', monospace" }}>
         {value}
       </span>
     </div>
