@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import BattleReport from './BattleReport'
+import CombatReplay from './CombatReplay'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -230,7 +231,17 @@ export default function SpectatorMode({ onClose }: SpectatorModeProps) {
           {' — '}
           <span style={{ color: '#888' }}>{replay.galaxy}:{replay.system}:{replay.position}</span>
         </div>
-        <BattleReport report={reportData as Parameters<typeof BattleReport>[0]['report']} />
+        {/* Animated round-by-round replay */}
+        <CombatReplay
+          battleData={reportData}
+          attackerName={replay.attacker_name}
+          defenderName={replay.defender_name}
+          onClose={() => setReplay(null)}
+        />
+        {/* Legacy text report below */}
+        <div style={{ marginTop: 16 }}>
+          <BattleReport report={reportData as Parameters<typeof BattleReport>[0]['report']} />
+        </div>
       </div>
     )
   }
