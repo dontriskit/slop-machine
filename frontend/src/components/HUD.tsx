@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { GameStore } from '../store/gameStore'
 import './HUD.css'
 
@@ -41,10 +41,13 @@ interface HUDProps {
   onOpenTrader?: () => void
   onOpenResearch?: () => void
   onOpenFleet?: () => void
-  onOpenSettings?: () => void
 }
 
-export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenFleet, onOpenSettings }: HUDProps) {
+export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenFleet }: HUDProps) {
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  const closeMenu = () => setMenuOpen(false)
+
   const selectedGalaxy = GameStore((s) => s.selectedGalaxy)
   const selectedSystem = GameStore((s) => s.selectedSystem)
   const selectedPlanet = GameStore((s) => s.selectedPlanet)
@@ -76,6 +79,125 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
 
   return (
     <div className="hud">
+      {/* Hamburger button — mobile only */}
+      <button
+        className={`hamburger-btn${menuOpen ? ' open' : ''}`}
+        onClick={() => setMenuOpen((v) => !v)}
+        aria-label="Toggle menu"
+      >
+        <span />
+        <span />
+        <span />
+      </button>
+
+      {/* Mobile resource bar — shown at top on small screens */}
+      <div className="mobile-resource-bar">
+        <span className="mobile-resource-item">
+          <span className="res-icon metal-icon" style={{ width: 20, height: 20, fontSize: 10 }}>Fe</span>
+          {formatNumber(resources.metal)}
+        </span>
+        <span className="mobile-resource-separator">|</span>
+        <span className="mobile-resource-item">
+          <span className="res-icon crystal-icon" style={{ width: 20, height: 20, fontSize: 10 }}>Si</span>
+          {formatNumber(resources.crystal)}
+        </span>
+        <span className="mobile-resource-separator">|</span>
+        <span className="mobile-resource-item">
+          <span className="res-icon deut-icon" style={{ width: 20, height: 20, fontSize: 10 }}>D</span>
+          {formatNumber(resources.deuterium)}
+        </span>
+        {apiReachable !== undefined && (
+          <>
+            <span className="mobile-resource-separator">|</span>
+            <span className="mobile-resource-item" style={{ color: apiReachable ? '#00ff00' : '#ff4444' }}>
+              {apiReachable ? '● Online' : '● Offline'}
+            </span>
+          </>
+        )}
+      </div>
+
+      {/* Mobile nav drawer */}
+      <div className={`mobile-nav-drawer${menuOpen ? ' open' : ''}`} onClick={closeMenu}>
+        <div className="mobile-nav-content" onClick={(e) => e.stopPropagation()}>
+          <div className="mobile-nav-section">
+            <h3>Navigation</h3>
+            {onOpenGalaxyMap && (
+              <button className="mobile-nav-btn" onClick={() => { onOpenGalaxyMap(); closeMenu() }}>
+                Galaxy Map (G)
+              </button>
+            )}
+            {onOpenLeaderboard && (
+              <button className="mobile-nav-btn" onClick={() => { onOpenLeaderboard(); closeMenu() }}>
+                Leaderboard (L)
+              </button>
+            )}
+            {onOpenTrader && (
+              <button className="mobile-nav-btn" onClick={() => { onOpenTrader(); closeMenu() }}>
+                Marketplace (T)
+              </button>
+            )}
+            {onOpenResearch && (
+              <button className="mobile-nav-btn" onClick={() => { onOpenResearch(); closeMenu() }}>
+                Research (R)
+              </button>
+            )}
+            {onOpenFleet && (
+              <button className="mobile-nav-btn" onClick={() => { onOpenFleet(); closeMenu() }}>
+                Fleet (F)
+              </button>
+            )}
+          </div>
+
+          <div className="mobile-nav-section">
+            <h3>Galaxies</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              {Array.from({ length: 9 }, (_, i) => i + 1).map((galaxy) => (
+                <button
+                  key={galaxy}
+                  className={`galaxy-btn${selectedGalaxy === galaxy ? ' active' : ''}`}
+                  onClick={() => { setSelectedGalaxy(galaxy); closeMenu() }}
+                >
+                  {galaxy}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mobile-nav-section">
+            <h3>AI Agent</h3>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className={`agent-btn${agentEnabled ? ' enabled' : ''}`}
+                onClick={toggleAgent}
+                style={{ flex: 1 }}
+              >
+                {agentEnabled ? 'Disable Agent' : 'Enable Agent'}
+              </button>
+              <button
+                className="agent-btn run-btn"
+                onClick={runAgentNow}
+                disabled={agentRunning}
+                style={{ flex: 1 }}
+              >
+                {agentRunning ? 'Running...' : 'Run Now'}
+              </button>
+            </div>
+          </div>
+
+          <div className="mobile-nav-section">
+            <h3>Buildings</h3>
+            <div style={{ fontSize: 12 }}>
+              <BuildingRow label="Metal Mine" level={buildings.metalMine} />
+              <BuildingRow label="Crystal Mine" level={buildings.crystalMine} />
+              <BuildingRow label="Deut Synth" level={buildings.deutSynth} />
+              <BuildingRow label="Solar Plant" level={buildings.solarPlant} />
+              <BuildingRow label="Shipyard" level={buildings.shipyard} />
+              <BuildingRow label="Research Lab" level={buildings.researchLab} />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Top-left: Galaxy info */}
       <div className="hud-panel info-panel">
         <h2>Cosmic Protocol</h2>
@@ -240,11 +362,6 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
         {onOpenFleet && (
           <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenFleet}>
             Fleet (F)
-          </button>
-        )}
-        {onOpenSettings && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenSettings}>
-            Settings (S)
           </button>
         )}
       </div>

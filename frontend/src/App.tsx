@@ -9,7 +9,6 @@ import PlayerProfile from './components/PlayerProfile'
 import ResourceTrader from './components/ResourceTrader'
 import ResearchTree from './components/ResearchTree'
 import FleetDispatch from './components/FleetDispatch'
-import SettingsPage from './components/SettingsPage'
 import { GameStore } from './store/gameStore'
 
 // ---------------------------------------------------------------------------
@@ -25,6 +24,7 @@ function ModalOverlay({
 }) {
   return (
     <div
+      className="modal-overlay"
       style={{
         position: 'fixed',
         inset: 0,
@@ -33,10 +33,18 @@ function ModalOverlay({
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 500,
+        overflowY: 'auto',
+        padding: '8px',
       }}
       onClick={onClose}
     >
-      <div onClick={(e) => e.stopPropagation()}>{children}</div>
+      <div
+        className="modal-inner"
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: '100%' }}
+      >
+        {children}
+      </div>
     </div>
   )
 }
@@ -45,7 +53,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'settings' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -95,9 +103,6 @@ export default function App() {
       if (e.key === 'f' || e.key === 'F') {
         setActivePanel((p) => (p === 'fleet' ? null : 'fleet'))
       }
-      if (e.key === 's' || e.key === 'S') {
-        setActivePanel((p) => (p === 'settings' ? null : 'settings'))
-      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -132,7 +137,6 @@ export default function App() {
         onOpenTrader={() => setActivePanel('trader')}
         onOpenResearch={() => setActivePanel('research')}
         onOpenFleet={() => setActivePanel('fleet')}
-        onOpenSettings={() => setActivePanel('settings')}
       />
 
       {/* Galaxy Map modal */}
@@ -177,13 +181,6 @@ export default function App() {
       {activePanel === 'profile' && profilePlayerId && (
         <ModalOverlay onClose={closePanel}>
           <PlayerProfile playerId={profilePlayerId} onClose={closePanel} />
-        </ModalOverlay>
-      )}
-
-      {/* Settings modal */}
-      {activePanel === 'settings' && (
-        <ModalOverlay onClose={closePanel}>
-          <SettingsPage onClose={closePanel} />
         </ModalOverlay>
       )}
     </div>
