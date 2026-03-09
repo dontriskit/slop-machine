@@ -188,6 +188,7 @@ export default function App() {
         onOpenFriendsList={() => setActivePanel('friends')}
         onOpenChat={() => setActivePanel('chat')}
         onOpenSimulator={() => setActivePanel('simulator')}
+        activePanel={activePanel}
       />
 
       {/* Galaxy Map modal */}

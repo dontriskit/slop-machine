@@ -69,9 +69,10 @@ interface HUDProps {
   onOpenFriendsList?: () => void
   onOpenChat?: () => void
   onOpenSimulator?: () => void
+  activePanel?: string | null
 }
 
-export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenFleet, onOpenChart, onOpenMessages, onOpenShipyard, onOpenDefense, onOpenBuddyList, onOpenFriendsList, onOpenChat, onOpenSimulator }: HUDProps) {
+export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenFleet, onOpenChart, onOpenMessages, onOpenShipyard, onOpenDefense, onOpenBuddyList, onOpenFriendsList, onOpenChat, onOpenSimulator , activePanel }: HUDProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [unreadMessages, setUnreadMessages] = useState(0)
 
@@ -429,38 +430,38 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
         <p className="control-item">Scroll to zoom</p>
         <p className="control-item">Click system/planet</p>
         {onOpenGalaxyMap && (
-          <button className="galaxy-btn" style={{ marginTop: 10, width: '100%' }} onClick={onOpenGalaxyMap}>
+          <button className={`galaxy-btn${activePanel === 'galaxy-map' ? ' active' : ''}`} style={{ marginTop: 10, width: '100%' }} onClick={onOpenGalaxyMap}>
             Galaxy Map (G)
           </button>
         )}
         {onOpenLeaderboard && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenLeaderboard}>
+          <button className={`galaxy-btn${activePanel === 'leaderboard' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenLeaderboard}>
             Leaderboard (L)
           </button>
         )}
         {onOpenTrader && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenTrader}>
+          <button className={`galaxy-btn${activePanel === 'trader' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenTrader}>
             Marketplace (T)
           </button>
         )}
         {onOpenResearch && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenResearch}>
+          <button className={`galaxy-btn${activePanel === 'research' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenResearch}>
             Research (R)
           </button>
         )}
         {onOpenFleet && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenFleet}>
+          <button className={`galaxy-btn${activePanel === 'fleet' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenFleet}>
             Fleet (F)
           </button>
         )}
         {onOpenChart && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenChart}>
+          <button className={`galaxy-btn${activePanel === 'chart' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenChart}>
             Production Chart (C)
           </button>
         )}
         {onOpenMessages && (
           <button
-            className="galaxy-btn"
+            className={`galaxy-btn${activePanel === 'messages' ? ' active' : ''}`}
             style={{ marginTop: 6, width: '100%', position: 'relative' }}
             onClick={onOpenMessages}
           >
@@ -476,30 +477,30 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
           </button>
         )}
         {onOpenShipyard && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenShipyard}>
+          <button className={`galaxy-btn${activePanel === 'shipyard' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenShipyard}>
             Shipyard (Y)
           </button>
         )}
         {onOpenDefense && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenDefense}>
+          <button className={`galaxy-btn${activePanel === 'defense' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenDefense}>
             Defense (D)
           </button>
         )}
         {onOpenBuddyList && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenBuddyList}>
+          <button className={`galaxy-btn${activePanel === 'buddy' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenBuddyList}>
             Buddy List (B)
           </button>
         )}
         {onOpenFriendsList && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenFriendsList}>
+          <button className={`galaxy-btn${activePanel === 'friends' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenFriendsList}>
             Friends (N)
           </button>
         )}
         {onOpenSimulator && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenSimulator}>⚔️ Simulator (H)</button>
+          <button className={`galaxy-btn${activePanel === 'simulator' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenSimulator}>⚔️ Simulator (H)</button>
         )}
         {onOpenChat && (
-          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenChat}>
+          <button className={`galaxy-btn${activePanel === 'chat' ? ' active' : ''}`} style={{ marginTop: 6, width: '100%' }} onClick={onOpenChat}>
             Chat (K)
           </button>
         )}
