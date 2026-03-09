@@ -198,6 +198,15 @@ export class PlanetDO implements DurableObject {
         return await this.handleGetAvailableShips();
       } else if (path === '/tech-levels' && request.method === 'POST') {
         return await this.handleSetTechLevels(request);
+      } else if (path === '/cheat-resources' && request.method === 'POST') {
+        const body = await request.json() as any;
+        if (this.planetState) {
+          this.planetState.resources.metal = body.metal ?? this.planetState.resources.metal;
+          this.planetState.resources.crystal = body.crystal ?? this.planetState.resources.crystal;
+          this.planetState.resources.deuterium = body.deuterium ?? this.planetState.resources.deuterium;
+          await this.ctx.storage.put('state', this.planetState);
+        }
+        return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
       } else {
         return new Response('Not Found', { status: 404 });
       }

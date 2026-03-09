@@ -6274,12 +6274,15 @@ app.get('/api/missions/definitions', (c) => {
 
 // DEV CHEAT — POST /api/dev/give-resources
 app.post('/api/dev/give-resources', async (c) => {
-  const DB = c.env.DB
   try {
     const { planetId, metal = 10000000, crystal = 10000000, deuterium = 1000000 } = await c.req.json() as any
     if (!planetId) return c.json({ error: 'planetId required' }, 400)
-    await DB.prepare('UPDATE planets SET metal=?, crystal=?, deuterium=? WHERE id=?')
-      .bind(metal, crystal, deuterium, planetId).run()
+    const stub = getPlanetStub(c.env.PLANET_DO, planetId)
+    await stub.fetch(new Request('https://planet/cheat-resources', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ metal, crystal, deuterium })
+    }))
     return c.json({ ok: true, metal, crystal, deuterium })
   } catch (err) {
     return c.json({ error: String(err) }, 500)
