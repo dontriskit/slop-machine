@@ -2086,6 +2086,52 @@ app.post('/api/tutorial/:playerId/claim-reward', async (c) => {
 // ============================================================================
 // OFFICERS ENDPOINTS
 
+
+// ============================================================================
+// PLAYER RELATIONS (BUDDY LIST) ENDPOINTS
+
+app.get('/api/relations', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.query('player_id');
+  if (\!playerId) return c.json({ error: 'player_id required' }, 400);
+  try {
+    const rows = await DB.prepare(
+      `SELECT r.id, r.target_id, p.name AS target_name, r.relation_type, r.note, r.created_at
+       FROM player_relations r
+       JOIN players p ON p.id = r.target_id
+       WHERE r.player_id = ?
+       ORDER BY r.relation_type, p.name`
+    ).bind(playerId).all();
+    return c.json({ relations: rows.results });
+  } catch (error) { return c.json({ error: String(error) }, 500); }
+});
+
+app.post('/api/relations', async (c) => {
+  const DB = c.env.DB;
+  const body = await c.req.json<{ player_id: string; target_id: string; relation_type: string; note?: string }>();
+  const { player_id, target_id, relation_type, note } = body;
+  if (\!player_id || \!target_id || \!relation_type) return c.json({ error: 'Missing fields' }, 400);
+  if (\!['ally', 'enemy', 'neutral'].includes(relation_type)) return c.json({ error: 'Invalid relation_type' }, 400);
+  if (player_id === target_id) return c.json({ error: 'Cannot mark yourself' }, 400);
+  const id = player_id + '_' + target_id;
+  await DB.prepare(
+    `INSERT INTO player_relations (id, player_id, target_id, relation_type, note)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(player_id, target_id) DO UPDATE SET relation_type=excluded.relation_type, note=excluded.note`
+  ).bind(id, player_id, target_id, relation_type, note ?? null).run();
+  return c.json({ ok: true });
+});
+
+app.delete('/api/relations/:target_id', async (c) => {
+  const DB = c.env.DB;
+  const targetId = c.req.param('target_id');
+  const playerId = c.req.query('player_id');
+  if (\!playerId) return c.json({ error: 'player_id required' }, 400);
+  await DB.prepare('DELETE FROM player_relations WHERE player_id = ? AND target_id = ?').bind(playerId, targetId).run();
+  return c.json({ ok: true });
+});
+
+
 // CRON TRIGGER
 // ============================================================================
 
@@ -4559,7 +4605,7 @@ app.get('/api/galaxy/history/recent', async (c) => {
 app.get('/api/referral/code', async (c) => {
   const DB = c.env.DB;
   const playerId = c.req.query('player_id');
-  if (\!playerId) return c.json({ error: 'player_id required' }, 400);
+  if (!playerId) return c.json({ error: 'player_id required' }, 400);
   const { getReferralCode } = await import('./game/services/referralService');
   const result = await getReferralCode(DB, playerId);
   return c.json(result);
@@ -4568,7 +4614,7 @@ app.get('/api/referral/code', async (c) => {
 app.get('/api/referral/stats', async (c) => {
   const DB = c.env.DB;
   const playerId = c.req.query('player_id');
-  if (\!playerId) return c.json({ error: 'player_id required' }, 400);
+  if (!playerId) return c.json({ error: 'player_id required' }, 400);
   const { getReferralStats } = await import('./game/services/referralService');
   const stats = await getReferralStats(DB, playerId);
   return c.json(stats);
@@ -4577,340 +4623,12 @@ app.get('/api/referral/stats', async (c) => {
 app.post('/api/referral/apply', async (c) => {
   const DB = c.env.DB;
   const { player_id, code } = await c.req.json<{ player_id: string; code: string }>();
-  if (\!player_id || \!code) return c.json({ error: 'player_id and code required' }, 400);
+  if (!player_id || !code) return c.json({ error: 'player_id and code required' }, 400);
   const { applyReferralCode } = await import('./game/services/referralService');
   const result = await applyReferralCode(DB, player_id, code);
-  if (\!result.success) return c.json({ error: result.reason }, 400);
+  if (!result.success) return c.json({ error: result.reason }, 400);
   return c.json({ success: true, bonus: result.bonus });
 });
-
-
-// CRON TRIGGER
-// ============================================================================
-
-/**
- * Scheduled handler - runs every minute
- * Fans out build order agent to all active planets
- */
-async function handleScheduled(event: ScheduledEvent, env: Bindings): Promise<void> {
-  const DB = env.DB;
-  const PLANET_DO = env.PLANET_DO;
-  const AI = env.AI;
-
-  try {
-    // Get all planets with agent enabled
-    const planetsResult = await DB.prepare('SELECT id, strategy_id FROM planets WHERE agent_enabled = 1').all();
-
-    const planets = planetsResult.results as Array<{ id: string; strategy_id: string }>;
-
-    if (planets.length === 0) {
-      console.log('No planets with agent enabled');
-      return;
-    }
-
-    // Load planet states and strategies
-    const planetStates: Map<string, PlanetState> = new Map();
-    const strategies: Map<string, Strategy> = new Map();
-    const planetDOs: Map<string, any> = new Map();
-
-    for (const planet of planets) {
-      // Get planet state using correct DO binding pattern
-      const stub = getPlanetStub(PLANET_DO, planet.id);
-      planetDOs.set(planet.id, stub);
-
-      const stateRes = await stub.fetch(new Request('https://planet/state'));
-      if (stateRes.ok) {
-        const state = (await stateRes.json()) as PlanetState;
-        planetStates.set(planet.id, state);
-      }
-
-      // Get strategy
-      if (planet.strategy_id) {
-        const stratResult = await DB.prepare(
-          'SELECT id, player_id, name, steps FROM build_strategies WHERE id = ?'
-        )
-          .bind(planet.strategy_id)
-          .first();
-
-        if (stratResult) {
-          strategies.set(planet.id, {
-            id: stratResult.id as string,
-            playerId: stratResult.player_id as string,
-            name: stratResult.name as string,
-            steps: JSON.parse((stratResult.steps as string) || '[]'),
-          });
-        }
-      }
-    }
-
-    // Run agent for all planets in parallel
-    const results = await runAgentForAllPlanets(
-      Array.from(planetStates.values()),
-      strategies,
-      planetDOs,
-      AI,
-      DB
-    );
-
-    console.log(`[Cron] Agent run: ${results.succeeded}/${results.total} planets succeeded`);
-
-    // Process fleet missions (arrivals + returns)
-    try {
-      const missionResult = await processFleetMissions(DB, PLANET_DO);
-      if (missionResult.arrivals > 0 || missionResult.returns > 0) {
-        console.log(`[Cron] Fleet missions: ${missionResult.arrivals} arrivals, ${missionResult.returns} returns`);
-      }
-      if (missionResult.errors.length > 0) {
-        console.error(`[Cron] Fleet mission errors:`, missionResult.errors);
-      }
-    } catch (fleetErr) {
-      console.error('[Cron] Fleet mission processing error:', fleetErr);
-    }
-  } catch (error) {
-    console.error('Cron handler error:', error);
-  }
-}
-
-// ============================================================================
-// DEFENSE ENDPOINTS
-// ============================================================================
-
-/**
- * POST /api/defense/build
- * Queue a defense build order
- * Body: { planetId, defenseType, count, shipyardLevel?, universeSpeed? }
- */
-app.post('/api/defense/build', async (c) => {
-  try {
-    const body = await c.req.json() as any;
-    const { planetId, defenseType, count, shipyardLevel = 5, universeSpeed = 1 } = body;
-
-    if (!planetId || !defenseType || !count) {
-      return c.json({ error: 'planetId, defenseType, and count are required' }, 400);
-    }
-
-    // Get planet resources and tech levels from DB
-    const DB = c.env.DB;
-    const planet = await DB.prepare('SELECT * FROM planets WHERE id = ?').bind(planetId).first() as any;
-    if (!planet) {
-      return c.json({ error: 'Planet not found' }, 404);
-    }
-
-    const resources = {
-      metal: planet.metal ?? 0,
-      crystal: planet.crystal ?? 0,
-      deuterium: planet.deuterium ?? 0,
-    };
-
-    const tech = {
-      laserTech: planet.laser_tech ?? 0,
-      energyTech: planet.energy_tech ?? 0,
-      weaponTech: planet.weapon_tech ?? 0,
-      shieldingTech: planet.shielding_tech ?? 0,
-      ionTech: planet.ion_tech ?? 0,
-      plasmaTech: planet.plasma_tech ?? 0,
-      impulseDrive: planet.impulse_drive ?? 0,
-      missileSilo: planet.missile_silo ?? 0,
-    };
-
-    const currentDefenses = planet.defenses_json
-      ? JSON.parse(planet.defenses_json)
-      : { rocketLauncher: 0, lightLaser: 0, heavyLaser: 0, gaussCannon: 0, ionCannon: 0, plasmaTurret: 0, smallShieldDome: 0, largeShieldDome: 0, antiBallisticMissile: 0, interplanetaryMissile: 0 };
-
-    const order = buildDefense(
-      planetId,
-      defenseType,
-      count,
-      tech,
-      currentDefenses,
-      resources,
-      shipyardLevel,
-      universeSpeed,
-    );
-
-    // Persist updated resources
-    await DB.prepare(
-      'UPDATE planets SET metal = ?, crystal = ?, deuterium = ? WHERE id = ?'
-    ).bind(resources.metal, resources.crystal, resources.deuterium, planetId).run();
-
-    // Store queue order in KV
-    const KV = c.env.KV;
-    const queueKey = `defense_queue:${planetId}`;
-    const existingQueue = await KV.get(queueKey, 'json') as any ?? createEmptyDefenseQueue();
-    existingQueue.orders.push(order);
-    await KV.put(queueKey, JSON.stringify(existingQueue));
-
-    return c.json({ success: true, order });
-  } catch (error) {
-    return c.json({ error: String(error) }, 400);
-  }
-});
-
-/**
- * GET /api/defense/:planetId
- * Get current defenses on a planet
- */
-app.get('/api/defense/:planetId', async (c) => {
-  const planetId = c.req.param('planetId');
-  const DB = c.env.DB;
-
-  try {
-    const planet = await DB.prepare('SELECT defenses_json FROM planets WHERE id = ?').bind(planetId).first() as any;
-    if (!planet) {
-      return c.json({ error: 'Planet not found' }, 404);
-    }
-
-    const defenses = planet.defenses_json ? JSON.parse(planet.defenses_json) : {
-      rocketLauncher: 0, lightLaser: 0, heavyLaser: 0, gaussCannon: 0, ionCannon: 0,
-      plasmaTurret: 0, smallShieldDome: 0, largeShieldDome: 0,
-      antiBallisticMissile: 0, interplanetaryMissile: 0,
-    };
-
-    return c.json({ planetId, defenses });
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-/**
- * GET /api/defense/queue/:planetId
- * Get the defense build queue for a planet
- */
-app.get('/api/defense/queue/:planetId', async (c) => {
-  const planetId = c.req.param('planetId');
-  const KV = c.env.KV;
-
-  try {
-    const queueKey = `defense_queue:${planetId}`;
-    const queue = await KV.get(queueKey, 'json') as any ?? createEmptyDefenseQueue();
-
-    const status = getDefenseBuildQueue(queue, Date.now());
-    return c.json({ planetId, ...status });
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-/**
- * DELETE /api/defense/cancel/:queueId
- * Cancel a queued defense order and refund resources
- * Query: ?planetId=...
- */
-app.delete('/api/defense/cancel/:queueId', async (c) => {
-  const queueId = c.req.param('queueId');
-  const planetId = c.req.query('planetId');
-
-  if (!planetId) {
-    return c.json({ error: 'planetId query parameter is required' }, 400);
-  }
-
-  const DB = c.env.DB;
-  const KV = c.env.KV;
-
-  try {
-    const planet = await DB.prepare('SELECT * FROM planets WHERE id = ?').bind(planetId).first() as any;
-    if (!planet) {
-      return c.json({ error: 'Planet not found' }, 404);
-    }
-
-    const resources = {
-      metal: planet.metal ?? 0,
-      crystal: planet.crystal ?? 0,
-      deuterium: planet.deuterium ?? 0,
-    };
-
-    const queueKey = `defense_queue:${planetId}`;
-    const queue = await KV.get(queueKey, 'json') as any ?? createEmptyDefenseQueue();
-
-    const cancelled = cancelDefenseBuild(queue, queueId, resources);
-    if (!cancelled) {
-      return c.json({ error: 'Queue item not found or already building' }, 404);
-    }
-
-    // Persist refund
-    await DB.prepare(
-      'UPDATE planets SET metal = ?, crystal = ?, deuterium = ? WHERE id = ?'
-    ).bind(resources.metal, resources.crystal, resources.deuterium, planetId).run();
-
-    await KV.put(queueKey, JSON.stringify(queue));
-
-    return c.json({ success: true, cancelled, refunded: cancelled.totalCost });
-  } catch (error) {
-    return c.json({ error: String(error) }, 500);
-  }
-});
-
-/**
- * POST /api/defense/missile-attack
- * Launch interplanetary missiles at a target planet
- * Body: { fromPlanetId, toPlanetId, missileCount, targetDefense? }
- */
-app.post('/api/defense/missile-attack', async (c) => {
-  try {
-    const body = await c.req.json() as any;
-    const { fromPlanetId, toPlanetId, missileCount, targetDefense } = body;
-
-    if (!fromPlanetId || !toPlanetId || !missileCount) {
-      return c.json({ error: 'fromPlanetId, toPlanetId, and missileCount are required' }, 400);
-    }
-
-    const DB = c.env.DB;
-
-    // Get attacker's planet (check IPM supply and weaponTech)
-    const attacker = await DB.prepare('SELECT * FROM planets WHERE id = ?').bind(fromPlanetId).first() as any;
-    if (!attacker) {
-      return c.json({ error: 'Attacker planet not found' }, 404);
-    }
-
-    const attackerDefenses = attacker.defenses_json ? JSON.parse(attacker.defenses_json) : { interplanetaryMissile: 0 };
-    if ((attackerDefenses.interplanetaryMissile ?? 0) < missileCount) {
-      return c.json({ error: `Not enough Interplanetary Missiles. Have: ${attackerDefenses.interplanetaryMissile ?? 0}, Need: ${missileCount}` }, 400);
-    }
-
-    // Get target planet defenses
-    const target = await DB.prepare('SELECT * FROM planets WHERE id = ?').bind(toPlanetId).first() as any;
-    if (!target) {
-      return c.json({ error: 'Target planet not found' }, 404);
-    }
-
-    const targetDefenses = target.defenses_json ? JSON.parse(target.defenses_json) : {
-      rocketLauncher: 0, lightLaser: 0, heavyLaser: 0, gaussCannon: 0, ionCannon: 0,
-      plasmaTurret: 0, smallShieldDome: 0, largeShieldDome: 0,
-      antiBallisticMissile: 0, interplanetaryMissile: 0,
-    };
-
-    const weaponTech = attacker.weapon_tech ?? 0;
-
-    // Simulate attack
-    const result = launchMissileAttack(targetDefenses, missileCount, weaponTech, targetDefense);
-
-    // Deduct missiles from attacker
-    attackerDefenses.interplanetaryMissile -= missileCount;
-    await DB.prepare(
-      'UPDATE planets SET defenses_json = ? WHERE id = ?'
-    ).bind(JSON.stringify(attackerDefenses), fromPlanetId).run();
-
-    // Update target defenses
-    await DB.prepare(
-      'UPDATE planets SET defenses_json = ? WHERE id = ?'
-    ).bind(JSON.stringify(result.remainingDefenses), toPlanetId).run();
-
-    return c.json({
-      success: true,
-      fromPlanetId,
-      toPlanetId,
-      missilesLaunched: missileCount,
-      result,
-    });
-  } catch (error) {
-    return c.json({ error: String(error) }, 400);
-  }
-});
-
-// Export Durable Object
-export { PlanetDO };
-
-// Export handler for scheduled event (Cron)
 
 // COLONIZATION ENDPOINTS
 app.get('/api/planet/:id/state', async (c) => {
@@ -6071,6 +5789,10 @@ app.get('/api/h2m/overrides/:playerId', async (c) => {
       limit,
       offset,
     });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
 
 app.get('/api/h2m/strategy/:planetId', async (c) => {
   const DB = c.env.DB;
@@ -6117,6 +5839,10 @@ app.get('/api/h2m/strategy/:planetId', async (c) => {
         createdAt: h.created_at,
       })),
     });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
 
 app.post('/api/h2m/learn/:playerId', async (c) => {
   const DB = c.env.DB;
@@ -6158,6 +5884,10 @@ app.post('/api/h2m/learn/:playerId', async (c) => {
       strategiesApplied,
       newStrategy,
     });
+  } catch (error) {
+    return c.json({ error: String(error) }, 500);
+  }
+});
 
 app.get('/api/h2m/report/:playerId', async (c) => {
   const DB = c.env.DB;

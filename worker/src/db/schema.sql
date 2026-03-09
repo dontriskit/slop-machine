@@ -500,3 +500,13 @@ CREATE TABLE IF NOT EXISTS attack_log (
 );
 CREATE INDEX IF NOT EXISTS idx_attack_log_pair ON attack_log(attacker_id, defender_id, timestamp);
 CREATE INDEX IF NOT EXISTS idx_attack_log_timestamp ON attack_log(timestamp);
+CREATE TABLE IF NOT EXISTS player_relations (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  target_id TEXT NOT NULL REFERENCES players(id),
+  relation_type TEXT NOT NULL DEFAULT 'neutral' CHECK(relation_type IN ('ally','enemy','neutral')),
+  note TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  UNIQUE(player_id, target_id)
+);
+CREATE INDEX IF NOT EXISTS idx_player_relations_player ON player_relations(player_id);

@@ -46,9 +46,10 @@ interface HUDProps {
   onOpenMessages?: () => void
   onOpenShipyard?: () => void
   onOpenDefense?: () => void
+  onOpenBuddyList?: () => void
 }
 
-export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenFleet, onOpenChart, onOpenMessages, onOpenShipyard, onOpenDefense }: HUDProps) {
+export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenFleet, onOpenChart, onOpenMessages, onOpenShipyard, onOpenDefense, onOpenBuddyList }: HUDProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [unreadMessages, setUnreadMessages] = useState(0)
 
@@ -447,6 +448,11 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
         {onOpenDefense && (
           <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenDefense}>
             Defense (D)
+          </button>
+        )}
+        {onOpenBuddyList && (
+          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenBuddyList}>
+            Buddy List (B)
           </button>
         )}
       </div>

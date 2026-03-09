@@ -13,6 +13,7 @@ import ResourceChart from './components/ResourceChart'
 import MessagesInbox from './components/MessagesInbox'
 import ShipyardPanel from './components/ShipyardPanel'
 import DefensePanel from './components/DefensePanel'
+import BuddyList from './components/BuddyList'
 import { GameStore } from './store/gameStore'
 
 // ---------------------------------------------------------------------------
@@ -57,7 +58,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | 'messages' | 'shipyard' | 'defense' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | 'messages' | 'shipyard' | 'defense' | 'buddy' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -120,6 +121,9 @@ export default function App() {
       if (e.key === 'd' || e.key === 'D') {
         setActivePanel((p) => (p === 'defense' ? null : 'defense'))
       }
+      if (e.key === 'b' || e.key === 'B') {
+        setActivePanel((p) => (p === 'buddy' ? null : 'buddy'))
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -158,6 +162,7 @@ export default function App() {
         onOpenMessages={() => setActivePanel('messages')}
         onOpenShipyard={() => setActivePanel('shipyard')}
         onOpenDefense={() => setActivePanel('defense')}
+        onOpenBuddyList={() => setActivePanel('buddy')}
       />
 
       {/* Galaxy Map modal */}
@@ -223,6 +228,13 @@ export default function App() {
       {activePanel === 'defense' && (
         <ModalOverlay onClose={closePanel}>
           <DefensePanel onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {/* Buddy List modal */}
+      {activePanel === 'buddy' && (
+        <ModalOverlay onClose={closePanel}>
+          <BuddyList onClose={closePanel} />
         </ModalOverlay>
       )}
 
