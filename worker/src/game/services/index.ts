@@ -1,3 +1,5 @@
+export { GalaxyHistoryService, createGalaxyHistoryService } from './galaxyHistoryService';
+export type { GalaxyEvent, GalaxyEventType, LogGalaxyEventParams } from './galaxyHistoryService';
 // Service exports for game logic
 
 export { CoordinateService, coordinateService } from './coordinateService';

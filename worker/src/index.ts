@@ -4530,6 +4530,28 @@ app.post('/api/tutorial/:playerId/claim-reward', async (c) => {
 // ============================================================================
 // OFFICERS ENDPOINTS
 
+
+// ============================================================================
+// GALAXY HISTORY ENDPOINTS
+
+app.get('/api/galaxy/:g/:s/history', async (c) => {
+  const DB = c.env.DB;
+  const g = parseInt(c.req.param('g'), 10);
+  const s = parseInt(c.req.param('s'), 10);
+  if (isNaN(g) || isNaN(s)) return c.json({ error: 'Invalid coordinates' }, 400);
+  const { createGalaxyHistoryService } = await import('./game/services/galaxyHistoryService');
+  const svc = createGalaxyHistoryService(DB);
+  return c.json({ events: await svc.getSystemHistory(g, s) });
+});
+
+app.get('/api/galaxy/history/recent', async (c) => {
+  const DB = c.env.DB;
+  const { createGalaxyHistoryService } = await import('./game/services/galaxyHistoryService');
+  const svc = createGalaxyHistoryService(DB);
+  return c.json({ events: await svc.getRecentHistory() });
+});
+
+
 // CRON TRIGGER
 // ============================================================================
 
