@@ -2504,6 +2504,106 @@ app.delete('/api/chat/:channel/:id', async (c) => {
 });
 
 
+// ============================================================================
+// LEADERBOARD
+// ============================================================================
+
+app.get('/api/leaderboard', async (c) => {
+  const DB = c.env.DB;
+  const type = (c.req.query('type') ?? 'points') as 'points' | 'fleet' | 'research' | 'economy';
+  const page = parseInt(c.req.query('page') ?? '1', 10);
+  const limit = parseInt(c.req.query('limit') ?? '50', 10);
+  // Map 'points' to the leaderboard service's supported types
+  const lbType = type === 'points' ? 'economy' : type;
+  try {
+    const result = await getLeaderboard(lbType as any, page, limit, DB);
+    return c.json(result);
+  } catch (err: any) {
+    return c.json({ error: err.message ?? 'leaderboard error' }, 500);
+  }
+});
+
+// ============================================================================
+// RESEARCH
+// ============================================================================
+
+app.get('/api/research/:planetId', async (c) => {
+  const planetId = c.req.param('planetId');
+  const stub = getPlanetStub(c.env.PLANET_DO, planetId);
+  try {
+    const res = await stub.fetch(`https://planet/state`);
+    const state: any = await res.json();
+    return c.json({
+      techLevels: state.techLevels ?? {},
+      researchQueue: state.researchQueue ?? [],
+    });
+  } catch (err: any) {
+    return c.json({ error: err.message ?? 'research fetch error' }, 500);
+  }
+});
+
+app.post('/api/research/:planetId/start', async (c) => {
+  const planetId = c.req.param('planetId');
+  const body: any = await c.req.json();
+  const stub = getPlanetStub(c.env.PLANET_DO, planetId);
+  try {
+    const res = await stub.fetch(`https://planet/research/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data: any = await res.json();
+    return c.json(data, res.status as any);
+  } catch (err: any) {
+    return c.json({ error: err.message ?? 'research start error' }, 500);
+  }
+});
+
+// ============================================================================
+// TRADES / MARKETPLACE
+// ============================================================================
+
+app.get('/api/trades', async (c) => {
+  const DB = c.env.DB;
+  const resource = c.req.query('resource');
+  const type = c.req.query('type'); // 'buy' | 'sell' — maps to offer_resource or want_resource
+  let query = `SELECT * FROM trade_offers WHERE status = 'open'`;
+  const binds: any[] = [];
+  if (resource) {
+    query += ` AND (offer_resource = ? OR want_resource = ?)`;
+    binds.push(resource, resource);
+  }
+  query += ` ORDER BY created_at DESC LIMIT 100`;
+  const result = await DB.prepare(query).bind(...binds).all();
+  return c.json({ trades: result.results ?? [] });
+});
+
+app.post('/api/trades', async (c) => {
+  const DB = c.env.DB;
+  const body: any = await c.req.json();
+  const { player_id, planet_id, offer_resource, offer_amount, want_resource, want_amount } = body;
+  if (!player_id || !planet_id || !offer_resource || !offer_amount || !want_resource || !want_amount) {
+    return c.json({ error: 'Missing required fields' }, 400);
+  }
+  const id = `trade-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  await DB.prepare(
+    `INSERT INTO trade_offers (id, player_id, planet_id, offer_resource, offer_amount, want_resource, want_amount, status, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?)`
+  ).bind(id, player_id, planet_id, offer_resource, offer_amount, want_resource, want_amount, Math.floor(Date.now() / 1000)).run();
+  return c.json({ id, ok: true });
+});
+
+app.delete('/api/trades/:id', async (c) => {
+  const DB = c.env.DB;
+  const id = c.req.param('id');
+  const player_id = c.req.query('player_id');
+  if (!player_id) return c.json({ error: 'player_id required' }, 400);
+  await DB.prepare(
+    `UPDATE trade_offers SET status = 'cancelled' WHERE id = ? AND player_id = ? AND status = 'open'`
+  ).bind(id, player_id).run();
+  return c.json({ ok: true });
+});
+
 // CRON TRIGGER
 // ============================================================================
 
