@@ -17,6 +17,7 @@ import BuddyList from './components/BuddyList'
 import FriendsList from './components/FriendsList'
 import ChatPanel from './components/ChatPanel'
 import SpectatorMode from './components/SpectatorMode'
+import CombatSimulator from './components/CombatSimulator'
 import RegistrationModal from './components/RegistrationModal'
 import { GameStore } from './store/gameStore'
 import { LS_PLAYER_ID_KEY } from './lib/config'
@@ -63,7 +64,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | 'messages' | 'shipyard' | 'defense' | 'buddy' | 'friends' | 'spectator' | 'chat' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | 'messages' | 'shipyard' | 'defense' | 'buddy' | 'friends' | 'spectator' | 'chat' | 'simulator' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -142,6 +143,9 @@ export default function App() {
       if (e.key === 'k' || e.key === 'K') {
         setActivePanel((p) => (p === 'chat' ? null : 'chat'))
       }
+      if (e.key === 'h' || e.key === 'H') {
+        setActivePanel((p) => (p === 'simulator' ? null : 'simulator'))
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -183,6 +187,7 @@ export default function App() {
         onOpenBuddyList={() => setActivePanel('buddy')}
         onOpenFriendsList={() => setActivePanel('friends')}
         onOpenChat={() => setActivePanel('chat')}
+        onOpenSimulator={() => setActivePanel('simulator')}
       />
 
       {/* Galaxy Map modal */}
@@ -274,6 +279,12 @@ export default function App() {
       {activePanel === 'chat' && (
         <ModalOverlay onClose={closePanel}>
           <ChatPanel onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {activePanel === 'simulator' && (
+        <ModalOverlay onClose={closePanel}>
+          <CombatSimulator onClose={closePanel} />
         </ModalOverlay>
       )}
 

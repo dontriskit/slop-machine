@@ -6272,6 +6272,24 @@ app.get('/api/missions/definitions', (c) => {
   return c.json({ missions: DAILY_MISSIONS });
 });
 
+// Combat Simulator — POST /api/simulate/battle
+app.post('/api/simulate/battle', async (c) => {
+  try {
+    const body = await c.req.json()
+    const attackerShips = (body?.attacker?.ships ?? {})
+    const defenderShips = (body?.defender?.ships ?? {})
+    const defenderDefenses = (body?.defender?.defenses ?? {})
+    const result = simulateBattle(attackerShips, defenderShips, defenderDefenses)
+    const loot = result.winner === 'attacker'
+      ? { metal: Math.floor(result.defenderLosses.metal * 0.5), crystal: Math.floor(result.defenderLosses.crystal * 0.5), deuterium: Math.floor(result.defenderLosses.deuterium * 0.5) }
+      : { metal: 0, crystal: 0, deuterium: 0 }
+    return c.json({ winner: result.winner, rounds: result.rounds.length, attackerLosses: result.attackerLosses, defenderLosses: result.defenderLosses, loot, debrisField: result.debrisField, attackerSurvivors: result.attackerSurvivors, defenderSurvivors: result.defenderSurvivors })
+  } catch (err) {
+    return c.json({ error: String(err) }, 400)
+  }
+})
+
+
 export default {
   async fetch(request: Request, env: Bindings): Promise<Response> {
     return app.fetch(request, env);
