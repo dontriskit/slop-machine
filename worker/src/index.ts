@@ -2240,6 +2240,85 @@ app.delete('/api/friends/:friend_id', async (c) => {
   return c.json({ ok: true });
 });
 
+
+// ============================================================================
+// SPECTATOR MODE ENDPOINTS
+
+app.get('/api/battles/recent', async (c) => {
+  const DB = c.env.DB;
+  const limit = Math.min(parseInt(c.req.query('limit') || '20', 10), 100);
+  const since = Math.floor(Date.now() / 1000) - 86400;
+  try {
+    const rows = await DB.prepare(
+      `SELECT id, attacker_id, defender_id, attacker_name, defender_name,
+              winner, galaxy, system, position, timestamp
+       FROM battle_replays WHERE is_public = 1 AND timestamp >= ?
+       ORDER BY timestamp DESC LIMIT ?`
+    ).bind(since, limit).all();
+    return c.json(rows.results || []);
+  } catch (error) { return c.json({ error: String(error) }, 500); }
+});
+
+app.get('/api/battles/:id', async (c) => {
+  const DB = c.env.DB;
+  const replayId = c.req.param('id');
+  const fifteenMinAgo = Math.floor(Date.now() / 1000) - 900;
+  try {
+    const replay = await DB.prepare('SELECT * FROM battle_replays WHERE id = ?').bind(replayId).first() as Record<string, unknown> | null;
+    if (!replay) return c.json({ error: 'Not found' }, 404);
+    if (!replay.is_public) return c.json({ error: 'Private' }, 403);
+    if ((replay.timestamp as number) > fifteenMinAgo) {
+      return c.json({ error: '15-minute delay', availableIn: Math.ceil((replay.timestamp as number) + 900 - Date.now()/1000) }, 425);
+    }
+    const result: Record<string, unknown> = { ...replay };
+    if (typeof result.battle_data_json === 'string') result.battle_data_json = JSON.parse(result.battle_data_json as string);
+    return c.json(result);
+  } catch (error) { return c.json({ error: String(error) }, 500); }
+});
+
+// ============================================================================
+// PHALANX SCANNER ENDPOINTS
+
+app.get('/api/phalanx/range', async (c) => {
+  const DB = c.env.DB;
+  const moonId = c.req.query('moon_id');
+  if (!moonId) return c.json({ error: 'moon_id required' }, 400);
+  try {
+    const { calculatePhalanxRange } = await import('./game/services/phalanxService');
+    let phalanxLevel = 0;
+    try {
+      const moonDoNs = (c.env as any).MOON_DO as DurableObjectNamespace | undefined;
+      if (moonDoNs) {
+        const doId = moonDoNs.idFromName(moonId);
+        const stub = moonDoNs.get(doId);
+        const resp = await stub.fetch('https://moon/state');
+        if (resp.ok) { const state = await resp.json<any>(); phalanxLevel = state?.buildings?.sensorPhalanx ?? 0; }
+      }
+    } catch { /* MoonDO not available */ }
+    return c.json({ moonId, phalanxLevel, range: calculatePhalanxRange(phalanxLevel) });
+  } catch (error) { return c.json({ error: String(error) }, 500); }
+});
+
+app.post('/api/phalanx/scan', async (c) => {
+  const DB = c.env.DB;
+  const body = await c.req.json<any>();
+  const { player_id, moon_id, target_galaxy, target_system, target_position } = body ?? {};
+  if (!player_id || !moon_id || target_galaxy == null || target_system == null || target_position == null)
+    return c.json({ error: 'player_id, moon_id, target_galaxy, target_system, target_position required' }, 400);
+  const [tGalaxy, tSystem, tPosition] = [Number(target_galaxy), Number(target_system), Number(target_position)];
+  try {
+    const { performPhalanxScan } = await import('./game/services/phalanxService');
+    const moonDoNs = (c.env as any).MOON_DO as DurableObjectNamespace | undefined;
+    const scanOutcome = await performPhalanxScan({ playerId: player_id, moonId: moon_id, targetGalaxy: tGalaxy, targetSystem: tSystem, targetPosition: tPosition }, DB, moonDoNs as any);
+    if (!scanOutcome.success) return c.json({ error: scanOutcome.error }, 400);
+    const scanId = `phalanx-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    await DB.prepare(`INSERT OR IGNORE INTO phalanx_scans (id, player_id, moon_id, phalanx_level, target_galaxy, target_system, target_position, deuterium_cost, fleets_detected, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, unixepoch())`)
+      .bind(scanId, player_id, moon_id, scanOutcome.result.phalanxLevel, tGalaxy, tSystem, tPosition, scanOutcome.result.deuteriumConsumed, scanOutcome.result.detectedFleets.length, JSON.stringify(scanOutcome.result.detectedFleets)).run();
+    return c.json({ ok: true, scanId, ...scanOutcome.result });
+  } catch (error) { return c.json({ error: String(error) }, 500); }
+});
+
+
 // CRON TRIGGER
 // ============================================================================
 

@@ -675,3 +675,39 @@ CREATE TABLE IF NOT EXISTS jump_gate_logs (
 CREATE INDEX IF NOT EXISTS idx_jump_gate_logs_player ON jump_gate_logs(player_id, teleported_at);
 CREATE INDEX IF NOT EXISTS idx_jump_gate_logs_source ON jump_gate_logs(source_moon_id, teleported_at);
 CREATE INDEX IF NOT EXISTS idx_jump_gate_logs_dest ON jump_gate_logs(destination_moon_id, teleported_at);
+CREATE TABLE IF NOT EXISTS phalanx_scans (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  moon_id TEXT NOT NULL REFERENCES moons(id),
+  phalanx_level INTEGER NOT NULL DEFAULT 1,
+  target_galaxy INTEGER NOT NULL,
+  target_system INTEGER NOT NULL,
+  target_position INTEGER NOT NULL,
+  deuterium_cost INTEGER NOT NULL DEFAULT 0,
+--
+CREATE INDEX IF NOT EXISTS idx_phalanx_scans_player ON phalanx_scans(player_id);
+CREATE INDEX IF NOT EXISTS idx_phalanx_scans_moon ON phalanx_scans(moon_id);
+CREATE INDEX IF NOT EXISTS idx_phalanx_scans_target ON phalanx_scans(target_galaxy, target_system, target_position);
+
+-- ============================================================================
+-- NFT ASSETS (Solana compressed NFTs)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS nft_assets (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL,
+CREATE TABLE IF NOT EXISTS battle_replays (
+  id TEXT PRIMARY KEY,
+  attacker_id TEXT NOT NULL REFERENCES players(id),
+  defender_id TEXT NOT NULL REFERENCES players(id),
+  planet_id TEXT NOT NULL REFERENCES planets(id),
+  -- Summary fields for list views
+  winner TEXT NOT NULL,          -- 'attacker' | 'defender' | 'draw'
+  galaxy INTEGER NOT NULL,
+  system INTEGER NOT NULL,
+  position INTEGER NOT NULL,
+  attacker_name TEXT NOT NULL,
+  defender_name TEXT NOT NULL,
+  -- Full replay JSON
+--
+CREATE INDEX IF NOT EXISTS idx_battle_replays_timestamp ON battle_replays(timestamp DESC);

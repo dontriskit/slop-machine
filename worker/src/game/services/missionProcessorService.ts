@@ -247,6 +247,31 @@ async function processAttackArrival(
       JSON.stringify(battle), nowSeconds,
     ).run();
 
+    // Also log to battle_replays for spectator mode
+    try {
+      const replayId = `replay-${reportId}`;
+      const g = row.galaxy_to as number || defState.coordinate?.galaxy || 1;
+      const s = row.system_to as number || defState.coordinate?.system || 1;
+      const p = row.position_to as number || defState.coordinate?.position || 1;
+      // Fetch player names for readable spectator list
+      const attackerRow = await DB.prepare('SELECT username FROM players WHERE id = ?').bind(playerId).first() as any;
+      const defenderRow = await DB.prepare('SELECT username FROM players WHERE id = ?').bind(defenderId).first() as any;
+      const attackerName = attackerRow?.username || 'Unknown';
+      const defenderName = defenderRow?.username || 'Unknown';
+      await DB.prepare(
+        `INSERT INTO battle_replays (id, attacker_id, defender_id, planet_id,
+           winner, galaxy, system, position, attacker_name, defender_name,
+           battle_data_json, is_public, timestamp)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+      ).bind(
+        replayId, playerId, defenderId, planetIdTo,
+        battle.winner, g, s, p, attackerName, defenderName,
+        JSON.stringify(battle), nowSeconds,
+      ).run();
+    } catch (_replayErr) {
+      // Non-critical — spectator logging failure must not break battle resolution
+    }
+
     // Update debris field
     if (battle.debrisField.metal > 0 || battle.debrisField.crystal > 0) {
       const g = row.galaxy_to as number || defState.coordinate?.galaxy || 1;
