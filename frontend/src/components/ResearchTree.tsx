@@ -4,7 +4,7 @@
  * Visual technology tree for Cosmic Protocol:
  * - Grid layout by category: Military, Economy, Drive, Defense
  * - Dependency lines between tech nodes
- * - Color coding: green=researched, yellow=available, gray=locked
+ * - Color coding: teal=researched, amber=available, gray=locked
  * - Click node: detail panel with level, cost, effects, research button
  * - Active research progress bar with countdown
  * - Keyboard shortcut 'R' registered in App.tsx
@@ -218,10 +218,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  military: '#ff4444',
-  economy: '#44aaff',
-  drive: '#ffaa00',
-  defense: '#44ff88',
+  military: '#f87171',
+  economy:  '#5b9cf6',
+  drive:    '#f59e0b',
+  defense:  '#34d399',
 }
 
 // ---------------------------------------------------------------------------
@@ -340,7 +340,6 @@ export default function ResearchTree({
   const getLocalAvailable = useCallback((levels: TechLevels): number[] => {
     return TECH_DEFS
       .filter((def) => {
-        const currentLevel = levels[def.key as keyof TechLevels] ?? 0
         // Check tech prerequisites
         if (def.prerequisites.techs) {
           for (const [k, minLevel] of Object.entries(def.prerequisites.techs)) {
@@ -446,17 +445,17 @@ export default function ResearchTree({
       {/* Banner image */}
       <div style={styles.bannerWrap}>
         <img src="/img/headers/research/research.jpg" alt="Research" style={styles.bannerImg} />
-        <span style={styles.bannerTitle}>RESEARCH</span>
+        <span style={styles.bannerTitle}>Research</span>
       </div>
 
       {/* Header */}
       <div style={styles.header}>
-        <span style={styles.title}>RESEARCH TREE</span>
+        <span style={styles.title}>Research Tree</span>
         {isMock && (
           <span style={styles.mockBadge}>MOCK DATA</span>
         )}
         <button style={styles.closeBtn} onClick={onClose}>
-          [X]
+          ✕
         </button>
       </div>
 
@@ -464,7 +463,7 @@ export default function ResearchTree({
       {activeResearch && activeResearchDef && (
         <div style={styles.activeBar}>
           <span style={styles.activeLabel}>
-            RESEARCHING: {activeResearchDef.name} Lv{activeResearch.level}
+            Researching: {activeResearchDef.name} Lv{activeResearch.level}
           </span>
           <div style={styles.progressTrack}>
             <div
@@ -504,15 +503,15 @@ export default function ResearchTree({
                     const isSelected = selectedTech?.id === def.id
 
                     const nodeColor =
-                      isActive ? '#ffff00' :
-                      status === 'researched' ? '#00ff88' :
-                      status === 'available' ? '#ffaa00' :
-                      '#444'
+                      isActive ? '#f59e0b' :
+                      status === 'researched' ? '#34d399' :
+                      status === 'available' ? '#5b9cf6' :
+                      '#334155'
 
                     const borderColor =
-                      isSelected ? '#ffffff' :
-                      isActive ? '#ffff44' :
-                      nodeColor
+                      isSelected ? 'rgba(255,255,255,0.5)' :
+                      isActive ? 'rgba(245,158,11,0.6)' :
+                      nodeColor + '88'
 
                     return (
                       <div key={def.id} style={{ position: 'relative' }}>
@@ -525,7 +524,7 @@ export default function ResearchTree({
                               left: '50%',
                               width: 2,
                               height: 12,
-                              background: '#333',
+                              background: 'rgba(91,156,246,0.2)',
                               transform: 'translateX(-50%)',
                             }}
                           />
@@ -535,12 +534,12 @@ export default function ResearchTree({
                             ...styles.techNode,
                             borderColor,
                             background: isSelected
-                              ? 'rgba(255,255,255,0.07)'
+                              ? 'rgba(255,255,255,0.05)'
                               : status === 'researched'
-                              ? 'rgba(0,255,136,0.08)'
+                              ? 'rgba(52,211,153,0.08)'
                               : status === 'available'
-                              ? 'rgba(255,170,0,0.07)'
-                              : 'rgba(0,0,0,0.3)',
+                              ? 'rgba(91,156,246,0.08)'
+                              : 'rgba(0,0,0,0.2)',
                           }}
                           onClick={() => setSelectedTech(isSelected ? null : def)}
                         >
@@ -580,19 +579,19 @@ export default function ResearchTree({
                 style={{
                   ...styles.detailStatus,
                   color:
-                    selectedStatus === 'researched' ? '#00ff88' :
-                    selectedStatus === 'available' ? '#ffaa00' : '#888',
+                    selectedStatus === 'researched' ? '#34d399' :
+                    selectedStatus === 'available' ? '#5b9cf6' : '#64748b',
                 }}
               >
                 {selectedStatus === 'researched'
-                  ? `RESEARCHED — Level ${selectedLevel}`
+                  ? `Researched — Level ${selectedLevel}`
                   : selectedStatus === 'available'
-                  ? 'AVAILABLE'
-                  : 'LOCKED — Prerequisites not met'}
+                  ? 'Available'
+                  : 'Locked — Prerequisites not met'}
               </div>
               <div style={styles.detailDesc}>{selectedTech.description}</div>
 
-              <div style={styles.detailSection}>PREREQUISITES</div>
+              <div style={styles.detailSection}>Prerequisites</div>
               {Object.keys(selectedTech.prerequisites).length === 0 ? (
                 <div style={styles.prereqRow}>None</div>
               ) : (
@@ -610,9 +609,9 @@ export default function ResearchTree({
                       return (
                         <div
                           key={k}
-                          style={{ ...styles.prereqRow, color: met ? '#00ff88' : '#ff6666' }}
+                          style={{ ...styles.prereqRow, color: met ? '#34d399' : '#f87171' }}
                         >
-                          {dep?.name ?? k} Lv{v} {met ? '[OK]' : '[MISSING]'}
+                          {dep?.name ?? k} Lv{v} {met ? '✓' : '✗'}
                         </div>
                       )
                     })}
@@ -624,20 +623,20 @@ export default function ResearchTree({
                 </>
               )}
 
-              <div style={styles.detailSection}>NEXT LEVEL: {nextLevel}</div>
+              <div style={styles.detailSection}>Next Level: {nextLevel}</div>
               {nextCost && (
                 <div style={styles.costGrid}>
                   <div style={styles.costItem}>
-                    <span style={{ color: '#aaa' }}>Fe</span>
-                    <span>{formatNumber(nextCost.metal)}</span>
+                    <span style={{ color: '#94a3b8' }}>Metal</span>
+                    <span style={{ color: '#e2e8f0' }}>{formatNumber(nextCost.metal)}</span>
                   </div>
                   <div style={styles.costItem}>
-                    <span style={{ color: '#aaa' }}>Si</span>
-                    <span>{formatNumber(nextCost.crystal)}</span>
+                    <span style={{ color: '#94a3b8' }}>Crystal</span>
+                    <span style={{ color: '#e2e8f0' }}>{formatNumber(nextCost.crystal)}</span>
                   </div>
                   <div style={styles.costItem}>
-                    <span style={{ color: '#aaa' }}>D</span>
-                    <span>{formatNumber(nextCost.deuterium)}</span>
+                    <span style={{ color: '#94a3b8' }}>Deut</span>
+                    <span style={{ color: '#e2e8f0' }}>{formatNumber(nextCost.deuterium)}</span>
                   </div>
                 </div>
               )}
@@ -664,10 +663,10 @@ export default function ResearchTree({
                 {researching
                   ? 'Starting...'
                   : selectedStatus === 'locked'
-                  ? 'LOCKED'
+                  ? 'Locked'
                   : activeResearch
-                  ? 'QUEUE FULL'
-                  : `RESEARCH Lv${nextLevel}`}
+                  ? 'Queue Full'
+                  : `Research Lv${nextLevel}`}
               </button>
             </>
           ) : (
@@ -678,17 +677,17 @@ export default function ResearchTree({
 
           {/* Queue section */}
           <div style={{ marginTop: 24 }}>
-            <div style={styles.detailSection}>RESEARCH QUEUE</div>
+            <div style={styles.detailSection}>Research Queue</div>
             {queue.length === 0 ? (
-              <div style={{ color: '#555', fontSize: 12 }}>No active research</div>
+              <div style={{ color: '#64748b', fontSize: 12 }}>No active research</div>
             ) : (
               queue.map((item) => {
                 const def = TECH_DEFS.find((d) => d.id === item.techId)
                 const remaining = item.timeEnd - Date.now()
                 return (
                   <div key={item.techId} style={styles.queueItem}>
-                    <span>{def?.name ?? `Tech #${item.techId}`} Lv{item.level}</span>
-                    <span style={{ color: '#ffaa00' }}>{formatCountdown(remaining)}</span>
+                    <span style={{ color: '#e2e8f0' }}>{def?.name ?? `Tech #${item.techId}`} Lv{item.level}</span>
+                    <span style={{ color: '#f59e0b' }}>{formatCountdown(remaining)}</span>
                   </div>
                 )
               })
@@ -699,12 +698,12 @@ export default function ResearchTree({
 
       {/* Legend */}
       <div style={styles.legend}>
-        <span style={{ color: '#00ff88' }}>Researched</span>
-        <span style={{ color: '#ffaa00', marginLeft: 16 }}>Available</span>
-        <span style={{ color: '#444', marginLeft: 16 }}>Locked</span>
-        <span style={{ color: '#ffff00', marginLeft: 16 }}>Researching</span>
-        <span style={{ color: '#555', marginLeft: 16, fontSize: 11 }}>
-          Press R or click [X] to close
+        <span style={{ color: '#34d399' }}>Researched</span>
+        <span style={{ color: '#5b9cf6', marginLeft: 16 }}>Available</span>
+        <span style={{ color: '#64748b', marginLeft: 16 }}>Locked</span>
+        <span style={{ color: '#f59e0b', marginLeft: 16 }}>Researching</span>
+        <span style={{ color: '#334155', marginLeft: 16, fontSize: 11 }}>
+          Press R or click ✕ to close
         </span>
       </div>
     </div>
@@ -717,80 +716,79 @@ export default function ResearchTree({
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    background: '#050d05',
-    border: '1px solid #00ff00',
-    borderRadius: 4,
+    background: 'rgba(8,14,28,0.95)',
+    backdropFilter: 'blur(16px)',
+    border: '1px solid rgba(91,156,246,0.2)',
+    borderRadius: 10,
     padding: '0 20px 20px 20px',
-    color: '#00ff00',
-    fontFamily: '"Courier New", monospace',
+    color: '#e2e8f0',
+    fontFamily: "'Inter', system-ui, sans-serif",
     width: 900,
     maxWidth: '96vw',
     maxHeight: '90vh',
     overflowY: 'auto',
-    boxShadow: '0 0 32px rgba(0,255,0,0.2)',
   },
   bannerWrap: {
     position: 'relative' as const,
     height: 200,
     margin: '0 -20px 16px -20px',
     overflow: 'hidden',
-    borderRadius: '4px 4px 0 0',
+    borderRadius: '10px 10px 0 0',
   },
   bannerImg: {
     width: '100%',
     height: '100%',
     objectFit: 'cover' as const,
     display: 'block',
-    filter: 'brightness(0.6)',
+    filter: 'brightness(0.5)',
   },
   bannerTitle: {
     position: 'absolute' as const,
     bottom: 16,
     left: 20,
     fontSize: 28,
-    fontWeight: 'bold',
-    letterSpacing: 6,
-    color: '#00ff00',
-    textShadow: '0 0 20px #00ff00, 0 2px 8px rgba(0,0,0,0.8)',
-    fontFamily: '"Courier New", monospace',
+    fontWeight: 600,
+    letterSpacing: 2,
+    color: '#e2e8f0',
+    textShadow: '0 2px 16px rgba(0,0,0,0.8)',
+    fontFamily: "'Inter', system-ui, sans-serif",
   },
   header: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
-    borderBottom: '1px solid #003300',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
     paddingBottom: 10,
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    letterSpacing: 3,
-    color: '#00ff88',
-    textShadow: '0 0 10px #00ff88',
+    fontSize: 17,
+    fontWeight: 600,
+    color: '#5b9cf6',
   },
   mockBadge: {
     fontSize: 10,
-    background: '#330000',
-    color: '#ff6666',
-    border: '1px solid #ff4444',
+    background: 'rgba(248,113,113,0.1)',
+    color: '#f87171',
+    border: '1px solid rgba(248,113,113,0.3)',
     padding: '2px 8px',
-    borderRadius: 2,
+    borderRadius: 4,
   },
   closeBtn: {
     background: 'transparent',
-    border: '1px solid #004400',
-    color: '#00ff00',
+    border: 'none',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: '"Courier New", monospace',
-    fontSize: 14,
-    padding: '4px 10px',
-    letterSpacing: 1,
+    fontFamily: "'Inter', system-ui, sans-serif",
+    fontSize: 18,
+    padding: '2px 6px',
+    borderRadius: 4,
+    transition: 'color 0.15s',
   },
   activeBar: {
-    background: 'rgba(255,255,0,0.05)',
-    border: '1px solid #444400',
-    borderRadius: 3,
+    background: 'rgba(245,158,11,0.06)',
+    border: '1px solid rgba(245,158,11,0.2)',
+    borderRadius: 6,
     padding: '8px 12px',
     marginBottom: 12,
     display: 'flex',
@@ -799,27 +797,27 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap',
   },
   activeLabel: {
-    color: '#ffff44',
+    color: '#f59e0b',
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: 600,
     minWidth: 200,
   },
   progressTrack: {
     flex: 1,
-    height: 8,
-    background: '#111',
-    border: '1px solid #333',
+    height: 6,
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: 4,
     overflow: 'hidden',
     minWidth: 100,
   },
   progressFill: {
     height: '100%',
-    background: 'linear-gradient(90deg, #00ff00, #ffff00)',
+    background: 'linear-gradient(90deg, #5b9cf6, #34d399)',
     transition: 'width 1s linear',
   },
   countdownText: {
-    color: '#ffaa00',
+    color: '#f59e0b',
     fontSize: 12,
     minWidth: 80,
     textAlign: 'right' as const,
@@ -843,8 +841,8 @@ const styles: Record<string, React.CSSProperties> = {
   categoryHeader: {
     textAlign: 'center' as const,
     fontSize: 11,
-    fontWeight: 'bold',
-    letterSpacing: 2,
+    fontWeight: 600,
+    letterSpacing: 1,
     borderBottom: '1px solid',
     paddingBottom: 6,
     marginBottom: 10,
@@ -860,9 +858,9 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     padding: '8px 6px',
     border: '1px solid',
-    borderRadius: 3,
+    borderRadius: 6,
     cursor: 'pointer',
-    fontFamily: '"Courier New", monospace',
+    fontFamily: "'Inter', system-ui, sans-serif",
     width: '100%',
     textAlign: 'center' as const,
     transition: 'all 0.15s ease',
@@ -871,66 +869,66 @@ const styles: Record<string, React.CSSProperties> = {
     width: 40,
     height: 40,
     objectFit: 'cover' as const,
-    borderRadius: 3,
+    borderRadius: 4,
     marginBottom: 4,
-    border: '1px solid #002200',
+    border: '1px solid rgba(91,156,246,0.2)',
   },
   nodeStatus: {
     fontSize: 9,
     letterSpacing: 1,
     marginBottom: 2,
-    fontWeight: 'bold',
+    fontWeight: 600,
   },
   nodeName: {
     fontSize: 10,
-    color: '#ccc',
+    color: '#94a3b8',
     lineHeight: 1.3,
     marginBottom: 2,
   },
   nodeLevel: {
     fontSize: 11,
-    fontWeight: 'bold',
+    fontWeight: 600,
   },
   detailPanel: {
     width: 260,
     minWidth: 240,
-    borderLeft: '1px solid #003300',
+    borderLeft: '1px solid rgba(91,156,246,0.15)',
     paddingLeft: 16,
     flexShrink: 0,
   },
   detailName: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#00ff88',
+    fontWeight: 600,
+    color: '#5b9cf6',
     marginBottom: 6,
     lineHeight: 1.3,
   },
   detailStatus: {
     fontSize: 11,
-    fontWeight: 'bold',
+    fontWeight: 600,
     marginBottom: 8,
-    letterSpacing: 1,
   },
   detailDesc: {
     fontSize: 11,
-    color: '#aaa',
+    color: '#94a3b8',
     lineHeight: 1.5,
     marginBottom: 12,
-    borderBottom: '1px solid #002200',
+    borderBottom: '1px solid rgba(91,156,246,0.12)',
     paddingBottom: 10,
   },
   detailSection: {
     fontSize: 10,
-    color: '#006600',
-    letterSpacing: 2,
+    color: '#5b9cf6',
+    fontWeight: 600,
+    letterSpacing: 1,
     marginBottom: 6,
     marginTop: 10,
-    borderBottom: '1px solid #002200',
+    borderBottom: '1px solid rgba(91,156,246,0.12)',
     paddingBottom: 3,
   },
   prereqRow: {
     fontSize: 11,
-    color: '#aaa',
+    color: '#94a3b8',
     marginBottom: 3,
     paddingLeft: 8,
   },
@@ -950,48 +948,47 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 14,
     width: '100%',
     padding: '10px 0',
-    background: 'rgba(0,255,0,0.1)',
-    border: '1px solid #00aa00',
-    color: '#00ff00',
-    fontFamily: '"Courier New", monospace',
+    background: 'rgba(91,156,246,0.12)',
+    border: '1px solid rgba(91,156,246,0.3)',
+    color: '#93c5fd',
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 12,
-    fontWeight: 'bold',
-    letterSpacing: 2,
-    cursor: 'pointer',
+    fontWeight: 600,
+    borderRadius: 6,
     transition: 'all 0.15s',
   },
   queueNote: {
     marginTop: 8,
     fontSize: 10,
-    color: '#ffaa00',
+    color: '#f59e0b',
     fontStyle: 'italic',
   },
   errorMsg: {
     marginTop: 6,
     fontSize: 11,
-    color: '#ff4444',
-    background: 'rgba(255,0,0,0.07)',
-    border: '1px solid #440000',
+    color: '#f87171',
+    background: 'rgba(248,113,113,0.07)',
+    border: '1px solid rgba(248,113,113,0.2)',
     padding: '4px 8px',
-    borderRadius: 2,
+    borderRadius: 4,
   },
   queueItem: {
     display: 'flex',
     justifyContent: 'space-between',
     fontSize: 11,
-    color: '#aaa',
+    color: '#94a3b8',
     padding: '3px 0',
-    borderBottom: '1px solid #111',
+    borderBottom: '1px solid rgba(255,255,255,0.04)',
   },
   selectHint: {
-    color: '#444',
+    color: '#334155',
     fontSize: 12,
     marginTop: 40,
     textAlign: 'center' as const,
     fontStyle: 'italic',
   },
   legend: {
-    borderTop: '1px solid #003300',
+    borderTop: '1px solid rgba(91,156,246,0.15)',
     paddingTop: 10,
     marginTop: 16,
     fontSize: 11,

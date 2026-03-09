@@ -9,7 +9,7 @@
  * - Filter tabs: All, Inbox, Sent, System, Combat Reports
  * - Mark as read/unread (GET /api/messages/:id marks as read automatically)
  * - Unread count badge
- * - Green retro-terminal HUD aesthetic matching existing components
+ * - Cockpit glass panel aesthetic
  */
 
 import { useState, useEffect, useCallback } from 'react'
@@ -214,11 +214,11 @@ function formatTime(unixSec: number): string {
 }
 
 const TYPE_COLORS: Record<MessageType, string> = {
-  player:           '#00ff41',
-  system:           '#44aaff',
-  combat_report:    '#ff4444',
-  espionage_report: '#ffaa00',
-  alliance:         '#aa44ff',
+  player:           '#93c5fd',
+  system:           '#5b9cf6',
+  combat_report:    '#f87171',
+  espionage_report: '#f59e0b',
+  alliance:         '#a78bfa',
 }
 
 const TYPE_LABELS: Record<MessageType, string> = {
@@ -453,9 +453,9 @@ export default function MessagesInbox({
       {/* Header */}
       <div style={styles.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={styles.title}>// MESSAGES</span>
+          <span style={styles.title}>Messages</span>
           {unreadCount > 0 && (
-            <span style={styles.unreadBadge}>{unreadCount} UNREAD</span>
+            <span style={styles.unreadBadge}>{unreadCount} unread</span>
           )}
           {offline && <span style={styles.offlineBadge}>OFFLINE (mock)</span>}
         </div>
@@ -475,7 +475,7 @@ export default function MessagesInbox({
             ↺
           </button>
           {onClose && (
-            <button style={styles.closeBtn} onClick={onClose}>[X]</button>
+            <button style={styles.closeBtn} onClick={onClose}>✕</button>
           )}
         </div>
       </div>
@@ -534,7 +534,7 @@ export default function MessagesInbox({
                     style={{
                       ...styles.typeBadge,
                       color: TYPE_COLORS[msg.type],
-                      borderColor: TYPE_COLORS[msg.type] + '66',
+                      borderColor: TYPE_COLORS[msg.type] + '55',
                     }}
                   >
                     {TYPE_LABELS[msg.type]}
@@ -561,7 +561,7 @@ export default function MessagesInbox({
                     disabled={isBusy}
                     title="Delete"
                   >
-                    {isBusy ? '...' : 'X'}
+                    {isBusy ? '...' : '✕'}
                   </button>
                 </div>
               )
@@ -575,17 +575,17 @@ export default function MessagesInbox({
             <div style={styles.detailHeader}>
               <div style={styles.detailSubject}>{selectedMsg.subject}</div>
               <div style={styles.detailMeta}>
-                <span style={{ color: '#006622' }}>
-                  From: <span style={{ color: '#00ff41' }}>{selectedMsg.fromPlayerName}</span>
+                <span style={{ color: '#64748b' }}>
+                  From: <span style={{ color: '#e2e8f0' }}>{selectedMsg.fromPlayerName}</span>
                 </span>
-                <span style={{ color: '#444', marginLeft: 12 }}>
+                <span style={{ color: '#334155', marginLeft: 12 }}>
                   {formatTime(selectedMsg.createdAt)}
                 </span>
                 <span
                   style={{
                     ...styles.typeBadge,
                     color: TYPE_COLORS[selectedMsg.type],
-                    borderColor: TYPE_COLORS[selectedMsg.type] + '66',
+                    borderColor: TYPE_COLORS[selectedMsg.type] + '55',
                     marginLeft: 10,
                   }}
                 >
@@ -631,7 +631,7 @@ export default function MessagesInbox({
             {showReply && (
               <form style={styles.replyForm} onSubmit={handleSendReply}>
                 <div style={styles.replyHeader}>
-                  REPLY TO: <span style={{ color: '#00ff41' }}>{replyTo}</span>
+                  Reply to: <span style={{ color: '#e2e8f0' }}>{replyTo}</span>
                 </div>
                 <input
                   style={styles.replyInput}
@@ -668,9 +668,9 @@ export default function MessagesInbox({
         {showCompose && (
           <div style={styles.detailPane}>
             <form style={styles.replyForm} onSubmit={handleSendCompose}>
-              <div style={styles.replyHeader}>NEW MESSAGE</div>
+              <div style={styles.replyHeader}>New Message</div>
               <div style={styles.composeFieldRow}>
-                <label style={styles.composeLabel}>TO:</label>
+                <label style={styles.composeLabel}>To:</label>
                 <input
                   style={styles.replyInput}
                   type="text"
@@ -680,7 +680,7 @@ export default function MessagesInbox({
                 />
               </div>
               <div style={styles.composeFieldRow}>
-                <label style={styles.composeLabel}>SUBJECT:</label>
+                <label style={styles.composeLabel}>Subject:</label>
                 <input
                   style={styles.replyInput}
                   type="text"
@@ -717,18 +717,18 @@ export default function MessagesInbox({
 }
 
 // ---------------------------------------------------------------------------
-// Styles
+// Styles — cockpit glass panel
 // ---------------------------------------------------------------------------
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    background: '#0a0a0a',
-    border: '1px solid #00ff41',
-    borderRadius: 4,
-    color: '#00ff41',
-    fontFamily: "'Courier New', monospace",
+    background: 'rgba(8,14,28,0.95)',
+    backdropFilter: 'blur(16px)',
+    border: '1px solid rgba(91,156,246,0.2)',
+    borderRadius: 10,
+    color: '#e2e8f0',
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 13,
-    boxShadow: '0 0 20px rgba(0,255,65,0.15)',
     width: 820,
     maxHeight: '88vh',
     display: 'flex',
@@ -739,102 +739,99 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '10px 14px',
-    borderBottom: '1px solid #00ff4133',
+    padding: '12px 16px',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
     flexShrink: 0,
   },
   title: {
-    fontWeight: 'bold',
-    fontSize: 13,
-    letterSpacing: 2,
-    textShadow: '0 0 8px #00ff41',
+    fontWeight: 600,
+    fontSize: 15,
+    color: '#5b9cf6',
   },
   unreadBadge: {
     fontSize: 10,
-    color: '#ff4444',
-    border: '1px solid #ff4444',
-    borderRadius: 2,
+    color: '#f87171',
+    border: '1px solid rgba(248,113,113,0.4)',
+    borderRadius: 4,
     padding: '1px 6px',
-    letterSpacing: 1,
-    animation: 'none',
   },
   offlineBadge: {
     fontSize: 10,
-    color: '#ff8800',
-    border: '1px solid #ff8800',
-    borderRadius: 2,
+    color: '#f59e0b',
+    border: '1px solid rgba(245,158,11,0.4)',
+    borderRadius: 4,
     padding: '1px 6px',
-    letterSpacing: 1,
   },
   composeBtn: {
-    background: 'rgba(0,255,65,0.1)',
-    border: '1px solid #00ff41',
-    color: '#00ff41',
+    background: 'rgba(91,156,246,0.12)',
+    border: '1px solid rgba(91,156,246,0.3)',
+    color: '#93c5fd',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 11,
     padding: '3px 10px',
-    borderRadius: 2,
+    borderRadius: 6,
   },
   markReadBtn: {
     background: 'transparent',
-    border: '1px solid #444',
-    color: '#666',
+    border: '1px solid rgba(100,116,139,0.3)',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 11,
     padding: '3px 8px',
-    borderRadius: 2,
+    borderRadius: 6,
   },
   refreshBtn: {
     background: 'transparent',
-    border: '1px solid #333',
-    color: '#555',
+    border: '1px solid rgba(100,116,139,0.2)',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 16,
     padding: '2px 8px',
-    borderRadius: 2,
+    borderRadius: 6,
   },
   closeBtn: {
     background: 'transparent',
-    border: '1px solid #ff4444',
-    color: '#ff4444',
+    border: 'none',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
-    fontSize: 12,
-    padding: '2px 8px',
-    borderRadius: 2,
+    fontFamily: "'Inter', system-ui, sans-serif",
+    fontSize: 18,
+    padding: '2px 6px',
+    borderRadius: 4,
+    transition: 'color 0.15s',
   },
   tabs: {
     display: 'flex',
-    borderBottom: '1px solid #00ff4133',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
     flexShrink: 0,
   },
   tab: {
     flex: 1,
     background: 'transparent',
     border: 'none',
-    borderRight: '1px solid #00ff4122',
-    color: '#006622',
+    borderRight: '1px solid rgba(91,156,246,0.1)',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 11,
-    padding: '7px 4px',
-    letterSpacing: 1,
+    padding: '8px 4px',
     position: 'relative',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
+    transition: 'color 0.15s',
   },
   tabActive: {
-    color: '#00ff41',
-    background: 'rgba(0,255,65,0.06)',
-    borderBottom: '2px solid #00ff41',
+    color: '#5b9cf6',
+    background: 'rgba(91,156,246,0.08)',
+    borderBottom: '2px solid #5b9cf6',
   },
   tabBadge: {
-    background: '#ff4444',
+    background: '#f87171',
     color: '#fff',
     borderRadius: 8,
     fontSize: 9,
@@ -843,9 +840,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 'bold',
   },
   statusMsg: {
-    background: 'rgba(0,255,65,0.06)',
-    borderBottom: '1px solid #00ff4133',
-    color: '#00ff41',
+    background: 'rgba(91,156,246,0.06)',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
+    color: '#93c5fd',
     fontSize: 12,
     padding: '5px 14px',
     flexShrink: 0,
@@ -858,7 +855,7 @@ const styles: Record<string, React.CSSProperties> = {
   msgList: {
     width: '100%',
     overflowY: 'auto',
-    borderRight: '1px solid #00ff4122',
+    borderRight: '1px solid rgba(91,156,246,0.1)',
     flex: 1,
     minWidth: 260,
   },
@@ -867,7 +864,7 @@ const styles: Record<string, React.CSSProperties> = {
     width: 280,
   },
   centerMsg: {
-    color: '#444',
+    color: '#334155',
     textAlign: 'center',
     padding: 30,
     fontSize: 12,
@@ -877,39 +874,38 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 8,
     padding: '9px 12px',
-    borderBottom: '1px solid #00ff4111',
+    borderBottom: '1px solid rgba(255,255,255,0.04)',
     cursor: 'pointer',
     transition: 'background 0.1s',
   },
   msgRowRead: {
-    opacity: 0.65,
+    opacity: 0.6,
   },
   msgRowUnread: {
     opacity: 1,
   },
   msgRowSelected: {
-    background: 'rgba(0,255,65,0.08)',
-    borderLeft: '3px solid #00ff41',
+    background: 'rgba(91,156,246,0.08)',
+    borderLeft: '3px solid #5b9cf6',
     paddingLeft: 9,
     opacity: 1,
   },
   typeBadge: {
     fontSize: 9,
     border: '1px solid',
-    borderRadius: 2,
+    borderRadius: 3,
     padding: '1px 4px',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     flexShrink: 0,
-    fontWeight: 'bold',
+    fontWeight: 600,
   },
   unreadDot: {
     display: 'inline-block',
     width: 7,
     height: 7,
     borderRadius: '50%',
-    background: '#00ff41',
+    background: '#5b9cf6',
     flexShrink: 0,
-    boxShadow: '0 0 4px #00ff41',
   },
   msgContent: {
     flex: 1,
@@ -922,21 +918,21 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 2,
   },
   msgSender: {
-    color: '#00cc33',
+    color: '#e2e8f0',
     fontSize: 11,
-    fontWeight: 'bold',
+    fontWeight: 600,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
     maxWidth: 110,
   },
   msgTime: {
-    color: '#444',
+    color: '#334155',
     fontSize: 10,
     flexShrink: 0,
   },
   msgSubject: {
-    color: '#888',
+    color: '#94a3b8',
     fontSize: 11,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -944,16 +940,16 @@ const styles: Record<string, React.CSSProperties> = {
   },
   deleteBtn: {
     background: 'transparent',
-    border: '1px solid #ff444444',
-    color: '#ff4444',
+    border: 'none',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
-    fontSize: 10,
+    fontFamily: "'Inter', system-ui, sans-serif",
+    fontSize: 12,
     padding: '2px 5px',
-    borderRadius: 2,
+    borderRadius: 3,
     flexShrink: 0,
     opacity: 0.5,
-    transition: 'opacity 0.15s',
+    transition: 'opacity 0.15s, color 0.15s',
   },
 
   // Detail pane
@@ -966,15 +962,14 @@ const styles: Record<string, React.CSSProperties> = {
   },
   detailHeader: {
     padding: '12px 16px',
-    borderBottom: '1px solid #00ff4133',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
     flexShrink: 0,
   },
   detailSubject: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#00ff41',
+    fontWeight: 600,
+    color: '#5b9cf6',
     marginBottom: 6,
-    textShadow: '0 0 6px #00ff4166',
   },
   detailMeta: {
     fontSize: 11,
@@ -982,12 +977,13 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     flexWrap: 'wrap' as const,
     gap: 4,
+    color: '#94a3b8',
   },
   detailBody: {
     flex: 1,
     overflowY: 'auto',
     padding: '14px 16px',
-    color: '#aaa',
+    color: '#94a3b8',
     fontSize: 12,
     lineHeight: 1.7,
     whiteSpace: 'pre-wrap' as const,
@@ -996,39 +992,38 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     gap: 8,
     padding: '10px 16px',
-    borderTop: '1px solid #00ff4122',
+    borderTop: '1px solid rgba(91,156,246,0.12)',
     flexShrink: 0,
   },
   replyBtn: {
-    background: 'rgba(0,255,65,0.08)',
-    border: '1px solid #00ff41',
-    color: '#00ff41',
+    background: 'rgba(91,156,246,0.12)',
+    border: '1px solid rgba(91,156,246,0.3)',
+    color: '#93c5fd',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 12,
     padding: '5px 18px',
-    borderRadius: 2,
-    boxShadow: '0 0 5px #00ff4122',
+    borderRadius: 6,
   },
   deleteBtnLarge: {
     background: 'transparent',
-    border: '1px solid #ff4444',
-    color: '#ff4444',
+    border: '1px solid rgba(248,113,113,0.3)',
+    color: '#f87171',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 12,
     padding: '5px 14px',
-    borderRadius: 2,
+    borderRadius: 6,
   },
   closeDetailBtn: {
     background: 'transparent',
-    border: '1px solid #444',
-    color: '#666',
+    border: '1px solid rgba(100,116,139,0.3)',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 12,
     padding: '5px 12px',
-    borderRadius: 2,
+    borderRadius: 6,
     marginLeft: 'auto',
   },
 
@@ -1042,10 +1037,10 @@ const styles: Record<string, React.CSSProperties> = {
     overflowY: 'auto',
   },
   replyHeader: {
-    color: '#006622',
-    fontSize: 11,
-    letterSpacing: 2,
-    borderBottom: '1px solid #00ff4122',
+    color: '#5b9cf6',
+    fontSize: 12,
+    fontWeight: 600,
+    borderBottom: '1px solid rgba(91,156,246,0.12)',
     paddingBottom: 8,
     marginBottom: 4,
   },
@@ -1055,35 +1050,32 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
   },
   composeLabel: {
-    color: '#006622',
+    color: '#64748b',
     fontSize: 11,
-    letterSpacing: 1,
     minWidth: 56,
     flexShrink: 0,
   },
   replyInput: {
     flex: 1,
-    background: 'rgba(0,8,0,0.8)',
-    border: '1px solid #006622',
-    color: '#00ff41',
-    fontFamily: "'Courier New', monospace",
+    background: 'rgba(8,14,28,0.8)',
+    border: '1px solid rgba(91,156,246,0.2)',
+    color: '#e2e8f0',
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 12,
     padding: '5px 10px',
-    borderRadius: 2,
+    borderRadius: 6,
     outline: 'none',
-    boxShadow: '0 0 5px #00ff4122',
   },
   replyTextarea: {
     flex: 1,
-    background: 'rgba(0,8,0,0.8)',
-    border: '1px solid #006622',
-    color: '#00ff41',
-    fontFamily: "'Courier New', monospace",
+    background: 'rgba(8,14,28,0.8)',
+    border: '1px solid rgba(91,156,246,0.2)',
+    color: '#e2e8f0',
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 12,
     padding: '8px 10px',
-    borderRadius: 2,
+    borderRadius: 6,
     outline: 'none',
-    boxShadow: '0 0 5px #00ff4122',
     resize: 'vertical' as const,
     minHeight: 80,
   },
@@ -1094,24 +1086,24 @@ const styles: Record<string, React.CSSProperties> = {
   },
   sendBtn: {
     flex: 1,
-    background: 'rgba(0,255,65,0.1)',
-    border: '1px solid #00ff41',
-    color: '#00ff41',
+    background: 'rgba(91,156,246,0.12)',
+    border: '1px solid rgba(91,156,246,0.3)',
+    color: '#93c5fd',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 12,
+    fontWeight: 600,
     padding: '7px 0',
-    borderRadius: 2,
-    boxShadow: '0 0 8px #00ff4133',
+    borderRadius: 6,
   },
   cancelReplyBtn: {
     background: 'transparent',
-    border: '1px solid #444',
-    color: '#666',
+    border: '1px solid rgba(100,116,139,0.3)',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 11,
     padding: '7px 14px',
-    borderRadius: 2,
+    borderRadius: 6,
   },
 }

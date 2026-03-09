@@ -6,7 +6,7 @@
  * - Sortable table: rank, player, alliance, score
  * - Pagination (20 per page)
  * - Search/filter by player name
- * - Green retro terminal styling (matches HUD.tsx)
+ * - Cockpit glass panel aesthetic
  */
 
 import { useState, useEffect, useCallback } from 'react'
@@ -194,14 +194,14 @@ export default function Leaderboard({ onClose, onSelectPlayer }: LeaderboardProp
     <div style={styles.container}>
       {/* Header */}
       <div style={styles.header}>
-        <span style={styles.title}>// GALACTIC LEADERBOARD</span>
+        <span style={styles.title}>Galactic Leaderboard</span>
         <div style={styles.headerRight}>
           {offline && (
             <span style={styles.offlineBadge}>OFFLINE (mock)</span>
           )}
           {onClose && (
             <button style={styles.closeBtn} onClick={onClose}>
-              [X]
+              ✕
             </button>
           )}
         </div>
@@ -225,11 +225,11 @@ export default function Leaderboard({ onClose, onSelectPlayer }: LeaderboardProp
 
       {/* Search */}
       <div style={styles.searchRow}>
-        <span style={styles.searchLabel}>SEARCH&gt;</span>
+        <span style={styles.searchLabel}>Search:</span>
         <input
           style={styles.searchInput}
           type="text"
-          placeholder="player name or [alliance]..."
+          placeholder="player name or alliance..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -273,7 +273,7 @@ export default function Leaderboard({ onClose, onSelectPlayer }: LeaderboardProp
             <tbody>
               {sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ ...styles.td, textAlign: 'center', color: '#555' }}>
+                  <td colSpan={5} style={{ ...styles.td, textAlign: 'center', color: '#64748b' }}>
                     No players found
                   </td>
                 </tr>
@@ -283,7 +283,7 @@ export default function Leaderboard({ onClose, onSelectPlayer }: LeaderboardProp
                     key={entry.playerId}
                     style={{
                       ...styles.row,
-                      background: idx % 2 === 0 ? 'transparent' : 'rgba(0,255,65,0.02)',
+                      background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)',
                     }}
                   >
                     <td style={styles.td}>
@@ -299,18 +299,18 @@ export default function Leaderboard({ onClose, onSelectPlayer }: LeaderboardProp
                           {entry.playerName}
                         </button>
                       ) : (
-                        <span style={{ color: '#00ff41' }}>{entry.playerName}</span>
+                        <span style={{ color: '#e2e8f0' }}>{entry.playerName}</span>
                       )}
                     </td>
                     <td style={styles.td}>
                       {entry.allianceTag ? (
                         <span style={styles.allianceTag}>[{entry.allianceTag}]</span>
                       ) : (
-                        <span style={{ color: '#333' }}>—</span>
+                        <span style={{ color: '#334155' }}>—</span>
                       )}
                     </td>
                     <td style={{ ...styles.td, textAlign: 'center' as const }}>
-                      <span style={{ color: '#88cc88' }}>{entry.planetCount}</span>
+                      <span style={{ color: '#94a3b8' }}>{entry.planetCount}</span>
                     </td>
                     <td style={{ ...styles.td, textAlign: 'right' as const }}>
                       <span style={styles.scoreValue}>
@@ -354,7 +354,7 @@ export default function Leaderboard({ onClose, onSelectPlayer }: LeaderboardProp
 // ---------------------------------------------------------------------------
 
 function RankBadge({ rank }: { rank: number }) {
-  let color = '#00ff41'
+  let color = '#e2e8f0'
   if (rank === 1) color = '#ffd700'
   if (rank === 2) color = '#c0c0c0'
   if (rank === 3) color = '#cd7f32'
@@ -371,13 +371,13 @@ function RankBadge({ rank }: { rank: number }) {
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    background: '#0a0a0a',
-    border: '1px solid #00ff41',
-    borderRadius: 4,
-    color: '#00ff41',
-    fontFamily: "'Courier New', monospace",
+    background: 'rgba(8,14,28,0.95)',
+    backdropFilter: 'blur(16px)',
+    border: '1px solid rgba(91,156,246,0.2)',
+    borderRadius: 10,
+    color: '#e2e8f0',
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 13,
-    boxShadow: '0 0 20px rgba(0,255,65,0.15)',
     minWidth: 560,
     maxHeight: '90vh',
     display: 'flex',
@@ -389,16 +389,14 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '10px 14px',
-    borderBottom: '1px solid #00ff4133',
+    padding: '12px 16px',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
     flexShrink: 0,
   },
   title: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    letterSpacing: 2,
-    color: '#00ff41',
-    textShadow: '0 0 8px #00ff41',
+    fontWeight: 600,
+    fontSize: 15,
+    color: '#5b9cf6',
   },
   headerRight: {
     display: 'flex',
@@ -407,46 +405,45 @@ const styles: Record<string, React.CSSProperties> = {
   },
   offlineBadge: {
     fontSize: 10,
-    color: '#ff8800',
-    border: '1px solid #ff8800',
-    borderRadius: 2,
+    color: '#f59e0b',
+    border: '1px solid rgba(245,158,11,0.4)',
+    borderRadius: 4,
     padding: '1px 6px',
-    letterSpacing: 1,
   },
   closeBtn: {
     background: 'transparent',
-    border: '1px solid #ff4444',
-    color: '#ff4444',
+    border: 'none',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
-    fontSize: 12,
-    padding: '2px 8px',
-    borderRadius: 2,
+    fontFamily: "'Inter', system-ui, sans-serif",
+    fontSize: 16,
+    padding: '2px 6px',
+    borderRadius: 4,
+    transition: 'color 0.15s',
   },
 
   // Tabs
   tabs: {
     display: 'flex',
-    borderBottom: '1px solid #00ff4133',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
     flexShrink: 0,
   },
   tab: {
     flex: 1,
     background: 'transparent',
     border: 'none',
-    borderRight: '1px solid #00ff4122',
-    color: '#006622',
+    borderRight: '1px solid rgba(91,156,246,0.1)',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 12,
-    padding: '7px 4px',
-    letterSpacing: 1,
+    padding: '8px 4px',
     transition: 'color 0.15s, background 0.15s',
   },
   tabActive: {
-    color: '#00ff41',
-    background: 'rgba(0,255,65,0.06)',
-    borderBottom: '2px solid #00ff41',
+    color: '#5b9cf6',
+    background: 'rgba(91,156,246,0.08)',
+    borderBottom: '2px solid #5b9cf6',
   },
 
   // Search
@@ -455,34 +452,34 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 8,
     padding: '8px 14px',
-    borderBottom: '1px solid #00ff4122',
+    borderBottom: '1px solid rgba(91,156,246,0.1)',
     flexShrink: 0,
   },
   searchLabel: {
-    color: '#006622',
-    fontSize: 11,
+    color: '#64748b',
+    fontSize: 12,
     whiteSpace: 'nowrap',
   },
   searchInput: {
     flex: 1,
-    background: 'rgba(0,8,0,0.8)',
-    border: '1px solid #006622',
-    color: '#00ff41',
-    fontFamily: "'Courier New', monospace",
+    background: 'rgba(8,14,28,0.8)',
+    border: '1px solid rgba(91,156,246,0.2)',
+    color: '#e2e8f0',
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 12,
     padding: '4px 8px',
-    borderRadius: 2,
+    borderRadius: 6,
     outline: 'none',
   },
   clearBtn: {
-    background: 'transparent',
-    border: '1px solid #555',
-    color: '#888',
+    background: 'rgba(91,156,246,0.12)',
+    border: '1px solid rgba(91,156,246,0.3)',
+    color: '#93c5fd',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 11,
     padding: '3px 8px',
-    borderRadius: 2,
+    borderRadius: 6,
   },
 
   // Table
@@ -498,13 +495,13 @@ const styles: Record<string, React.CSSProperties> = {
   th: {
     padding: '7px 12px',
     textAlign: 'left',
-    borderBottom: '1px solid #00ff4133',
-    color: '#006622',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
+    color: '#5b9cf6',
     fontSize: 11,
-    letterSpacing: 1,
+    fontWeight: 600,
     position: 'sticky' as const,
     top: 0,
-    background: '#0a0a0a',
+    background: 'rgba(8,14,28,0.98)',
     userSelect: 'none',
   },
   row: {
@@ -512,17 +509,18 @@ const styles: Record<string, React.CSSProperties> = {
   },
   td: {
     padding: '6px 12px',
-    borderBottom: '1px solid #00ff4115',
+    borderBottom: '1px solid rgba(255,255,255,0.04)',
     verticalAlign: 'middle',
+    color: '#e2e8f0',
   },
 
   // Player button
   playerBtn: {
     background: 'transparent',
     border: 'none',
-    color: '#00ff41',
+    color: '#93c5fd',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 12,
     padding: 0,
     textDecoration: 'underline',
@@ -531,20 +529,19 @@ const styles: Record<string, React.CSSProperties> = {
 
   // Alliance tag
   allianceTag: {
-    color: '#44aaff',
-    fontWeight: 'bold',
+    color: '#93c5fd',
+    fontWeight: 600,
   },
 
   // Score
   scoreValue: {
-    color: '#00ffff',
-    fontWeight: 'bold',
-    textShadow: '0 0 6px #00ffff44',
+    color: '#f59e0b',
+    fontWeight: 600,
   },
 
   // Loading
   loadingMsg: {
-    color: '#006622',
+    color: '#64748b',
     textAlign: 'center',
     padding: 30,
     fontSize: 13,
@@ -557,22 +554,22 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '8px 14px',
-    borderTop: '1px solid #00ff4133',
+    borderTop: '1px solid rgba(91,156,246,0.15)',
     flexShrink: 0,
   },
   pageBtn: {
-    background: 'rgba(0,255,65,0.08)',
-    border: '1px solid #00ff4155',
-    color: '#00ff41',
+    background: 'rgba(91,156,246,0.12)',
+    border: '1px solid rgba(91,156,246,0.3)',
+    color: '#93c5fd',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 11,
     padding: '4px 12px',
-    borderRadius: 2,
+    borderRadius: 6,
     transition: 'background 0.15s',
   },
   pageInfo: {
-    color: '#006622',
+    color: '#64748b',
     fontSize: 11,
   },
 }

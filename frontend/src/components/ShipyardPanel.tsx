@@ -6,7 +6,7 @@
  * - Quantity selector per ship
  * - Build button (POST /api/planet/:id/ships/build)
  * - Live build queue with countdown timer
- * - Green retro-terminal aesthetic matching HUD.tsx
+ * - Cockpit glass panel aesthetic
  */
 
 import { useState, useEffect, useCallback } from 'react'
@@ -364,16 +364,16 @@ export default function ShipyardPanel({ onClose, planetId }: ShipyardPanelProps)
       {/* Banner image */}
       <div style={s.bannerWrap}>
         <img src="/img/headers/shipyard/shipyard.jpg" alt="Shipyard" style={s.bannerImg} />
-        <span style={s.bannerTitle}>SHIPYARD</span>
+        <span style={s.bannerTitle}>Shipyard</span>
       </div>
 
       {/* Header */}
       <div style={s.header}>
-        <span style={s.title}>// SHIPYARD — BUILD QUEUE</span>
+        <span style={s.title}>Shipyard — Build Queue</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {offline && <span style={s.offlineBadge}>OFFLINE (mock)</span>}
           {onClose && (
-            <button style={s.closeBtn} onClick={onClose}>[X]</button>
+            <button style={s.closeBtn} onClick={onClose}>✕</button>
           )}
         </div>
       </div>
@@ -393,7 +393,7 @@ export default function ShipyardPanel({ onClose, planetId }: ShipyardPanelProps)
       <div style={s.body}>
         {/* Left: ship grid */}
         <div style={s.leftCol}>
-          <div style={s.sectionLabel}>SHIPS</div>
+          <div style={s.sectionLabel}>Ships</div>
           {loading ? (
             <div style={s.loadingMsg}>Loading ships...</div>
           ) : (
@@ -490,7 +490,7 @@ export default function ShipyardPanel({ onClose, planetId }: ShipyardPanelProps)
                     {/* Total cost preview */}
                     {meetsReq && qty > 1 && (
                       <div style={{ ...s.costRow, marginTop: 4, opacity: 0.7 }}>
-                        <span style={{ color: '#666', fontSize: 10 }}>Total: </span>
+                        <span style={{ color: '#64748b', fontSize: 10 }}>Total: </span>
                         {ship.cost.metal > 0 && (
                           <span style={{ ...s.costMetal, fontSize: 10 }}>
                             Fe {fmt(ship.cost.metal * qty)}
@@ -517,7 +517,7 @@ export default function ShipyardPanel({ onClose, planetId }: ShipyardPanelProps)
 
         {/* Right: build queue */}
         <div style={s.rightCol}>
-          <div style={s.sectionLabel}>BUILD QUEUE</div>
+          <div style={s.sectionLabel}>Build Queue</div>
           <button style={s.refreshBtn} onClick={loadData} title="Refresh">
             ↺ Refresh
           </button>
@@ -572,17 +572,17 @@ export default function ShipyardPanel({ onClose, planetId }: ShipyardPanelProps)
 
           {/* Current resources */}
           <div style={s.resourcesBox}>
-            <div style={s.sectionLabel}>RESOURCES</div>
+            <div style={s.sectionLabel}>Resources</div>
             <div style={s.resRow}>
               <span style={s.resIcon}>Fe</span>
               <span style={s.resVal}>{fmt(resources.metal)}</span>
             </div>
             <div style={s.resRow}>
-              <span style={{ ...s.resIcon, color: '#64b4ff' }}>Si</span>
+              <span style={{ ...s.resIcon, color: '#93c5fd' }}>Si</span>
               <span style={s.resVal}>{fmt(resources.crystal)}</span>
             </div>
             <div style={s.resRow}>
-              <span style={{ ...s.resIcon, color: '#80ffb0' }}>D</span>
+              <span style={{ ...s.resIcon, color: '#34d399' }}>D</span>
               <span style={s.resVal}>{fmt(resources.deuterium)}</span>
             </div>
           </div>
@@ -593,101 +593,97 @@ export default function ShipyardPanel({ onClose, planetId }: ShipyardPanelProps)
 }
 
 // ---------------------------------------------------------------------------
-// Styles — green retro-terminal matching HUD.tsx
+// Styles — cockpit glass panel
 // ---------------------------------------------------------------------------
 
 const s: Record<string, React.CSSProperties> = {
   container: {
-    background: 'rgba(0, 8, 20, 0.97)',
-    border: '2px solid #00ff00',
-    borderRadius: 4,
-    color: '#00ff00',
-    fontFamily: "'Courier New', monospace",
+    background: 'rgba(8,14,28,0.95)',
+    backdropFilter: 'blur(16px)',
+    border: '1px solid rgba(91,156,246,0.2)',
+    borderRadius: 10,
+    color: '#e2e8f0',
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 13,
-    boxShadow: '0 0 20px rgba(0, 255, 0, 0.3)',
     width: 900,
     maxWidth: '95vw',
     maxHeight: '90vh',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
-    textShadow: '0 0 6px #00ff00',
   },
   bannerWrap: {
     position: 'relative' as const,
     height: 200,
     flexShrink: 0,
     overflow: 'hidden',
+    borderRadius: '10px 10px 0 0',
   },
   bannerImg: {
     width: '100%',
     height: '100%',
     objectFit: 'cover' as const,
     display: 'block',
-    filter: 'brightness(0.6)',
+    filter: 'brightness(0.5)',
   },
   bannerTitle: {
     position: 'absolute' as const,
     bottom: 16,
     left: 20,
     fontSize: 28,
-    fontWeight: 'bold',
-    letterSpacing: 6,
-    color: '#00ff00',
-    textShadow: '0 0 20px #00ff00, 0 2px 8px rgba(0,0,0,0.8)',
-    fontFamily: "'Courier New', monospace",
+    fontWeight: 600,
+    letterSpacing: 2,
+    color: '#e2e8f0',
+    textShadow: '0 2px 16px rgba(0,0,0,0.8)',
+    fontFamily: "'Inter', system-ui, sans-serif",
   },
   header: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '10px 16px',
-    borderBottom: '1px solid #00ff0033',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
     flexShrink: 0,
   },
   title: {
-    fontWeight: 'bold',
+    fontWeight: 600,
     fontSize: 14,
-    letterSpacing: 2,
-    textShadow: '0 0 10px #00ff00',
-    color: '#ffff00',
+    color: '#5b9cf6',
   },
   offlineBadge: {
     fontSize: 10,
-    color: '#ff8800',
-    border: '1px solid #ff8800',
-    borderRadius: 2,
+    color: '#f59e0b',
+    border: '1px solid rgba(245,158,11,0.4)',
+    borderRadius: 4,
     padding: '1px 6px',
-    letterSpacing: 1,
-    textShadow: 'none',
   },
   closeBtn: {
     background: 'transparent',
-    border: '1px solid #ff4444',
-    color: '#ff4444',
+    border: 'none',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
-    fontSize: 12,
-    padding: '2px 8px',
-    borderRadius: 2,
-    textShadow: 'none',
+    fontFamily: "'Inter', system-ui, sans-serif",
+    fontSize: 18,
+    padding: '2px 6px',
+    borderRadius: 4,
+    transition: 'color 0.15s',
   },
   levelBar: {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
     padding: '6px 16px',
-    borderBottom: '1px solid #00ff0022',
+    borderBottom: '1px solid rgba(91,156,246,0.1)',
     flexShrink: 0,
     fontSize: 12,
   },
-  levelLabel: { color: '#006600', opacity: 0.8 },
-  levelValue: { color: '#00ffff', fontWeight: 'bold' },
-  levelWarn: { color: '#ff8800', marginLeft: 10, fontSize: 11 },
+  levelLabel: { color: '#64748b' },
+  levelValue: { color: '#5b9cf6', fontWeight: 600 },
+  levelWarn: { color: '#f59e0b', marginLeft: 10, fontSize: 11 },
   statusMsg: {
-    background: 'rgba(0,255,0,0.06)',
-    borderBottom: '1px solid #00ff0033',
-    color: '#00ff00',
+    background: 'rgba(91,156,246,0.06)',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
+    color: '#93c5fd',
     fontSize: 12,
     padding: '6px 16px',
     flexShrink: 0,
@@ -702,7 +698,7 @@ const s: Record<string, React.CSSProperties> = {
     flex: 1,
     overflowY: 'auto',
     padding: 14,
-    borderRight: '1px solid #00ff0022',
+    borderRight: '1px solid rgba(91,156,246,0.1)',
     display: 'flex',
     flexDirection: 'column',
     gap: 8,
@@ -717,14 +713,14 @@ const s: Record<string, React.CSSProperties> = {
     overflowY: 'auto',
   },
   sectionLabel: {
-    color: '#006600',
-    fontSize: 10,
-    letterSpacing: 2,
+    color: '#5b9cf6',
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: 0.5,
     marginBottom: 4,
-    textShadow: 'none',
   },
   loadingMsg: {
-    color: '#006600',
+    color: '#64748b',
     textAlign: 'center',
     padding: 30,
   },
@@ -734,10 +730,10 @@ const s: Record<string, React.CSSProperties> = {
     gap: 10,
   },
   shipCard: {
-    border: '1px solid #00ff0033',
-    borderRadius: 3,
+    border: '1px solid rgba(91,156,246,0.15)',
+    borderRadius: 8,
     padding: '10px 12px',
-    background: 'rgba(0, 255, 0, 0.02)',
+    background: 'rgba(255,255,255,0.02)',
     display: 'flex',
     flexDirection: 'column',
     gap: 5,
@@ -745,8 +741,8 @@ const s: Record<string, React.CSSProperties> = {
   },
   shipCardLocked: {
     opacity: 0.45,
-    borderColor: '#333',
-    background: 'rgba(0,0,0,0.3)',
+    borderColor: 'rgba(255,255,255,0.06)',
+    background: 'rgba(0,0,0,0.2)',
   },
   shipHeader: {
     display: 'flex',
@@ -757,29 +753,26 @@ const s: Record<string, React.CSSProperties> = {
     width: 48,
     height: 48,
     objectFit: 'cover' as const,
-    borderRadius: 3,
-    border: '1px solid #003300',
+    borderRadius: 4,
+    border: '1px solid rgba(91,156,246,0.2)',
     flexShrink: 0,
   },
   shipName: {
-    color: '#00ffff',
-    fontWeight: 'bold',
+    color: '#e2e8f0',
+    fontWeight: 600,
     fontSize: 13,
-    textShadow: '0 0 6px #00ffff',
   },
   lockBadge: {
     fontSize: 10,
-    color: '#ff4444',
-    border: '1px solid #ff444466',
-    borderRadius: 2,
+    color: '#f87171',
+    border: '1px solid rgba(248,113,113,0.3)',
+    borderRadius: 4,
     padding: '0 4px',
-    textShadow: 'none',
   },
   shipDesc: {
-    color: '#006600',
+    color: '#64748b',
     fontSize: 10,
     lineHeight: 1.3,
-    textShadow: 'none',
   },
   costRow: {
     display: 'flex',
@@ -788,30 +781,26 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 11,
   },
   costMetal: {
-    color: '#a0a0a0',
-    background: 'rgba(160,160,160,0.1)',
+    color: '#94a3b8',
+    background: 'rgba(148,163,184,0.1)',
     padding: '1px 5px',
-    borderRadius: 2,
-    textShadow: 'none',
+    borderRadius: 3,
   },
   costCrystal: {
-    color: '#64b4ff',
-    background: 'rgba(100,180,255,0.1)',
+    color: '#93c5fd',
+    background: 'rgba(147,197,253,0.1)',
     padding: '1px 5px',
-    borderRadius: 2,
-    textShadow: 'none',
+    borderRadius: 3,
   },
   costDeut: {
-    color: '#80ffb0',
-    background: 'rgba(0,200,100,0.1)',
+    color: '#34d399',
+    background: 'rgba(52,211,153,0.1)',
     padding: '1px 5px',
-    borderRadius: 2,
-    textShadow: 'none',
+    borderRadius: 3,
   },
   buildTime: {
-    color: '#555',
+    color: '#64748b',
     fontSize: 10,
-    textShadow: 'none',
   },
   buildRow: {
     display: 'flex',
@@ -820,73 +809,66 @@ const s: Record<string, React.CSSProperties> = {
     marginTop: 4,
   },
   qtyBtn: {
-    background: 'rgba(0,255,0,0.08)',
-    border: '1px solid #00ff0066',
-    color: '#00ff00',
+    background: 'rgba(91,156,246,0.12)',
+    border: '1px solid rgba(91,156,246,0.3)',
+    color: '#93c5fd',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 14,
     width: 26,
     height: 26,
-    borderRadius: 2,
-    textShadow: 'none',
+    borderRadius: 4,
     padding: 0,
   },
   qtyInput: {
-    background: 'rgba(0,8,0,0.8)',
-    border: '1px solid #006600',
-    color: '#00ff00',
-    fontFamily: "'Courier New', monospace",
+    background: 'rgba(8,14,28,0.8)',
+    border: '1px solid rgba(91,156,246,0.2)',
+    color: '#e2e8f0',
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 13,
     width: 52,
     textAlign: 'center',
-    borderRadius: 2,
+    borderRadius: 4,
     outline: 'none',
     padding: '2px 4px',
-    textShadow: 'none',
   },
   buildBtn: {
     flex: 1,
-    background: 'rgba(0,255,0,0.1)',
-    border: '1px solid #00ff00',
-    color: '#00ff00',
+    background: 'rgba(91,156,246,0.12)',
+    border: '1px solid rgba(91,156,246,0.3)',
+    color: '#93c5fd',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 11,
     padding: '4px 6px',
-    borderRadius: 2,
-    boxShadow: '0 0 5px #00ff0033',
+    borderRadius: 6,
     transition: 'background 0.15s',
-    textShadow: 'none',
-    letterSpacing: 1,
+    fontWeight: 600,
   },
   buildBtnDisabled: {
-    background: 'rgba(0,0,0,0.3)',
-    border: '1px solid #333',
-    color: '#444',
+    background: 'rgba(0,0,0,0.2)',
+    border: '1px solid rgba(255,255,255,0.06)',
+    color: '#334155',
     cursor: 'not-allowed',
-    boxShadow: 'none',
   },
 
   // Queue
   refreshBtn: {
-    background: 'transparent',
-    border: '1px solid #006600',
-    color: '#006600',
+    background: 'rgba(91,156,246,0.08)',
+    border: '1px solid rgba(91,156,246,0.2)',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 11,
     padding: '3px 8px',
-    borderRadius: 2,
-    textShadow: 'none',
+    borderRadius: 6,
     width: '100%',
   },
   emptyQueue: {
-    color: '#444',
+    color: '#334155',
     fontSize: 12,
     textAlign: 'center',
     padding: '20px 0',
-    textShadow: 'none',
   },
   queueList: {
     display: 'flex',
@@ -895,49 +877,47 @@ const s: Record<string, React.CSSProperties> = {
     flex: 1,
   },
   queueItem: {
-    border: '1px solid #00ff0022',
-    borderRadius: 3,
+    border: '1px solid rgba(91,156,246,0.12)',
+    borderRadius: 6,
     padding: '8px 10px',
-    background: 'rgba(0,255,0,0.015)',
+    background: 'rgba(255,255,255,0.02)',
     display: 'flex',
     flexDirection: 'column',
     gap: 4,
   },
   queueItemActive: {
-    borderColor: '#00ffff',
-    background: 'rgba(0,255,255,0.05)',
+    borderColor: 'rgba(52,211,153,0.3)',
+    background: 'rgba(52,211,153,0.04)',
   },
   queueShipName: {
-    color: '#00ffff',
+    color: '#e2e8f0',
     fontSize: 12,
-    fontWeight: 'bold',
-    textShadow: '0 0 4px #00ffff',
+    fontWeight: 600,
   },
   queueMeta: {
     display: 'flex',
     justifyContent: 'space-between',
     fontSize: 11,
-    color: '#006600',
+    color: '#64748b',
   },
-  queueCount: { color: '#00ff00' },
-  queueProgress: { color: '#ffff00' },
-  queueTime: { color: '#ffff00', fontWeight: 'bold' },
+  queueCount: { color: '#93c5fd' },
+  queueProgress: { color: '#f59e0b' },
+  queueTime: { color: '#f59e0b', fontWeight: 600 },
   progressBarWrap: {
-    background: 'rgba(0,255,0,0.1)',
+    background: 'rgba(255,255,255,0.04)',
     borderRadius: 2,
     height: 4,
     overflow: 'hidden',
   },
   progressBar: {
-    background: '#00ff00',
+    background: 'linear-gradient(90deg, #5b9cf6, #34d399)',
     height: '100%',
-    boxShadow: '0 0 6px #00ff00',
     transition: 'width 0.5s linear',
   },
 
   // Resources sidebar
   resourcesBox: {
-    borderTop: '1px solid #00ff0022',
+    borderTop: '1px solid rgba(91,156,246,0.1)',
     paddingTop: 10,
     marginTop: 'auto',
     display: 'flex',
@@ -959,14 +939,12 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: 3,
     fontSize: 10,
     fontWeight: 'bold',
-    background: 'rgba(160,160,160,0.2)',
-    border: '1px solid #555',
-    color: '#e0e0e0',
-    textShadow: 'none',
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    color: '#94a3b8',
   },
   resVal: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-    textShadow: 'none',
+    color: '#e2e8f0',
+    fontWeight: 600,
   },
 }

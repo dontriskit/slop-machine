@@ -64,11 +64,11 @@ function tempLabel(pos: number): string {
 
 function tempColor(pos: number): string {
   const [min] = TEMP_RANGE[pos] ?? [0, 0]
-  if (min >= 120) return '#ff4444'     // scorching – red
-  if (min >= 50)  return '#ffaa00'     // warm – orange
-  if (min >= 10)  return '#88cc44'     // comfortable – green
-  if (min >= -30) return '#44aaff'     // cool – light blue
-  return '#aaddff'                     // frozen – icy blue
+  if (min >= 120) return '#f87171'     // scorching – red
+  if (min >= 50)  return '#f59e0b'     // warm – amber
+  if (min >= 10)  return '#34d399'     // comfortable – teal
+  if (min >= -30) return '#93c5fd'     // cool – light blue
+  return '#bfdbfe'                     // frozen – icy blue
 }
 
 // ============================================================================
@@ -133,7 +133,7 @@ function PlanetDetail({
     <div style={styles.popup} onClick={(e) => e.stopPropagation()}>
       <div style={styles.popupHeader}>
         <span style={styles.popupTitle}>{planet.name}</span>
-        <button style={styles.closeBtn} onClick={onClose}>X</button>
+        <button style={styles.closeBtn} onClick={onClose}>✕</button>
       </div>
 
       <div style={styles.popupBody}>
@@ -148,7 +148,7 @@ function PlanetDetail({
         {planet.allianceTag && (
           <div style={styles.popupRow}>
             <span style={styles.popupLabel}>Alliance:</span>
-            <span style={{ ...styles.popupValue, color: '#44aaff' }}>[{planet.allianceTag}]</span>
+            <span style={{ ...styles.popupValue, color: '#93c5fd' }}>[{planet.allianceTag}]</span>
           </div>
         )}
         <div style={styles.popupRow}>
@@ -168,7 +168,7 @@ function PlanetDetail({
         {planet.debris && (
           <div style={styles.popupRow}>
             <span style={styles.popupLabel}>Debris:</span>
-            <span style={{ ...styles.popupValue, color: '#aaaaff' }}>
+            <span style={{ ...styles.popupValue, color: '#c4b5fd' }}>
               {planet.debris.metal.toLocaleString()}M / {planet.debris.crystal.toLocaleString()}C
             </span>
           </div>
@@ -206,13 +206,13 @@ function AttackDialog({ planet, position, galaxy, system, onClose }: AttackDialo
     <div style={styles.popup} onClick={(e) => e.stopPropagation()}>
       <div style={styles.popupHeader}>
         <span style={styles.popupTitle}>Fleet Dispatch</span>
-        <button style={styles.closeBtn} onClick={onClose}>X</button>
+        <button style={styles.closeBtn} onClick={onClose}>✕</button>
       </div>
       <div style={styles.popupBody}>
-        <p style={{ color: '#ccc', margin: '0 0 8px 0', fontSize: 12 }}>
+        <p style={{ color: '#94a3b8', margin: '0 0 8px 0', fontSize: 12 }}>
           Target: {planet.name} ({galaxy}:{system}:{position})
         </p>
-        <p style={{ color: '#ff4444', fontSize: 11, margin: 0 }}>
+        <p style={{ color: '#f87171', fontSize: 11, margin: 0 }}>
           Fleet dispatch not yet implemented — wire to POST /api/fleet/send
         </p>
       </div>
@@ -544,47 +544,47 @@ export default function GalaxyMap({ currentPlayerId = 'local-player', onClose }:
                           )}
                         </button>
                       ) : (
-                        <span style={{ color: '#444', fontSize: 11 }}>(empty)</span>
+                        <span style={{ color: '#334155', fontSize: 11 }}>(empty)</span>
                       )}
                     </td>
 
                     {/* Player */}
                     <td style={styles.td}>
                       {planet ? (
-                        <span style={planet.playerId === currentPlayerId ? { color: '#00ff88' } : {}}>
+                        <span style={planet.playerId === currentPlayerId ? { color: '#34d399' } : { color: '#e2e8f0' }}>
                           {planet.playerName}
                         </span>
                       ) : (
-                        <span style={{ color: '#333' }}>—</span>
+                        <span style={{ color: '#334155' }}>—</span>
                       )}
                     </td>
 
                     {/* Alliance tag */}
                     <td style={styles.td}>
                       {planet?.allianceTag ? (
-                        <span style={{ color: '#44aaff' }}>[{planet.allianceTag}]</span>
+                        <span style={{ color: '#93c5fd' }}>[{planet.allianceTag}]</span>
                       ) : (
-                        <span style={{ color: '#333' }}>—</span>
+                        <span style={{ color: '#334155' }}>—</span>
                       )}
                     </td>
 
                     {/* Moon indicator */}
                     <td style={{ ...styles.td, textAlign: 'center' }}>
                       {planet?.hasMoon ? (
-                        <span title="Moon present" style={{ color: '#aaaaff' }}>M</span>
+                        <span title="Moon present" style={{ color: '#c4b5fd' }}>M</span>
                       ) : (
-                        <span style={{ color: '#333' }}>—</span>
+                        <span style={{ color: '#334155' }}>—</span>
                       )}
                     </td>
 
                     {/* Debris field */}
                     <td style={{ ...styles.td, fontSize: 11 }}>
                       {planet?.debris ? (
-                        <span style={{ color: '#9988ff' }} title={`${planet.debris.metal}M / ${planet.debris.crystal}C`}>
+                        <span style={{ color: '#a5b4fc' }} title={`${planet.debris.metal}M / ${planet.debris.crystal}C`}>
                           D
                         </span>
                       ) : (
-                        <span style={{ color: '#333' }}>—</span>
+                        <span style={{ color: '#334155' }}>—</span>
                       )}
                     </td>
 
@@ -609,7 +609,7 @@ export default function GalaxyMap({ currentPlayerId = 'local-player', onClose }:
                             </button>
                           </>
                         ) : (
-                          <span style={{ color: '#00ff88', fontSize: 11 }}>Own</span>
+                          <span style={{ color: '#34d399', fontSize: 11 }}>Own</span>
                         )
                       ) : (
                         <button
@@ -652,14 +652,14 @@ export default function GalaxyMap({ currentPlayerId = 'local-player', onClose }:
 const styles: Record<string, React.CSSProperties> = {
   container: {
     position: 'relative',
-    background: 'rgba(0, 8, 20, 0.96)',
-    border: '2px solid #00ff00',
-    borderRadius: 6,
+    background: 'rgba(8,14,28,0.95)',
+    backdropFilter: 'blur(16px)',
+    border: '1px solid rgba(91,156,246,0.2)',
+    borderRadius: 10,
     padding: 16,
-    color: '#00ff00',
-    fontFamily: "'Courier New', monospace",
+    color: '#e2e8f0',
+    fontFamily: "'Inter', system-ui, sans-serif",
     outline: 'none',
-    boxShadow: '0 0 30px rgba(0, 255, 0, 0.2)',
     maxHeight: '90vh',
     overflowY: 'auto',
     minWidth: 680,
@@ -669,12 +669,12 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'absolute',
     top: 8,
     right: 8,
-    background: 'rgba(255,0,0,0.2)',
-    border: '1px solid #ff4444',
-    color: '#ff4444',
+    background: 'rgba(248,113,113,0.12)',
+    border: '1px solid rgba(248,113,113,0.3)',
+    color: '#f87171',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
-    borderRadius: 3,
+    fontFamily: "'Inter', system-ui, sans-serif",
+    borderRadius: 6,
     padding: '4px 10px',
     fontSize: 12,
   },
@@ -693,57 +693,56 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
   },
   navBtn: {
-    background: 'rgba(0,255,0,0.1)',
-    border: '1px solid #00ff00',
-    color: '#00ff00',
+    background: 'rgba(91,156,246,0.12)',
+    border: '1px solid rgba(91,156,246,0.3)',
+    color: '#93c5fd',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
-    borderRadius: 3,
+    fontFamily: "'Inter', system-ui, sans-serif",
+    borderRadius: 6,
     padding: '4px 10px',
     fontSize: 14,
     transition: 'background 0.15s',
   },
   select: {
-    background: 'rgba(0,8,20,0.9)',
-    border: '1px solid #00ff00',
-    color: '#00ff00',
-    fontFamily: "'Courier New', monospace",
-    borderRadius: 3,
+    background: 'rgba(8,14,28,0.9)',
+    border: '1px solid rgba(91,156,246,0.3)',
+    color: '#e2e8f0',
+    fontFamily: "'Inter', system-ui, sans-serif",
+    borderRadius: 6,
     padding: '4px 8px',
     fontSize: 13,
     cursor: 'pointer',
   },
   coordDisplay: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#00ffff',
-    textShadow: '0 0 8px #00ffff',
+    fontWeight: 600,
+    color: '#5b9cf6',
     minWidth: 100,
     textAlign: 'center',
   },
   jumpInput: {
-    background: 'rgba(0,8,20,0.9)',
-    border: '1px solid #008800',
-    color: '#00ff00',
-    fontFamily: "'Courier New', monospace",
-    borderRadius: 3,
+    background: 'rgba(8,14,28,0.9)',
+    border: '1px solid rgba(91,156,246,0.2)',
+    color: '#e2e8f0',
+    fontFamily: "'Inter', system-ui, sans-serif",
+    borderRadius: 6,
     padding: '4px 8px',
     fontSize: 12,
     width: 180,
   },
   keyHint: {
-    color: '#006600',
+    color: '#64748b',
     fontSize: 10,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     marginLeft: 'auto',
   },
 
   // ---- Error banner ----
   errorBanner: {
-    background: 'rgba(255,0,0,0.15)',
-    border: '1px solid #ff4444',
-    color: '#ff8888',
-    borderRadius: 3,
+    background: 'rgba(248,113,113,0.1)',
+    border: '1px solid rgba(248,113,113,0.3)',
+    color: '#f87171',
+    borderRadius: 6,
     padding: '6px 12px',
     fontSize: 12,
     marginBottom: 10,
@@ -753,11 +752,11 @@ const styles: Record<string, React.CSSProperties> = {
   },
   dismissBtn: {
     background: 'transparent',
-    border: '1px solid #ff4444',
-    color: '#ff4444',
+    border: '1px solid rgba(248,113,113,0.4)',
+    color: '#f87171',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
-    borderRadius: 2,
+    fontFamily: "'Inter', system-ui, sans-serif",
+    borderRadius: 4,
     padding: '2px 8px',
     fontSize: 11,
     marginLeft: 'auto',
@@ -765,7 +764,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   // ---- Loading ----
   loadingMsg: {
-    color: '#008800',
+    color: '#64748b',
     fontSize: 13,
     textAlign: 'center',
     padding: 20,
@@ -783,10 +782,11 @@ const styles: Record<string, React.CSSProperties> = {
   th: {
     padding: '6px 10px',
     textAlign: 'left',
-    borderBottom: '1px solid #004400',
-    color: '#008800',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
+    color: '#5b9cf6',
     fontSize: 11,
-    letterSpacing: 1,
+    fontWeight: 600,
+    letterSpacing: 0.5,
     whiteSpace: 'nowrap',
   },
   row: {
@@ -796,18 +796,19 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'transparent',
   },
   rowOwn: {
-    background: 'rgba(0, 255, 136, 0.06)',
+    background: 'rgba(52,211,153,0.05)',
   },
   rowAlliance: {
-    background: 'rgba(68, 170, 255, 0.06)',
+    background: 'rgba(147,197,253,0.05)',
   },
   rowEnemy: {
-    background: 'rgba(255, 68, 68, 0.04)',
+    background: 'rgba(248,113,113,0.04)',
   },
   td: {
     padding: '5px 10px',
-    borderBottom: '1px solid #001a00',
+    borderBottom: '1px solid rgba(255,255,255,0.04)',
     verticalAlign: 'middle',
+    color: '#e2e8f0',
   },
 
   // ---- Position badge ----
@@ -827,9 +828,9 @@ const styles: Record<string, React.CSSProperties> = {
   planetNameBtn: {
     background: 'transparent',
     border: 'none',
-    color: '#00ff00',
+    color: '#93c5fd',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 12,
     padding: 0,
     position: 'relative',
@@ -838,28 +839,31 @@ const styles: Record<string, React.CSSProperties> = {
 
   // ---- Action buttons ----
   actionBtn: {
-    background: 'rgba(0,0,0,0.3)',
-    border: '1px solid #555',
-    color: '#ccc',
+    background: 'rgba(91,156,246,0.12)',
+    border: '1px solid rgba(91,156,246,0.3)',
+    color: '#93c5fd',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
-    borderRadius: 2,
+    fontFamily: "'Inter', system-ui, sans-serif",
+    borderRadius: 6,
     padding: '2px 8px',
     fontSize: 11,
     marginRight: 4,
     transition: 'background 0.15s',
   },
   spyBtn: {
-    borderColor: '#aaaa00',
-    color: '#ffff44',
+    borderColor: 'rgba(245,158,11,0.4)',
+    color: '#f59e0b',
+    background: 'rgba(245,158,11,0.1)',
   },
   attackBtn: {
-    borderColor: '#ff4444',
-    color: '#ff8888',
+    borderColor: 'rgba(248,113,113,0.4)',
+    color: '#f87171',
+    background: 'rgba(248,113,113,0.1)',
   },
   colonizeBtn: {
-    borderColor: '#00ff00',
-    color: '#00ff00',
+    borderColor: 'rgba(52,211,153,0.4)',
+    color: '#34d399',
+    background: 'rgba(52,211,153,0.1)',
   },
 
   // ---- Popup ----
@@ -873,13 +877,13 @@ const styles: Record<string, React.CSSProperties> = {
     zIndex: 1000,
   },
   popup: {
-    background: 'rgba(0, 8, 20, 0.98)',
-    border: '2px solid #00ff00',
-    borderRadius: 6,
+    background: 'rgba(8,14,28,0.98)',
+    backdropFilter: 'blur(16px)',
+    border: '1px solid rgba(91,156,246,0.2)',
+    borderRadius: 10,
     minWidth: 280,
-    boxShadow: '0 0 30px rgba(0,255,0,0.3)',
-    fontFamily: "'Courier New', monospace",
-    color: '#00ff00',
+    fontFamily: "'Inter', system-ui, sans-serif",
+    color: '#e2e8f0',
     position: 'absolute',
     top: '100%',
     left: 0,
@@ -891,20 +895,21 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '8px 12px',
-    borderBottom: '1px solid #004400',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
   },
   popupTitle: {
-    fontWeight: 'bold',
-    color: '#ffff00',
+    fontWeight: 600,
+    color: '#5b9cf6',
     fontSize: 13,
   },
   closeBtn: {
     background: 'transparent',
     border: 'none',
-    color: '#ff4444',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
-    fontSize: 13,
+    fontFamily: "'Inter', system-ui, sans-serif",
+    fontSize: 14,
+    transition: 'color 0.15s',
   },
   popupBody: {
     padding: '8px 12px',
@@ -916,17 +921,17 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 16,
   },
   popupLabel: {
-    color: '#006600',
+    color: '#64748b',
     fontSize: 11,
   },
   popupValue: {
-    color: '#00ffff',
+    color: '#e2e8f0',
     fontSize: 11,
   },
   popupActions: {
     display: 'flex',
     gap: 8,
     padding: '8px 12px',
-    borderTop: '1px solid #004400',
+    borderTop: '1px solid rgba(91,156,246,0.15)',
   },
 }
