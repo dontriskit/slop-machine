@@ -10,6 +10,9 @@ import ResourceTrader from './components/ResourceTrader'
 import ResearchTree from './components/ResearchTree'
 import FleetDispatch from './components/FleetDispatch'
 import ResourceChart from './components/ResourceChart'
+import MessagesInbox from './components/MessagesInbox'
+import ShipyardPanel from './components/ShipyardPanel'
+import DefensePanel from './components/DefensePanel'
 import { GameStore } from './store/gameStore'
 
 // ---------------------------------------------------------------------------
@@ -54,7 +57,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | 'messages' | 'shipyard' | 'defense' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -108,6 +111,15 @@ export default function App() {
       if (e.key === 'c' || e.key === 'C') {
         setActivePanel((p) => (p === 'chart' ? null : 'chart'))
       }
+      if (e.key === 'm' || e.key === 'M') {
+        setActivePanel((p) => (p === 'messages' ? null : 'messages'))
+      }
+      if (e.key === 'y' || e.key === 'Y') {
+        setActivePanel((p) => (p === 'shipyard' ? null : 'shipyard'))
+      }
+      if (e.key === 'd' || e.key === 'D') {
+        setActivePanel((p) => (p === 'defense' ? null : 'defense'))
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -143,6 +155,9 @@ export default function App() {
         onOpenResearch={() => setActivePanel('research')}
         onOpenFleet={() => setActivePanel('fleet')}
         onOpenChart={() => setActivePanel('chart')}
+        onOpenMessages={() => setActivePanel('messages')}
+        onOpenShipyard={() => setActivePanel('shipyard')}
+        onOpenDefense={() => setActivePanel('defense')}
       />
 
       {/* Galaxy Map modal */}
@@ -187,6 +202,27 @@ export default function App() {
       {activePanel === 'chart' && (
         <ModalOverlay onClose={closePanel}>
           <ResourceChart onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {/* Messages Inbox modal */}
+      {activePanel === 'messages' && (
+        <ModalOverlay onClose={closePanel}>
+          <MessagesInbox onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {/* Shipyard modal */}
+      {activePanel === 'shipyard' && (
+        <ModalOverlay onClose={closePanel}>
+          <ShipyardPanel onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
+      {/* Defense modal */}
+      {activePanel === 'defense' && (
+        <ModalOverlay onClose={closePanel}>
+          <DefensePanel onClose={closePanel} />
         </ModalOverlay>
       )}
 

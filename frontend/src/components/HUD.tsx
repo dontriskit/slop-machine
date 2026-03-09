@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { GameStore } from '../store/gameStore'
+import { DEFAULT_PLAYER_ID } from '../lib/config'
 import './HUD.css'
 
 // Building ID -> human-readable name
@@ -42,10 +43,32 @@ interface HUDProps {
   onOpenResearch?: () => void
   onOpenFleet?: () => void
   onOpenChart?: () => void
+  onOpenMessages?: () => void
+  onOpenShipyard?: () => void
+  onOpenDefense?: () => void
 }
 
-export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenFleet, onOpenChart }: HUDProps) {
+export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenFleet, onOpenChart, onOpenMessages, onOpenShipyard, onOpenDefense }: HUDProps) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [unreadMessages, setUnreadMessages] = useState(0)
+
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/messages/unread-count?player_id=${DEFAULT_PLAYER_ID}`)
+      if (res.ok) {
+        const data: { unreadCount: number } = await res.json()
+        setUnreadMessages(data.unreadCount)
+      }
+    } catch {
+      // offline — ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchUnreadCount()
+    const interval = setInterval(fetchUnreadCount, 60_000) // poll every minute
+    return () => clearInterval(interval)
+  }, [fetchUnreadCount])
 
   const closeMenu = () => setMenuOpen(false)
 
@@ -150,6 +173,30 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
             {onOpenChart && (
               <button className="mobile-nav-btn" onClick={() => { onOpenChart(); closeMenu() }}>
                 Production Chart (C)
+              </button>
+            )}
+            {onOpenMessages && (
+              <button className="mobile-nav-btn" onClick={() => { onOpenMessages(); closeMenu() }}
+                style={{ position: 'relative' }}>
+                Messages (M)
+                {unreadMessages > 0 && (
+                  <span style={{
+                    position: 'absolute', top: 4, right: 8,
+                    background: '#ff4444', color: '#fff',
+                    borderRadius: 8, fontSize: 9, padding: '0 5px',
+                    lineHeight: '14px', fontWeight: 'bold',
+                  }}>{unreadMessages}</span>
+                )}
+              </button>
+            )}
+            {onOpenShipyard && (
+              <button className="mobile-nav-btn" onClick={() => { onOpenShipyard(); closeMenu() }}>
+                Shipyard (Y)
+              </button>
+            )}
+            {onOpenDefense && (
+              <button className="mobile-nav-btn" onClick={() => { onOpenDefense(); closeMenu() }}>
+                Defense (D)
               </button>
             )}
           </div>
@@ -373,6 +420,33 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
         {onOpenChart && (
           <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenChart}>
             Production Chart (C)
+          </button>
+        )}
+        {onOpenMessages && (
+          <button
+            className="galaxy-btn"
+            style={{ marginTop: 6, width: '100%', position: 'relative' }}
+            onClick={onOpenMessages}
+          >
+            Messages (M)
+            {unreadMessages > 0 && (
+              <span style={{
+                position: 'absolute', top: 4, right: 8,
+                background: '#ff4444', color: '#fff',
+                borderRadius: 8, fontSize: 9, padding: '0 5px',
+                lineHeight: '14px', fontWeight: 'bold',
+              }}>{unreadMessages}</span>
+            )}
+          </button>
+        )}
+        {onOpenShipyard && (
+          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenShipyard}>
+            Shipyard (Y)
+          </button>
+        )}
+        {onOpenDefense && (
+          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenDefense}>
+            Defense (D)
           </button>
         )}
       </div>
