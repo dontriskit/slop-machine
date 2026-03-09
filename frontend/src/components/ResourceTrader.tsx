@@ -137,9 +137,9 @@ const RESOURCE_LABELS: Record<Resource, string> = {
 }
 
 const RESOURCE_COLORS: Record<Resource, string> = {
-  metal:     '#aaaaaa',
-  crystal:   '#44aaff',
-  deuterium: '#44ffcc',
+  metal:     '#94a3b8',
+  crystal:   '#5b9cf6',
+  deuterium: '#34d399',
 }
 
 const RESOURCE_ABBREV: Record<Resource, string> = {
@@ -401,13 +401,13 @@ export default function ResourceTrader({
 
                     {/* Meta */}
                     <div style={styles.tradeMeta}>
-                      <span style={{ color: '#006622' }}>
+                      <span style={{ color: '#e2e8f0', fontWeight: 500 }}>
                         {trade.playerName}
                         {trade.allianceTag && (
-                          <span style={{ color: '#44aaff', marginLeft: 4 }}>[{trade.allianceTag}]</span>
+                          <span style={{ color: '#5b9cf6', marginLeft: 4 }}>[{trade.allianceTag}]</span>
                         )}
                       </span>
-                      <span style={{ color: '#333', fontSize: 10 }}>{timeAgo(trade.createdAt)}</span>
+                      <span style={{ color: '#64748b', fontSize: 10 }}>{timeAgo(trade.createdAt)}</span>
                     </div>
 
                     {/* Rate */}
@@ -419,7 +419,7 @@ export default function ResourceTrader({
                     <div style={styles.tradeActions}>
                       {isOwn ? (
                         <>
-                          <span style={{ color: '#006622', fontSize: 11, marginRight: 8 }}>Your offer</span>
+                          <span style={{ color: '#34d399', fontSize: 11, marginRight: 8 }}>Your offer</span>
                           <button
                             style={styles.cancelBtn}
                             onClick={() => handleCancel(trade.id)}
@@ -508,15 +508,15 @@ export default function ResourceTrader({
           {/* Preview */}
           {offerResource !== wantResource && parseInt(offerAmount) > 0 && parseInt(wantAmount) > 0 && (
             <div style={styles.previewBox}>
-              <span style={{ color: '#006622', fontSize: 11 }}>PREVIEW  </span>
+              <span style={{ color: '#64748b', fontSize: 11, fontWeight: 600 }}>PREVIEW  </span>
               <span style={{ color: RESOURCE_COLORS[offerResource] }}>
                 {fmt(parseInt(offerAmount))} {RESOURCE_LABELS[offerResource]}
               </span>
-              <span style={{ color: '#555', margin: '0 8px' }}>for</span>
+              <span style={{ color: '#64748b', margin: '0 8px' }}>for</span>
               <span style={{ color: RESOURCE_COLORS[wantResource] }}>
                 {fmt(parseInt(wantAmount))} {RESOURCE_LABELS[wantResource]}
               </span>
-              <div style={{ color: '#444', fontSize: 10, marginTop: 4 }}>
+              <div style={{ color: '#64748b', fontSize: 10, marginTop: 4 }}>
                 Rate: 1 {RESOURCE_ABBREV[wantResource]} = {(parseInt(offerAmount) / parseInt(wantAmount)).toFixed(2)} {RESOURCE_ABBREV[offerResource]}
               </div>
             </div>
@@ -546,13 +546,13 @@ export default function ResourceTrader({
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    background: '#0a0a0a',
-    border: '1px solid #00ff41',
-    borderRadius: 4,
-    color: '#00ff41',
-    fontFamily: "'Courier New', monospace",
+    background: 'rgba(8,14,28,0.95)',
+    backdropFilter: 'blur(16px)',
+    border: '1px solid rgba(91,156,246,0.2)',
+    borderRadius: 10,
+    color: '#e2e8f0',
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 13,
-    boxShadow: '0 0 20px rgba(0,255,65,0.15)',
     width: 500,
     maxHeight: '90vh',
     display: 'flex',
@@ -563,63 +563,60 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '10px 14px',
-    borderBottom: '1px solid #00ff4133',
+    padding: '12px 16px',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
     flexShrink: 0,
   },
   title: {
-    fontWeight: 'bold',
-    fontSize: 13,
-    letterSpacing: 2,
-    textShadow: '0 0 8px #00ff41',
+    fontWeight: 600,
+    fontSize: 14,
+    color: '#5b9cf6',
   },
   offlineBadge: {
     fontSize: 10,
-    color: '#ff8800',
-    border: '1px solid #ff8800',
-    borderRadius: 2,
+    color: '#f59e0b',
+    border: '1px solid rgba(245,158,11,0.4)',
+    borderRadius: 4,
     padding: '1px 6px',
-    letterSpacing: 1,
   },
   closeBtn: {
     background: 'transparent',
-    border: '1px solid #ff4444',
-    color: '#ff4444',
+    border: '1px solid rgba(248,113,113,0.4)',
+    color: '#f87171',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
-    fontSize: 12,
+    fontFamily: "'Inter', system-ui, sans-serif",
+    fontSize: 14,
     padding: '2px 8px',
-    borderRadius: 2,
+    borderRadius: 6,
   },
   tabs: {
     display: 'flex',
-    borderBottom: '1px solid #00ff4133',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
     flexShrink: 0,
   },
   tab: {
     flex: 1,
     background: 'transparent',
     border: 'none',
-    borderRight: '1px solid #00ff4122',
-    color: '#006622',
+    borderBottom: '2px solid transparent',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 12,
-    padding: '7px 4px',
-    letterSpacing: 1,
-    transition: 'color 0.15s, background 0.15s',
+    fontWeight: 500,
+    padding: '8px 4px',
+    transition: 'color 0.15s',
   },
   tabActive: {
-    color: '#00ff41',
-    background: 'rgba(0,255,65,0.06)',
-    borderBottom: '2px solid #00ff41',
+    color: '#5b9cf6',
+    borderBottom: '2px solid #5b9cf6',
   },
   statusMsg: {
-    background: 'rgba(0,255,65,0.06)',
-    borderBottom: '1px solid #00ff4133',
-    color: '#00ff41',
+    background: 'rgba(52,211,153,0.06)',
+    borderBottom: '1px solid rgba(52,211,153,0.2)',
+    color: '#34d399',
     fontSize: 12,
-    padding: '6px 14px',
+    padding: '6px 16px',
     flexShrink: 0,
   },
 
@@ -629,52 +626,52 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 6,
     padding: '8px 14px',
-    borderBottom: '1px solid #00ff4122',
+    borderBottom: '1px solid rgba(91,156,246,0.1)',
     flexShrink: 0,
     flexWrap: 'wrap' as const,
   },
   filterLabel: {
-    color: '#006622',
+    color: '#64748b',
     fontSize: 11,
-    letterSpacing: 1,
+    fontWeight: 500,
     whiteSpace: 'nowrap',
   },
   filterBtn: {
     background: 'transparent',
-    border: '1px solid #333',
-    color: '#555',
+    border: '1px solid rgba(91,156,246,0.15)',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 11,
     padding: '3px 8px',
-    borderRadius: 2,
+    borderRadius: 4,
     transition: 'all 0.15s',
   },
   filterBtnActive: {
-    background: 'rgba(0,255,65,0.1)',
-    color: '#00ff41',
-    borderColor: '#00ff41',
+    background: 'rgba(91,156,246,0.12)',
+    color: '#5b9cf6',
+    borderColor: 'rgba(91,156,246,0.4)',
   },
   refreshBtn: {
     marginLeft: 'auto',
     background: 'transparent',
-    border: '1px solid #333',
-    color: '#555',
+    border: '1px solid rgba(91,156,246,0.2)',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 16,
     padding: '2px 8px',
-    borderRadius: 2,
+    borderRadius: 4,
   },
 
   loadingMsg: {
-    color: '#006622',
+    color: '#64748b',
     textAlign: 'center',
     padding: 30,
     fontSize: 13,
   },
   emptyMsg: {
-    color: '#444',
+    color: '#334155',
     textAlign: 'center',
     padding: 30,
     fontSize: 12,
@@ -690,17 +687,17 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
   },
   tradeCard: {
-    border: '1px solid #00ff4133',
-    borderRadius: 3,
+    border: '1px solid rgba(91,156,246,0.15)',
+    borderRadius: 8,
     padding: '10px 12px',
-    background: 'rgba(0,255,65,0.015)',
+    background: 'rgba(91,156,246,0.03)',
     display: 'flex',
     flexDirection: 'column',
     gap: 6,
   },
   tradeCardOwn: {
-    borderColor: '#006622',
-    background: 'rgba(0,255,65,0.03)',
+    borderColor: 'rgba(52,211,153,0.25)',
+    background: 'rgba(52,211,153,0.03)',
   },
   tradeMain: {
     display: 'flex',
@@ -714,8 +711,9 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 2,
   },
   tradeSideLabel: {
-    color: '#006622',
+    color: '#64748b',
     fontSize: 10,
+    fontWeight: 600,
     letterSpacing: 1,
   },
   tradeResource: {
@@ -723,7 +721,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'baseline',
   },
   tradeArrow: {
-    color: '#444',
+    color: '#334155',
     fontSize: 20,
     flexShrink: 0,
   },
@@ -734,9 +732,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 11,
   },
   tradeRate: {
-    color: '#555',
+    color: '#64748b',
     fontSize: 10,
-    letterSpacing: 1,
+    fontWeight: 500,
   },
   tradeActions: {
     display: 'flex',
@@ -745,26 +743,26 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 4,
   },
   acceptBtn: {
-    background: 'rgba(0,255,65,0.1)',
-    border: '1px solid #00ff41',
-    color: '#00ff41',
+    background: 'rgba(91,156,246,0.12)',
+    border: '1px solid rgba(91,156,246,0.4)',
+    color: '#5b9cf6',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 12,
+    fontWeight: 500,
     padding: '4px 14px',
-    borderRadius: 2,
-    boxShadow: '0 0 5px #00ff4133',
+    borderRadius: 6,
     transition: 'background 0.15s',
   },
   cancelBtn: {
     background: 'transparent',
-    border: '1px solid #ff4444',
-    color: '#ff4444',
+    border: '1px solid rgba(248,113,113,0.35)',
+    color: '#f87171',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 11,
     padding: '3px 10px',
-    borderRadius: 2,
+    borderRadius: 6,
     transition: 'background 0.15s',
   },
 
@@ -778,10 +776,11 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
   },
   formTitle: {
-    color: '#006622',
-    fontSize: 11,
-    letterSpacing: 2,
-    borderBottom: '1px solid #00ff4122',
+    color: '#5b9cf6',
+    fontSize: 12,
+    fontWeight: 600,
+    letterSpacing: 1,
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
     paddingBottom: 8,
   },
   formRow: {
@@ -790,8 +789,9 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 12,
   },
   formLabel: {
-    color: '#006622',
+    color: '#64748b',
     fontSize: 11,
+    fontWeight: 600,
     letterSpacing: 1,
     minWidth: 60,
   },
@@ -802,38 +802,37 @@ const styles: Record<string, React.CSSProperties> = {
   },
   amountInput: {
     flex: 1,
-    background: 'rgba(0,8,0,0.8)',
-    border: '1px solid #006622',
-    color: '#00ff41',
-    fontFamily: "'Courier New', monospace",
+    background: 'rgba(8,14,28,0.8)',
+    border: '1px solid rgba(91,156,246,0.3)',
+    color: '#e2e8f0',
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 13,
     padding: '6px 10px',
-    borderRadius: 2,
+    borderRadius: 6,
     outline: 'none',
-    boxShadow: '0 0 5px #00ff4122',
   },
   resSelect: {
-    background: 'rgba(0,8,0,0.9)',
-    border: '1px solid #006622',
-    color: '#00ff41',
-    fontFamily: "'Courier New', monospace",
+    background: 'rgba(8,14,28,0.8)',
+    border: '1px solid rgba(91,156,246,0.3)',
+    color: '#e2e8f0',
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 13,
     padding: '6px 8px',
-    borderRadius: 2,
+    borderRadius: 6,
     cursor: 'pointer',
     outline: 'none',
   },
   formArrowRow: {
     textAlign: 'center' as const,
-    color: '#444',
+    color: '#334155',
     fontSize: 24,
     lineHeight: 1,
   },
   previewBox: {
-    border: '1px solid #00ff4133',
-    borderRadius: 3,
+    border: '1px solid rgba(91,156,246,0.15)',
+    borderRadius: 6,
     padding: '10px 14px',
-    background: 'rgba(0,255,65,0.02)',
+    background: 'rgba(91,156,246,0.04)',
     fontSize: 13,
   },
   formActions: {
@@ -842,25 +841,25 @@ const styles: Record<string, React.CSSProperties> = {
   },
   submitBtn: {
     flex: 1,
-    background: 'rgba(0,255,65,0.1)',
-    border: '1px solid #00ff41',
-    color: '#00ff41',
+    background: 'rgba(91,156,246,0.12)',
+    border: '1px solid rgba(91,156,246,0.4)',
+    color: '#5b9cf6',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 13,
+    fontWeight: 500,
     padding: '8px 0',
-    borderRadius: 3,
-    boxShadow: '0 0 8px #00ff4133',
+    borderRadius: 6,
     transition: 'background 0.15s',
   },
   cancelFormBtn: {
     background: 'transparent',
-    border: '1px solid #555',
-    color: '#666',
+    border: '1px solid rgba(91,156,246,0.15)',
+    color: '#64748b',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 12,
     padding: '8px 16px',
-    borderRadius: 3,
+    borderRadius: 6,
   },
 }

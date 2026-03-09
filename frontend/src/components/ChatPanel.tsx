@@ -174,12 +174,13 @@ export default function ChatPanel({ onClose, playerId, allianceId, allianceName,
         height: 520,
         display: 'flex',
         flexDirection: 'column',
-        background: '#0d1117',
-        border: '1px solid #30363d',
-        borderRadius: 8,
+        background: 'rgba(8,14,28,0.95)',
+        backdropFilter: 'blur(16px)',
+        border: '1px solid rgba(91,156,246,0.2)',
+        borderRadius: 10,
         overflow: 'hidden',
-        fontFamily: 'monospace',
-        color: '#e6edf3',
+        fontFamily: "'Inter', system-ui, sans-serif",
+        color: '#e2e8f0',
       }}
       onClick={(e) => e.stopPropagation()}
     >
@@ -189,22 +190,22 @@ export default function ChatPanel({ onClose, playerId, allianceId, allianceName,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '8px 12px',
-          background: '#161b22',
-          borderBottom: '1px solid #30363d',
+          padding: '10px 14px',
+          background: 'rgba(15,23,42,0.6)',
+          borderBottom: '1px solid rgba(91,156,246,0.15)',
         }}
       >
-        <span style={{ fontWeight: 700, color: '#58a6ff' }}>Chat</span>
+        <span style={{ fontWeight: 600, color: '#5b9cf6', fontSize: 14 }}>Communications</span>
         <button
           onClick={onClose}
-          style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: 18 }}
+          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}
         >
           ×
         </button>
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: 'flex', borderBottom: '1px solid #30363d', background: '#161b22' }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid rgba(91,156,246,0.15)', background: 'rgba(15,23,42,0.4)' }}>
         <TabButton
           label="Global"
           active={activeTab === 'global'}
@@ -236,7 +237,7 @@ export default function ChatPanel({ onClose, playerId, allianceId, allianceName,
         }}
       >
         {messages.length === 0 && (
-          <div style={{ color: '#8b949e', textAlign: 'center', marginTop: 40, fontSize: 13 }}>
+          <div style={{ color: '#64748b', textAlign: 'center', marginTop: 40, fontSize: 13 }}>
             No messages yet. Say something!
           </div>
         )}
@@ -254,9 +255,9 @@ export default function ChatPanel({ onClose, playerId, allianceId, allianceName,
       </div>
 
       {/* Composer */}
-      <div style={{ padding: '8px 12px', borderTop: '1px solid #30363d', background: '#161b22' }}>
+      <div style={{ padding: '8px 12px', borderTop: '1px solid rgba(91,156,246,0.15)', background: 'rgba(15,23,42,0.6)' }}>
         {sendError && (
-          <div style={{ color: '#f85149', fontSize: 12, marginBottom: 4 }}>{sendError}</div>
+          <div style={{ color: '#f87171', fontSize: 12, marginBottom: 4 }}>{sendError}</div>
         )}
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <div style={{ flex: 1, position: 'relative' }}>
@@ -269,14 +270,15 @@ export default function ChatPanel({ onClose, playerId, allianceId, allianceName,
               style={{
                 width: '100%',
                 resize: 'none',
-                background: '#0d1117',
-                border: '1px solid #30363d',
+                background: 'rgba(8,14,28,0.8)',
+                border: '1px solid rgba(91,156,246,0.25)',
                 borderRadius: 6,
-                color: '#e6edf3',
+                color: '#e2e8f0',
                 padding: '6px 8px',
                 fontSize: 13,
-                fontFamily: 'monospace',
+                fontFamily: "'Inter', system-ui, sans-serif",
                 boxSizing: 'border-box',
+                outline: 'none',
               }}
             />
             <span
@@ -285,7 +287,7 @@ export default function ChatPanel({ onClose, playerId, allianceId, allianceName,
                 bottom: 4,
                 right: 8,
                 fontSize: 11,
-                color: input.length >= MAX_CHARS ? '#f85149' : '#8b949e',
+                color: input.length >= MAX_CHARS ? '#f87171' : '#64748b',
               }}
             >
               {input.length}/{MAX_CHARS}
@@ -295,13 +297,15 @@ export default function ChatPanel({ onClose, playerId, allianceId, allianceName,
             onClick={handleSend}
             disabled={loading || !input.trim()}
             style={{
-              background: loading || !input.trim() ? '#21262d' : '#1f6feb',
-              border: 'none',
+              background: loading || !input.trim() ? 'rgba(30,41,59,0.5)' : 'rgba(91,156,246,0.2)',
+              border: '1px solid rgba(91,156,246,0.4)',
               borderRadius: 6,
-              color: '#e6edf3',
+              color: loading || !input.trim() ? '#334155' : '#5b9cf6',
               padding: '6px 14px',
               cursor: loading || !input.trim() ? 'default' : 'pointer',
               fontSize: 13,
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontWeight: 500,
               height: 56,
             }}
           >
@@ -334,12 +338,13 @@ function TabButton({
       style={{
         background: 'none',
         border: 'none',
-        borderBottom: active ? '2px solid #58a6ff' : '2px solid transparent',
-        color: active ? '#58a6ff' : '#8b949e',
+        borderBottom: active ? '2px solid #5b9cf6' : '2px solid transparent',
+        color: active ? '#5b9cf6' : '#64748b',
         padding: '8px 16px',
         cursor: 'pointer',
         fontSize: 13,
-        fontFamily: 'monospace',
+        fontFamily: "'Inter', system-ui, sans-serif",
+        fontWeight: active ? 600 : 400,
         position: 'relative',
       }}
     >
@@ -348,7 +353,7 @@ function TabButton({
         <span
           style={{
             marginLeft: 6,
-            background: '#f85149',
+            background: '#f87171',
             color: '#fff',
             borderRadius: 10,
             padding: '1px 6px',
@@ -388,10 +393,11 @@ function MessageRow({
         gap: 8,
         padding: '3px 0',
         borderRadius: 4,
-        background: hovered ? '#161b22' : 'transparent',
+        background: hovered ? 'rgba(91,156,246,0.06)' : 'transparent',
+      borderRadius: 4,
       }}
     >
-      <span style={{ color: '#8b949e', fontSize: 11, minWidth: 42, marginTop: 1 }}>
+      <span style={{ color: '#64748b', fontSize: 11, minWidth: 42, marginTop: 1 }}>
         {formatTime(msg.timestamp)}
       </span>
       <span style={{ flex: 1, wordBreak: 'break-word' }}>
@@ -400,18 +406,18 @@ function MessageRow({
           style={{
             background: 'none',
             border: 'none',
-            color: isOwn ? '#79c0ff' : '#58a6ff',
+            color: isOwn ? '#34d399' : '#5b9cf6',
             fontWeight: 700,
             cursor: onOpenProfile ? 'pointer' : 'default',
             padding: 0,
-            fontFamily: 'monospace',
+            fontFamily: "'Inter', system-ui, sans-serif",
             fontSize: 13,
           }}
         >
           {msg.playerName}
         </button>
-        <span style={{ color: '#8b949e', margin: '0 4px' }}>:</span>
-        <span style={{ color: '#e6edf3', fontSize: 13 }}>{msg.message}</span>
+        <span style={{ color: '#334155', margin: '0 4px' }}>:</span>
+        <span style={{ color: '#e2e8f0', fontSize: 13 }}>{msg.message}</span>
       </span>
       {isOwn && hovered && (
         <button
@@ -420,7 +426,7 @@ function MessageRow({
           style={{
             background: 'none',
             border: 'none',
-            color: '#f85149',
+            color: '#f87171',
             cursor: 'pointer',
             fontSize: 12,
             padding: '0 4px',

@@ -174,6 +174,16 @@ export default function PlayerProfile({ playerId, onClose }: PlayerProfileProps)
         </div>
       </div>
 
+      {/* Planet header image */}
+      <div style={{ width: '100%', height: 150, overflow: 'hidden', flexShrink: 0 }}>
+        <img
+          src="/img/headers/overview/normal.jpg"
+          alt="Planet overview"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+        />
+      </div>
+
       {loading ? (
         <div style={styles.loadingMsg}>Loading profile...</div>
       ) : data ? (
@@ -182,18 +192,18 @@ export default function PlayerProfile({ playerId, onClose }: PlayerProfileProps)
           <div style={styles.card}>
             <div style={styles.cardRow}>
               <span style={styles.label}>PLAYER</span>
-              <span style={{ ...styles.value, fontSize: 16, fontWeight: 'bold', textShadow: '0 0 8px #00ff41' }}>
+              <span style={{ ...styles.value, fontSize: 16, fontWeight: 700 }}>
                 {data.playerName}
               </span>
             </div>
             <div style={styles.cardRow}>
               <span style={styles.label}>ALLIANCE</span>
               {data.allianceTag ? (
-                <span style={{ ...styles.value, color: '#44aaff', fontWeight: 'bold' }}>
+                <span style={{ ...styles.value, color: '#5b9cf6', fontWeight: 600 }}>
                   [{data.allianceTag}]
                 </span>
               ) : (
-                <span style={{ color: '#444' }}>None</span>
+                <span style={{ color: '#334155' }}>None</span>
               )}
             </div>
             <div style={styles.cardRow}>
@@ -206,7 +216,7 @@ export default function PlayerProfile({ playerId, onClose }: PlayerProfileProps)
             </div>
             <div style={styles.cardRow}>
               <span style={styles.label}>TOTAL PTS</span>
-              <span style={{ ...styles.value, color: '#ffd700', fontWeight: 'bold', fontSize: 15 }}>
+              <span style={{ ...styles.value, color: '#f59e0b', fontWeight: 700, fontSize: 15 }}>
                 {formatScore(data.totalScore)}
               </span>
             </div>
@@ -215,9 +225,9 @@ export default function PlayerProfile({ playerId, onClose }: PlayerProfileProps)
           {/* Score breakdown */}
           <div style={styles.section}>
             <div style={styles.sectionTitle}>SCORE BREAKDOWN</div>
-            <ScoreBar label="Economy"  value={data.economyScore}  max={scoreBarMax} color="#00ff41" />
-            <ScoreBar label="Research" value={data.researchScore} max={scoreBarMax} color="#44aaff" />
-            <ScoreBar label="Fleet"    value={data.fleetScore}    max={scoreBarMax} color="#ff8800" />
+            <ScoreBar label="Economy"  value={data.economyScore}  max={scoreBarMax} color="#34d399" />
+            <ScoreBar label="Research" value={data.researchScore} max={scoreBarMax} color="#5b9cf6" />
+            <ScoreBar label="Fleet"    value={data.fleetScore}    max={scoreBarMax} color="#f59e0b" />
           </div>
 
           {/* Recent activity */}
@@ -230,18 +240,18 @@ export default function PlayerProfile({ playerId, onClose }: PlayerProfileProps)
                 {data.recentActivity.map((act, idx) => (
                   <div key={idx} style={styles.activityItem}>
                     <div style={styles.activityLeft}>
-                      <span style={{ color: act.source === 'agent' ? '#ff8800' : '#00ff41', fontSize: 10, marginRight: 6 }}>
+                      <span style={{ color: act.source === 'agent' ? '#f59e0b' : '#34d399', fontSize: 10, marginRight: 6, fontWeight: 600 }}>
                         {act.source === 'agent' ? '[AI]' : '[ME]'}
                       </span>
-                      <span style={{ color: '#00ff41' }}>
+                      <span style={{ color: '#e2e8f0' }}>
                         {BUILDING_NAMES[act.buildingId] ?? `Building #${act.buildingId}`}
                       </span>
-                      <span style={{ color: '#006622', marginLeft: 6, fontSize: 11 }}>
+                      <span style={{ color: '#64748b', marginLeft: 6, fontSize: 11 }}>
                         Lv{act.level}
                       </span>
                     </div>
                     <div style={styles.activityRight}>
-                      <span style={{ color: '#444', fontSize: 10 }}>{timeAgo(act.createdAt)}</span>
+                      <span style={{ color: '#64748b', fontSize: 10 }}>{timeAgo(act.createdAt)}</span>
                     </div>
                     {act.reason && (
                       <div style={styles.activityReason}>
@@ -266,7 +276,7 @@ export default function PlayerProfile({ playerId, onClose }: PlayerProfileProps)
           </div>
         </div>
       ) : (
-        <div style={{ color: '#ff4444', padding: 20, textAlign: 'center' }}>
+        <div style={{ color: '#f87171', padding: 20, textAlign: 'center' }}>
           Player not found.
         </div>
       )}
@@ -287,12 +297,12 @@ function ScoreBar({
   return (
     <div style={{ marginBottom: 8 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-        <span style={{ color: '#006622', fontSize: 11, letterSpacing: 1 }}>{label.toUpperCase()}</span>
-        <span style={{ color, fontSize: 11, fontWeight: 'bold' }}>
+        <span style={{ color: '#64748b', fontSize: 11, fontWeight: 600, letterSpacing: 1 }}>{label.toUpperCase()}</span>
+        <span style={{ color, fontSize: 11, fontWeight: 600 }}>
           {formatScore(value)}
         </span>
       </div>
-      <div style={{ background: 'rgba(0,255,65,0.06)', borderRadius: 2, height: 6, border: '1px solid #00ff4122' }}>
+      <div style={{ background: 'rgba(91,156,246,0.08)', borderRadius: 3, height: 6, border: '1px solid rgba(91,156,246,0.1)' }}>
         <div
           style={{
             width: `${pct}%`,
@@ -314,14 +324,14 @@ function ScoreBar({
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    background: '#0a0a0a',
-    border: '1px solid #00ff41',
-    borderRadius: 4,
-    color: '#00ff41',
-    fontFamily: "'Courier New', monospace",
+    background: 'rgba(8,14,28,0.95)',
+    backdropFilter: 'blur(16px)',
+    border: '1px solid rgba(91,156,246,0.2)',
+    borderRadius: 10,
+    color: '#e2e8f0',
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 13,
-    boxShadow: '0 0 20px rgba(0,255,65,0.15)',
-    width: 360,
+    width: 380,
     maxHeight: '90vh',
     display: 'flex',
     flexDirection: 'column',
@@ -332,35 +342,33 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '10px 14px',
-    borderBottom: '1px solid #00ff4133',
+    borderBottom: '1px solid rgba(91,156,246,0.15)',
     flexShrink: 0,
   },
   title: {
-    fontWeight: 'bold',
-    fontSize: 13,
-    letterSpacing: 2,
-    textShadow: '0 0 8px #00ff41',
+    fontWeight: 600,
+    fontSize: 14,
+    color: '#5b9cf6',
   },
   offlineBadge: {
     fontSize: 10,
-    color: '#ff8800',
-    border: '1px solid #ff8800',
-    borderRadius: 2,
+    color: '#f59e0b',
+    border: '1px solid rgba(245,158,11,0.4)',
+    borderRadius: 4,
     padding: '1px 6px',
-    letterSpacing: 1,
   },
   closeBtn: {
     background: 'transparent',
-    border: '1px solid #ff4444',
-    color: '#ff4444',
+    border: '1px solid rgba(248,113,113,0.4)',
+    color: '#f87171',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
-    fontSize: 12,
+    fontFamily: "'Inter', system-ui, sans-serif",
+    fontSize: 14,
     padding: '2px 8px',
-    borderRadius: 2,
+    borderRadius: 6,
   },
   loadingMsg: {
-    color: '#006622',
+    color: '#64748b',
     textAlign: 'center',
     padding: 30,
     fontSize: 13,
@@ -376,10 +384,10 @@ const styles: Record<string, React.CSSProperties> = {
 
   // Identity card
   card: {
-    border: '1px solid #00ff4133',
-    borderRadius: 3,
+    border: '1px solid rgba(91,156,246,0.15)',
+    borderRadius: 8,
     padding: '10px 12px',
-    background: 'rgba(0,255,65,0.02)',
+    background: 'rgba(91,156,246,0.04)',
     display: 'flex',
     flexDirection: 'column',
     gap: 6,
@@ -390,27 +398,30 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
   },
   label: {
-    color: '#006622',
+    color: '#64748b',
     fontSize: 11,
+    fontWeight: 600,
     letterSpacing: 1,
   },
   value: {
-    color: '#00ff41',
+    color: '#e2e8f0',
     fontSize: 13,
+    fontWeight: 500,
   },
 
   // Sections
   section: {
-    border: '1px solid #00ff4122',
-    borderRadius: 3,
+    border: '1px solid rgba(91,156,246,0.12)',
+    borderRadius: 8,
     padding: '10px 12px',
   },
   sectionTitle: {
-    color: '#006622',
-    fontSize: 10,
-    letterSpacing: 2,
+    color: '#5b9cf6',
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: 1,
     marginBottom: 10,
-    borderBottom: '1px solid #00ff4122',
+    borderBottom: '1px solid rgba(91,156,246,0.12)',
     paddingBottom: 4,
   },
 
@@ -421,7 +432,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
   },
   activityItem: {
-    borderLeft: '2px solid #006622',
+    borderLeft: '2px solid rgba(91,156,246,0.3)',
     paddingLeft: 8,
     display: 'flex',
     flexWrap: 'wrap' as const,
@@ -438,7 +449,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   activityReason: {
     width: '100%',
-    color: '#554400',
+    color: '#64748b',
     fontSize: 10,
     fontStyle: 'italic',
     paddingTop: 2,
@@ -451,21 +462,20 @@ const styles: Record<string, React.CSSProperties> = {
     paddingTop: 4,
   },
   actionBtn: {
-    background: 'rgba(0,255,65,0.08)',
-    border: '1px solid #00ff41',
-    color: '#00ff41',
+    background: 'rgba(91,156,246,0.1)',
+    border: '1px solid rgba(91,156,246,0.4)',
+    color: '#5b9cf6',
     cursor: 'pointer',
-    fontFamily: "'Courier New', monospace",
+    fontFamily: "'Inter', system-ui, sans-serif",
     fontSize: 12,
+    fontWeight: 500,
     padding: '6px 16px',
-    borderRadius: 3,
+    borderRadius: 6,
     transition: 'background 0.15s',
-    boxShadow: '0 0 5px #00ff4133',
   },
   actionBtnSent: {
-    color: '#888',
-    border: '1px solid #444',
-    boxShadow: 'none',
+    color: '#334155',
+    border: '1px solid rgba(91,156,246,0.15)',
     cursor: 'default',
   },
 }

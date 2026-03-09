@@ -127,26 +127,27 @@ export default function ResourceChart({ onClose }: ResourceChartProps) {
   return (
     <div
       style={{
-        background: '#0a0a1a',
-        border: '1px solid #1e3a5f',
-        borderRadius: 12,
-        padding: '24px 20px',
+        background: 'rgba(8,14,28,0.95)',
+        backdropFilter: 'blur(16px)',
+        border: '1px solid rgba(91,156,246,0.2)',
+        borderRadius: 10,
+        padding: '20px',
         width: 'min(90vw, 760px)',
         maxHeight: '90vh',
         overflowY: 'auto',
-        color: '#c8d8e8',
-        fontFamily: 'monospace',
+        color: '#e2e8f0',
+        fontFamily: "'Inter', system-ui, sans-serif",
       }}
     >
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h2 style={{ margin: 0, color: '#7ec8e3', fontSize: 18 }}>Resource Production Chart</h2>
+        <h2 style={{ margin: 0, color: '#5b9cf6', fontSize: 16, fontWeight: 600 }}>Resource Production Chart</h2>
         <button
           onClick={onClose}
           style={{
             background: 'transparent',
-            border: '1px solid #334',
-            color: '#aaa',
+            border: '1px solid rgba(248,113,113,0.4)',
+            color: '#f87171',
             borderRadius: 6,
             padding: '4px 10px',
             cursor: 'pointer',
@@ -161,29 +162,29 @@ export default function ResourceChart({ onClose }: ResourceChartProps) {
       <div
         style={{
           display: 'flex',
-          gap: 16,
+          gap: 12,
           marginBottom: 16,
           flexWrap: 'wrap',
         }}
       >
         {[
-          { label: 'Metal', value: production.metalPerHour, color: '#b87333' },
-          { label: 'Crystal', value: production.crystalPerHour, color: '#7ec8e3' },
-          { label: 'Deuterium', value: production.deutPerHour, color: '#4fc3f7' },
+          { label: 'Metal', value: production.metalPerHour, color: '#94a3b8' },
+          { label: 'Crystal', value: production.crystalPerHour, color: '#5b9cf6' },
+          { label: 'Deuterium', value: production.deutPerHour, color: '#34d399' },
         ].map(({ label, value, color }) => (
           <div
             key={label}
             style={{
-              background: '#111827',
-              border: `1px solid ${color}44`,
+              background: 'rgba(15,23,42,0.6)',
+              border: `1px solid ${color}33`,
               borderRadius: 8,
               padding: '8px 14px',
               flex: '1 1 140px',
             }}
           >
-            <div style={{ color, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
-            <div style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginTop: 2 }}>
-              {formatNumber(value)}<span style={{ fontSize: 11, color: '#888', marginLeft: 4 }}>/h</span>
+            <div style={{ color, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>{label}</div>
+            <div style={{ color: '#e2e8f0', fontSize: 18, fontWeight: 700, marginTop: 2 }}>
+              {formatNumber(value)}<span style={{ fontSize: 11, color: '#64748b', marginLeft: 4 }}>/h</span>
             </div>
           </div>
         ))}
@@ -198,12 +199,13 @@ export default function ResourceChart({ onClose }: ResourceChartProps) {
             style={{
               padding: '6px 14px',
               borderRadius: 6,
-              border: `1px solid ${mode === m ? '#7ec8e3' : '#334'}`,
-              background: mode === m ? '#1e3a5f' : 'transparent',
-              color: mode === m ? '#7ec8e3' : '#778899',
+              border: `1px solid ${mode === m ? 'rgba(91,156,246,0.5)' : 'rgba(91,156,246,0.15)'}`,
+              background: mode === m ? 'rgba(91,156,246,0.12)' : 'transparent',
+              color: mode === m ? '#5b9cf6' : '#64748b',
               cursor: 'pointer',
               fontSize: 12,
-              fontFamily: 'monospace',
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontWeight: mode === m ? 600 : 400,
               transition: 'all 0.15s',
             }}
           >
@@ -215,38 +217,38 @@ export default function ResourceChart({ onClose }: ResourceChartProps) {
       {/* Chart */}
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e2a3a" />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(91,156,246,0.08)" />
           <XAxis
             dataKey="time"
-            tick={{ fill: '#556', fontSize: 10 }}
+            tick={{ fill: '#64748b', fontSize: 10 }}
             interval={3}
-            stroke="#223"
+            stroke="rgba(91,156,246,0.1)"
           />
           <YAxis
             tickFormatter={formatNumber}
-            tick={{ fill: '#556', fontSize: 10 }}
-            stroke="#223"
+            tick={{ fill: '#64748b', fontSize: 10 }}
+            stroke="rgba(91,156,246,0.1)"
             width={52}
           />
           <Tooltip
             contentStyle={{
-              background: '#0d1b2a',
-              border: '1px solid #1e3a5f',
+              background: 'rgba(8,14,28,0.95)',
+              border: '1px solid rgba(91,156,246,0.25)',
               borderRadius: 8,
-              color: '#c8d8e8',
-              fontFamily: 'monospace',
+              color: '#e2e8f0',
+              fontFamily: "'Inter', system-ui, sans-serif",
               fontSize: 12,
             }}
             formatter={(value: number, name: string) => [formatNumber(value), name]}
-            labelStyle={{ color: '#7ec8e3', marginBottom: 4 }}
+            labelStyle={{ color: '#5b9cf6', marginBottom: 4 }}
           />
           <Legend
-            wrapperStyle={{ fontSize: 12, color: '#778899', paddingTop: 8 }}
+            wrapperStyle={{ fontSize: 12, color: '#64748b', paddingTop: 8 }}
           />
           <Line
             type="monotone"
             dataKey="metal"
-            stroke="#b87333"
+            stroke="#94a3b8"
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}
@@ -255,7 +257,7 @@ export default function ResourceChart({ onClose }: ResourceChartProps) {
           <Line
             type="monotone"
             dataKey="crystal"
-            stroke="#7ec8e3"
+            stroke="#5b9cf6"
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}
@@ -264,7 +266,7 @@ export default function ResourceChart({ onClose }: ResourceChartProps) {
           <Line
             type="monotone"
             dataKey="deuterium"
-            stroke="#4fc3f7"
+            stroke="#34d399"
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}
@@ -273,7 +275,7 @@ export default function ResourceChart({ onClose }: ResourceChartProps) {
         </LineChart>
       </ResponsiveContainer>
 
-      <p style={{ color: '#445', fontSize: 11, margin: '12px 0 0', textAlign: 'center' }}>
+      <p style={{ color: '#334155', fontSize: 11, margin: '12px 0 0', textAlign: 'center' }}>
         Simulated from current production rates · Historical data coming soon · Press C to close
       </p>
     </div>
