@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { GameStore } from '../store/gameStore'
+import { getPlanetId } from '../lib/config'
 
 // ---------------------------------------------------------------------------
 // Building definitions
@@ -258,26 +259,42 @@ interface BuildingsPanelProps {
   onClose: () => void
 }
 
+
+const BUILDING_IDS: Record<string, number> = {
+  metalMine: 1, crystalMine: 2, deutSynth: 3, solarPlant: 4,
+  fusionReactor: 12, roboticsFactory: 14, naniteFactory: 15,
+  shipyard: 21, metalStorage: 22, crystalStorage: 23, deutTank: 24,
+  researchLab: 31, allianceDepot: 33, missileSilo: 34,
+}
+
 export default function BuildingsPanel({ onClose }: BuildingsPanelProps) {
   const buildings = GameStore((s) => s.buildings)
   const resources  = GameStore((s) => s.resources)
   const production = GameStore((s) => s.production)
+  const fetchPlanetState = GameStore((s) => s.fetchPlanetState)
 
   const [upgrading, setUpgrading] = useState<string | null>(null)
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null)
 
+  // Refresh state when panel opens
+  useEffect(() => {
+    fetchPlanetState()
+  }, [fetchPlanetState])
+
   const handleUpgrade = useCallback(async (key: string) => {
-    const planetId = localStorage.getItem('og_planet_id')
+    const planetId = getPlanetId()
     if (!planetId) {
       setMessage({ text: 'No planet selected', ok: false })
       return
     }
     setUpgrading(key)
     try {
-      const res = await fetch(`/api/planet/${planetId}/upgrade`, {
+      const buildingId = BUILDING_IDS[key]
+      const currentLevel = (buildings as unknown as Record<string, number>)[key] ?? 0
+      const res = await fetch(`/api/planet/${planetId}/queue`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ buildingType: key }),
+        body: JSON.stringify({ buildingId, targetLevel: currentLevel + 1 }),
       })
       if (res.ok) {
         setMessage({ text: `Upgrade started!`, ok: true })
