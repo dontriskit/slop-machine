@@ -18,6 +18,7 @@ import FriendsList from './components/FriendsList'
 import ChatPanel from './components/ChatPanel'
 import SpectatorMode from './components/SpectatorMode'
 import CombatSimulator from './components/CombatSimulator'
+import BuildingsPanel from './components/BuildingsPanel'
 import RegistrationModal from './components/RegistrationModal'
 import { GameStore } from './store/gameStore'
 import { LS_PLAYER_ID_KEY } from './lib/config'
@@ -64,7 +65,7 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | 'messages' | 'shipyard' | 'defense' | 'buddy' | 'friends' | 'spectator' | 'chat' | 'simulator' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | 'messages' | 'shipyard' | 'defense' | 'buddy' | 'friends' | 'spectator' | 'chat' | 'simulator' | 'buildings' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
@@ -146,6 +147,9 @@ export default function App() {
       if (e.key === 'h' || e.key === 'H') {
         setActivePanel((p) => (p === 'simulator' ? null : 'simulator'))
       }
+      if (e.key === 'i' || e.key === 'I') {
+        setActivePanel((p) => (p === 'buildings' ? null : 'buildings'))
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -189,6 +193,7 @@ export default function App() {
         onOpenChat={() => setActivePanel('chat')}
         onOpenSimulator={() => setActivePanel('simulator')}
         activePanel={activePanel}
+        onOpenBuildings={() => setActivePanel('buildings')}
       />
 
       {/* Galaxy Map modal */}
@@ -294,6 +299,10 @@ export default function App() {
         <ModalOverlay onClose={closePanel}>
           <PlayerProfile playerId={profilePlayerId} onClose={closePanel} />
         </ModalOverlay>
+      )}
+
+      {activePanel === 'buildings' && (
+        <BuildingsPanel onClose={closePanel} />
       )}
 
       {/* Registration modal — shown only if no player identity in localStorage */}
