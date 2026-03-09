@@ -14,7 +14,10 @@ import MessagesInbox from './components/MessagesInbox'
 import ShipyardPanel from './components/ShipyardPanel'
 import DefensePanel from './components/DefensePanel'
 import BuddyList from './components/BuddyList'
+import FriendsList from './components/FriendsList'
+import RegistrationModal from './components/RegistrationModal'
 import { GameStore } from './store/gameStore'
+import { LS_PLAYER_ID_KEY } from './lib/config'
 
 // ---------------------------------------------------------------------------
 // Modal overlay wrapper — closes on backdrop click
@@ -58,10 +61,14 @@ function ModalOverlay({
 // App
 // ---------------------------------------------------------------------------
 
-type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | 'messages' | 'shipyard' | 'defense' | 'buddy' | null
+type Panel = 'galaxy-map' | 'leaderboard' | 'trader' | 'profile' | 'research' | 'fleet' | 'chart' | 'messages' | 'shipyard' | 'defense' | 'buddy' | 'friends' | null
 
 export default function App() {
   const selectedGalaxy = GameStore((state) => state.selectedGalaxy)
+
+  const [needsRegistration, setNeedsRegistration] = useState(
+    () => !localStorage.getItem(LS_PLAYER_ID_KEY)
+  )
 
   const [activePanel, setActivePanel]       = useState<Panel>(null)
   const [profilePlayerId, setProfilePlayerId] = useState<string | null>(null)
@@ -124,6 +131,9 @@ export default function App() {
       if (e.key === 'b' || e.key === 'B') {
         setActivePanel((p) => (p === 'buddy' ? null : 'buddy'))
       }
+      if (e.key === 'n' || e.key === 'N') {
+        setActivePanel((p) => (p === 'friends' ? null : 'friends'))
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -163,6 +173,7 @@ export default function App() {
         onOpenShipyard={() => setActivePanel('shipyard')}
         onOpenDefense={() => setActivePanel('defense')}
         onOpenBuddyList={() => setActivePanel('buddy')}
+        onOpenFriendsList={() => setActivePanel('friends')}
       />
 
       {/* Galaxy Map modal */}
@@ -238,11 +249,23 @@ export default function App() {
         </ModalOverlay>
       )}
 
+      {/* Friends List modal */}
+      {activePanel === 'friends' && (
+        <ModalOverlay onClose={closePanel}>
+          <FriendsList onClose={closePanel} />
+        </ModalOverlay>
+      )}
+
       {/* Player Profile modal — opened from Leaderboard or elsewhere */}
       {activePanel === 'profile' && profilePlayerId && (
         <ModalOverlay onClose={closePanel}>
           <PlayerProfile playerId={profilePlayerId} onClose={closePanel} />
         </ModalOverlay>
+      )}
+
+      {/* Registration modal — shown only if no player identity in localStorage */}
+      {needsRegistration && (
+        <RegistrationModal onComplete={() => setNeedsRegistration(false)} />
       )}
     </div>
   )

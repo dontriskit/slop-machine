@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { GameStore } from '../store/gameStore'
 import { DEFAULT_PLAYER_ID } from '../lib/config'
+import PlanetSelector from './PlanetSelector'
+import BuildingUpgradeModal from './BuildingUpgradeModal'
 import './HUD.css'
 
 // Building ID -> human-readable name
@@ -47,9 +49,10 @@ interface HUDProps {
   onOpenShipyard?: () => void
   onOpenDefense?: () => void
   onOpenBuddyList?: () => void
+  onOpenFriendsList?: () => void
 }
 
-export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenFleet, onOpenChart, onOpenMessages, onOpenShipyard, onOpenDefense, onOpenBuddyList }: HUDProps) {
+export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, onOpenResearch, onOpenFleet, onOpenChart, onOpenMessages, onOpenShipyard, onOpenDefense, onOpenBuddyList, onOpenFriendsList }: HUDProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [unreadMessages, setUnreadMessages] = useState(0)
 
@@ -200,6 +203,11 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
                 Defense (D)
               </button>
             )}
+            {onOpenFriendsList && (
+              <button className="mobile-nav-btn" onClick={() => { onOpenFriendsList(); closeMenu() }}>
+                Friends (N)
+              </button>
+            )}
           </div>
 
           <div className="mobile-nav-section">
@@ -285,6 +293,8 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
 
         {loading && <div className="loading-indicator">Loading...</div>}
         {error && <div className="error-indicator">{error}</div>}
+
+        <PlanetSelector />
       </div>
 
       {/* Top-right: Resources */}
@@ -455,6 +465,11 @@ export default function HUD({ onOpenGalaxyMap, onOpenLeaderboard, onOpenTrader, 
             Buddy List (B)
           </button>
         )}
+        {onOpenFriendsList && (
+          <button className="galaxy-btn" style={{ marginTop: 6, width: '100%' }} onClick={onOpenFriendsList}>
+            Friends (N)
+          </button>
+        )}
       </div>
     </div>
   )
@@ -469,8 +484,11 @@ function BuildingRow({ label, level, buildingId }: { label: string; level: numbe
   const fetchPlanetState = GameStore((s) => s.fetchPlanetState)
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
 
-  const handleUpgrade = useCallback(async () => {
+  // Quick-upgrade shortcut (skips modal)
+  const handleQuickUpgrade = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation()
     setLoading(true)
     setMsg(null)
     try {
@@ -487,22 +505,39 @@ function BuildingRow({ label, level, buildingId }: { label: string; level: numbe
   }, [activePlanetId, buildingId, level, fetchPlanetState])
 
   return (
-    <div className="stat building-stat" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
-      <span className="label">{label}</span>
-      <span className="value" style={{ minWidth: 36 }}>Lv {level}</span>
-      <button
-        onClick={handleUpgrade}
-        disabled={loading}
-        style={{
-          background: 'none', border: '1px solid #00ff41', color: '#00ff41',
-          fontSize: '0.65rem', padding: '1px 5px', cursor: 'pointer',
-          opacity: loading ? 0.5 : 1, minWidth: 42,
-        }}
-        title={`Upgrade ${label} to Lv ${level + 1}`}
+    <>
+      <div
+        className="stat building-stat"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, cursor: 'pointer' }}
+        onClick={() => setModalOpen(true)}
+        title={`Click to view upgrade details for ${label}`}
       >
-        {msg ?? (loading ? '...' : '▲ UP')}
-      </button>
-    </div>
+        <span className="label">{label}</span>
+        <span className="value" style={{ minWidth: 36 }}>Lv {level}</span>
+        <button
+          onClick={handleQuickUpgrade}
+          disabled={loading}
+          style={{
+            background: 'none', border: '1px solid #00ff41', color: '#00ff41',
+            fontSize: '0.65rem', padding: '1px 5px', cursor: 'pointer',
+            opacity: loading ? 0.5 : 1, minWidth: 42,
+          }}
+          title={`Quick upgrade ${label} to Lv ${level + 1}`}
+        >
+          {msg ?? (loading ? '...' : '▲ UP')}
+        </button>
+      </div>
+
+      {modalOpen && (
+        <BuildingUpgradeModal
+          buildingId={buildingId}
+          buildingName={label}
+          currentLevel={level}
+          planetId={activePlanetId}
+          onClose={() => setModalOpen(false)}
+        />
+      )}
+    </>
   )
 }
 

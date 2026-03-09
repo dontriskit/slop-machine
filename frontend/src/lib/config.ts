@@ -20,3 +20,14 @@ export const RESOURCE_POLL_INTERVAL_MS = 5000
 export const RESOURCE_INTERPOLATION_INTERVAL_MS = 1000
 export const DEFAULT_PLANET_ID = '1:1:1'
 export const DEFAULT_PLAYER_ID = 'player-1'
+
+export const LS_PLAYER_ID_KEY = 'cp_player_id'
+export const LS_PLANET_ID_KEY = 'cp_planet_id'
+
+export function getPlayerId(): string {
+  return localStorage.getItem(LS_PLAYER_ID_KEY) ?? DEFAULT_PLAYER_ID
+}
+
+export function getPlanetId(): string {
+  return localStorage.getItem(LS_PLANET_ID_KEY) ?? DEFAULT_PLANET_ID
+}

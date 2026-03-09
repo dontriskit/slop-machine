@@ -4,6 +4,10 @@ CREATE TABLE IF NOT EXISTS players (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   alliance_tag TEXT,
+  referral_code TEXT UNIQUE,
+  referred_by TEXT,
+  dark_matter INTEGER NOT NULL DEFAULT 0,
+  last_seen INTEGER NOT NULL DEFAULT (unixepoch()),
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
@@ -95,6 +99,10 @@ CREATE TABLE IF NOT EXISTS fleet_missions (
   colony_ship INTEGER NOT NULL DEFAULT 0,
   recycler INTEGER NOT NULL DEFAULT 0,
   espionage_probe INTEGER NOT NULL DEFAULT 0,
+  -- Serialized fleet/resource snapshot for expedition history
+  ships_json TEXT,
+  resources_json TEXT,
+  fuel_consumed INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL DEFAULT (unixepoch())
 );
 
@@ -510,3 +518,139 @@ CREATE TABLE IF NOT EXISTS player_relations (
   UNIQUE(player_id, target_id)
 );
 CREATE INDEX IF NOT EXISTS idx_player_relations_player ON player_relations(player_id);
+
+-- ============================================================================
+-- PLAYER STATS (E-sport counters)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS player_stats (
+  player_id TEXT PRIMARY KEY REFERENCES players(id),
+  battles_won INTEGER NOT NULL DEFAULT 0,
+  battles_lost INTEGER NOT NULL DEFAULT 0,
+  battles_draw INTEGER NOT NULL DEFAULT 0,
+  ships_destroyed INTEGER NOT NULL DEFAULT 0,
+  ships_lost INTEGER NOT NULL DEFAULT 0,
+  resources_raided_metal INTEGER NOT NULL DEFAULT 0,
+  resources_raided_crystal INTEGER NOT NULL DEFAULT 0,
+  resources_raided_deut INTEGER NOT NULL DEFAULT 0,
+  resources_lost_metal INTEGER NOT NULL DEFAULT 0,
+  resources_lost_crystal INTEGER NOT NULL DEFAULT 0,
+  resources_lost_deut INTEGER NOT NULL DEFAULT 0,
+  fleets_dispatched INTEGER NOT NULL DEFAULT 0,
+  espionage_sent INTEGER NOT NULL DEFAULT 0,
+  buildings_built INTEGER NOT NULL DEFAULT 0,
+  research_completed INTEGER NOT NULL DEFAULT 0,
+  planets_colonized INTEGER NOT NULL DEFAULT 0,
+  trades_completed INTEGER NOT NULL DEFAULT 0,
+  agent_decisions INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_player_stats_battles_won ON player_stats(battles_won DESC);
+CREATE INDEX IF NOT EXISTS idx_player_stats_ships_destroyed ON player_stats(ships_destroyed DESC);
+CREATE INDEX IF NOT EXISTS idx_player_stats_fleets ON player_stats(fleets_dispatched DESC);
+
+-- ============================================================================
+-- DARK MATTER (premium currency)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS dark_matter (
+  player_id TEXT PRIMARY KEY REFERENCES players(id),
+  balance INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+
+CREATE TABLE IF NOT EXISTS dark_matter_transactions (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  amount INTEGER NOT NULL,
+  source TEXT NOT NULL,
+  balance_before INTEGER NOT NULL DEFAULT 0,
+  balance_after INTEGER NOT NULL DEFAULT 0,
+  reference TEXT,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE INDEX IF NOT EXISTS idx_dm_transactions_player ON dark_matter_transactions(player_id, created_at);
+
+-- ============================================================================
+-- PLAYER ACHIEVEMENTS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS player_achievements (
+  player_id TEXT NOT NULL REFERENCES players(id),
+  achievement_id TEXT NOT NULL,
+  unlocked_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  PRIMARY KEY (player_id, achievement_id)
+);
+CREATE INDEX IF NOT EXISTS idx_player_achievements_player ON player_achievements(player_id);
+CREATE INDEX IF NOT EXISTS idx_player_achievements_achievement ON player_achievements(achievement_id);
+
+-- ============================================================================
+-- TUTORIAL PROGRESS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS tutorial_progress (
+  player_id TEXT PRIMARY KEY REFERENCES players(id),
+  completed_steps TEXT NOT NULL DEFAULT '[]',  -- JSON: string[]
+  claimed_steps TEXT NOT NULL DEFAULT '[]',    -- JSON: string[]
+  current_step_id TEXT,
+  skipped INTEGER NOT NULL DEFAULT 0,
+  started_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  completed_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS tutorial_step_log (
+  player_id TEXT NOT NULL REFERENCES players(id),
+  step_id TEXT NOT NULL,
+  completed_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  PRIMARY KEY (player_id, step_id)
+);
+CREATE INDEX IF NOT EXISTS idx_tutorial_step_log_player ON tutorial_step_log(player_id);
+
+-- ============================================================================
+-- DAILY MISSIONS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS daily_missions (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  mission_type TEXT NOT NULL,
+  date_key TEXT NOT NULL,          -- YYYY-MM-DD UTC
+  status TEXT NOT NULL DEFAULT 'active',  -- 'active' | 'completed' | 'claimed'
+  progress INTEGER NOT NULL DEFAULT 0,
+  target INTEGER NOT NULL,
+  assigned_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  completed_at INTEGER,
+  claimed_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_daily_missions_player ON daily_missions(player_id, date_key);
+CREATE INDEX IF NOT EXISTS idx_daily_missions_status ON daily_missions(player_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_missions_unique ON daily_missions(player_id, mission_type, date_key);
+
+-- ============================================================================
+-- OFFICERS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS officers (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  officer_type TEXT NOT NULL,
+  activated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_officers_player ON officers(player_id, officer_type, expires_at);
+CREATE INDEX IF NOT EXISTS idx_officers_expires ON officers(expires_at);
+
+-- ============================================================================
+-- FRIENDSHIPS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS friendships (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  friend_id TEXT NOT NULL REFERENCES players(id),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'blocked')),
+  created_at INTEGER NOT NULL DEFAULT (unixepoch())
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_friendships_pair ON friendships(player_id, friend_id);
+CREATE INDEX IF NOT EXISTS idx_friendships_player ON friendships(player_id, status);
+CREATE INDEX IF NOT EXISTS idx_friendships_friend ON friendships(friend_id, status);

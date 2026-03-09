@@ -24,7 +24,7 @@ describe('Vacation Service', () => {
   describe('enableVacationMode', () => {
     it('should enable vacation mode when no fleet missions are active', async () => {
       // Mock: no fleet missions
-      mockDb.prepare.mockReturnValue({
+      mockDb.prepare.mockReturnValueOnce({
         bind: vi.fn().mockReturnValue({
           first: vi.fn().mockResolvedValue({ count: 0 }),
         }),

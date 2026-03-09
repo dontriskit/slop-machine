@@ -2148,6 +2148,98 @@ app.delete('/api/relations/:target_id', async (c) => {
 });
 
 
+// ============================================================================
+// FRIENDS
+// ============================================================================
+
+// GET /api/friends?player_id=X — list friends with online indicator
+app.get('/api/friends', async (c) => {
+  const DB = c.env.DB;
+  const playerId = c.req.query('player_id');
+  if (!playerId) return c.json({ error: 'player_id required' }, 400);
+
+  // Update last_seen for player
+  const now = Math.floor(Date.now() / 1000);
+  await DB.prepare('UPDATE players SET last_seen = ? WHERE id = ?').bind(now, playerId).run();
+
+  // Get all friendships involving this player
+  const rows = await DB.prepare(`
+    SELECT f.id, f.player_id, f.friend_id, f.status, f.created_at,
+           p.name as friend_name, p.last_seen as friend_last_seen
+    FROM friendships f
+    JOIN players p ON (
+      CASE WHEN f.player_id = ? THEN f.friend_id ELSE f.player_id END = p.id
+    )
+    WHERE f.player_id = ? OR (f.friend_id = ? AND f.status = 'accepted')
+    ORDER BY f.created_at DESC
+  `).bind(playerId, playerId, playerId).all();
+
+  const fiveMinAgo = now - 300;
+  const friends = (rows.results as any[]).map((r) => ({
+    id: r.id,
+    friendId: r.player_id === playerId ? r.friend_id : r.player_id,
+    friendName: r.friend_name,
+    status: r.status,
+    direction: r.player_id === playerId ? 'sent' : 'received',
+    online: r.friend_last_seen >= fiveMinAgo,
+    createdAt: r.created_at,
+  }));
+
+  return c.json({ friends });
+});
+
+// POST /api/friends/request — send a friend request
+app.post('/api/friends/request', async (c) => {
+  const DB = c.env.DB;
+  const body = await c.req.json<{ player_id: string; friend_id: string }>();
+  const { player_id, friend_id } = body;
+  if (!player_id || !friend_id) return c.json({ error: 'player_id and friend_id required' }, 400);
+  if (player_id === friend_id) return c.json({ error: 'cannot add yourself' }, 400);
+
+  // Check if friendship already exists in either direction
+  const existing = await DB.prepare(
+    'SELECT id FROM friendships WHERE (player_id = ? AND friend_id = ?) OR (player_id = ? AND friend_id = ?)'
+  ).bind(player_id, friend_id, friend_id, player_id).first();
+  if (existing) return c.json({ error: 'friendship already exists' }, 409);
+
+  const id = crypto.randomUUID();
+  await DB.prepare(
+    'INSERT INTO friendships (id, player_id, friend_id, status) VALUES (?, ?, ?, ?)'
+  ).bind(id, player_id, friend_id, 'pending').run();
+
+  return c.json({ ok: true, id });
+});
+
+// POST /api/friends/accept — accept a friend request
+app.post('/api/friends/accept', async (c) => {
+  const DB = c.env.DB;
+  const body = await c.req.json<{ player_id: string; friend_id: string }>();
+  const { player_id, friend_id } = body;
+  if (!player_id || !friend_id) return c.json({ error: 'player_id and friend_id required' }, 400);
+
+  // The friend_id sent the original request (they are player_id in friendships row)
+  const result = await DB.prepare(
+    `UPDATE friendships SET status = 'accepted' WHERE player_id = ? AND friend_id = ? AND status = 'pending'`
+  ).bind(friend_id, player_id).run();
+
+  if (result.meta.changes === 0) return c.json({ error: 'no pending request found' }, 404);
+  return c.json({ ok: true });
+});
+
+// DELETE /api/friends/:friend_id?player_id=X — remove or reject a friend
+app.delete('/api/friends/:friend_id', async (c) => {
+  const DB = c.env.DB;
+  const friendId = c.req.param('friend_id');
+  const playerId = c.req.query('player_id');
+  if (!playerId) return c.json({ error: 'player_id required' }, 400);
+
+  await DB.prepare(
+    'DELETE FROM friendships WHERE (player_id = ? AND friend_id = ?) OR (player_id = ? AND friend_id = ?)'
+  ).bind(playerId, friendId, friendId, playerId).run();
+
+  return c.json({ ok: true });
+});
+
 // CRON TRIGGER
 // ============================================================================
 

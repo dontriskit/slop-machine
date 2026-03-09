@@ -3,7 +3,7 @@ import * as api from '../lib/api'
 import {
   RESOURCE_POLL_INTERVAL_MS,
   RESOURCE_INTERPOLATION_INTERVAL_MS,
-  DEFAULT_PLANET_ID,
+  getPlanetId,
 } from '../lib/config'
 
 // ---------------------------------------------------------------------------
@@ -176,7 +176,7 @@ export const GameStore = create<GameState>((set, get) => ({
   selectedGalaxy: 1,
   selectedSystem: null,
   selectedPlanet: null,
-  activePlanetId: DEFAULT_PLANET_ID,
+  activePlanetId: getPlanetId(),
   systems: [],
 
   // Planet data
